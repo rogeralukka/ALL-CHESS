@@ -23,3 +23,7 @@ __pycache__/
 .venv/
 env/
 venv/
+
+# Local chat exports
+Chess_Coach_Conversation_History.pdf
+chat_history.html
