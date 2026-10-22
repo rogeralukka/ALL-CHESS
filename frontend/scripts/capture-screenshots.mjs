@@ -62,10 +62,17 @@ async function capture() {
     headless: true,
   });
 
-  const routes = [
+  let routes = [
     { name: 'playground', path: '/dev/playground' },
     { name: 'home', path: '/' },
   ];
+
+  if (step === 'step1b') {
+    routes = [
+      { name: 'gamelist', path: '/review' },
+      { name: 'gamesummary', path: '/review/game-01' },
+    ];
+  }
 
   const widths = [390, 820, 1440];
   const themes = ['dusk', 'dawn'];

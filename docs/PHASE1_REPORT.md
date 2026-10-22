@@ -75,3 +75,55 @@ npm run dev             # Starts Vite development server
   - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1a/home-dawn-390.png)
   - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1a/home-dawn-820.png)
   - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1a/home-dawn-1440.png)
+
+
+---
+
+## Step 1B: Review Flow (Games List, Game Summary, Review Board)
+
+### 1. What was built
+- **Games List Screen (`GameList.tsx`):**
+  - Instant multi-factor filtering: Time control (All, Rapid, Blitz, Bullet), Player Color (All, White, Black), Game Result (All, Wins, Losses, Draws).
+  - Real-time opponent and opening search.
+  - Interactive game cards displaying speed badges, results, player ratings, accuracy comparisons, opening names, and dates.
+  - Full loading skeletons and coach-powered empty states with filter reset actions.
+- **Game Summary Screen (`GameSummary.tsx`):**
+  - Coach portrait + speech bubble tailored dynamically to the game's outcome, opening name, and blunder frequency.
+  - Players row with ratings, title badges, and accuracy comparison chips.
+  - **Move Quality Table (`MoveQualityTable.tsx`):** Displays move counts per classification for White and Black, color-tinted to the classification palette, with non-zero row collapse and expander toggle.
+  - **Estimated Game Rating:** Plausible performance ratings (e.g. White ~1120, Black ~980).
+  - **Phase Performance Grades (`PhaseGradesCard.tsx`):** A through D / N/A grades across Opening, Middlegame, Tactics, and Endgame.
+  - Advantage momentum mini eval graph with colored key-move dots.
+  - Pinned primary **Start Review** action button.
+- **Review Board (`ReviewBoard.tsx`):**
+  - Three-zone responsive layout with board, eval bar, and fixed right mode panel.
+  - Move-by-move stepping with figurine notation, classification badges on destination squares, and square tints.
+  - **Explain / Best / Next Loop:**
+    - "Show Best" displays the top engine line and changes to "Resume Game".
+    - "Explain Move" renders the refutation line directly as an indented variation in the move list with a "Got it!" dismissal.
+    - "Retry Mistake" mode when inaccuracies, mistakes, or blunders occur, encouraging the user to find a better continuation on the board with immediate coach feedback.
+  - Collapsible **Top 3 Engine Lines** panel with eval chips and plain-English "why" lines.
+  - Complete transport bar (first, previous, play/pause autoplay, next, last, and board flip).
+- **Unit Tests:**
+  - Added `src/test/review.test.ts` covering PGN parsing, game-01 move integrity, blunder detection, speed filtering, result filtering, and search.
+
+### 2. Deviations from Prompt
+- None.
+
+### 3. Screenshots (Step 1B)
+- **Games List (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamelist-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamelist-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamelist-dusk-1440.png)
+- **Games List (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamelist-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamelist-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamelist-dawn-1440.png)
+- **Game Summary (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dusk-1440.png)
+- **Game Summary (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dawn-1440.png)

@@ -1,42 +1,85 @@
-import React from 'react';
-import { Card } from '@/components/Card';
-import { NavLink } from 'react-router-dom';
-import { MOCK_GAMES } from '@/data/mock/mockGames';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Game } from '@/data/types';
+import { gameRepository } from '@/data/repositories';
+import { GameList } from './GameList';
+import { GameSummary } from './GameSummary';
+import { ReviewBoard } from './ReviewBoard';
+import { Skeleton } from '@/components/Skeleton';
 
 export const ReviewRouter: React.FC = () => {
+  const params = useParams();
+  const navigate = useNavigate();
+
+  // Extract ID from pathname if wildcard
+  const pathParts = window.location.pathname.split('/review/');
+  const gameId = params.id || (pathParts.length > 1 && pathParts[1] ? pathParts[1] : null);
+
+  const [currentGame, setCurrentGame] = useState<Game | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [activeView, setActiveView] = useState<'summary' | 'board'>('summary');
+
+  useEffect(() => {
+    if (!gameId) {
+      setCurrentGame(null);
+      return;
+    }
+
+    setLoading(true);
+    gameRepository.getGameById(gameId).then((g) => {
+      setCurrentGame(g);
+      setLoading(false);
+      setActiveView('summary');
+    });
+  }, [gameId]);
+
+  // If no gameId, render the games list
+  if (!gameId) {
+    return <GameList onSelectGame={(id) => navigate(`/review/${id}`)} />;
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="p-8 max-w-xl mx-auto space-y-4">
+        <Skeleton height={100} />
+        <Skeleton height={140} />
+        <Skeleton height={200} />
+      </div>
+    );
+  }
+
+  // If game not found
+  if (!currentGame) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold font-display text-theme-text">Game Not Found</h2>
+        <button
+          type="button"
+          onClick={() => navigate('/review')}
+          className="text-amber-500 font-bold hover:underline"
+        >
+          Return to Game List
+        </button>
+      </div>
+    );
+  }
+
+  // Toggle between Summary and Review Board
+  if (activeView === 'summary') {
+    return (
+      <GameSummary
+        game={currentGame}
+        onStartReview={() => setActiveView('board')}
+      />
+    );
+  }
+
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-theme-text">Game Review &amp; Analysis</h1>
-          <p className="text-sm text-theme-muted mt-0.5">Explore move-by-move evaluations with coach insights.</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {MOCK_GAMES.map((game) => (
-          <NavLink key={game.id} to={`/review/${game.id}`}>
-            <Card className="hover:border-amber-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-amber-500 uppercase">{game.speed} • {game.timeControl}</span>
-                <span className="text-xs font-mono font-bold bg-theme-raised px-1.5 py-0.5 rounded">{game.result}</span>
-              </div>
-              <h3 className="font-bold text-theme-text group-hover:text-amber-500 transition-colors">
-                {game.white.username} vs {game.black.username}
-              </h3>
-              <p className="text-xs text-theme-muted mt-1">{game.opening.name}</p>
-              {game.accuracy && (
-                <div className="flex items-center gap-2 mt-3 pt-2 border-t border-theme-border/50 text-xs">
-                  <span className="text-theme-muted">Accuracy:</span>
-                  <span className="font-bold text-emerald-500">{game.accuracy.white}%</span>
-                  <span className="text-theme-muted">/</span>
-                  <span className="font-bold text-sky-500">{game.accuracy.black}%</span>
-                </div>
-              )}
-            </Card>
-          </NavLink>
-        ))}
-      </div>
-    </div>
+    <ReviewBoard
+      game={currentGame}
+      onBackToSummary={() => setActiveView('summary')}
+    />
   );
 };
 export default ReviewRouter;
