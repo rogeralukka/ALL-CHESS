@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/Skeleton';
 
 const Home = lazy(() => import('@/features/home/Home'));
 const ReviewRouter = lazy(() => import('@/features/review/ReviewRouter'));
-const PlayLobby = lazy(() => import('@/features/play/PlayLobby'));
+const PlayGame = lazy(() => import('@/features/play/PlayGame'));
 const LearnPath = lazy(() => import('@/features/learn/LearnPath'));
 const PuzzleScreen = lazy(() => import('@/features/puzzles/PuzzleScreen'));
 const ScoutSearch = lazy(() => import('@/features/scout/ScoutSearch'));
@@ -50,7 +50,7 @@ export const router = createBrowserRouter([
         path: 'play',
         element: (
           <Suspense fallback={<LoadingFallback />}>
-            <PlayLobby />
+            <PlayGame />
           </Suspense>
         ),
       },

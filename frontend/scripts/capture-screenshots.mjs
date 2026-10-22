@@ -72,6 +72,19 @@ async function capture() {
       { name: 'gamelist', path: '/review' },
       { name: 'gamesummary', path: '/review/game-01' },
     ];
+  } else if (step === 'step1c') {
+    routes = [
+      { name: 'play', path: '/play' },
+      { name: 'learn', path: '/learn' },
+      { name: 'puzzles', path: '/puzzles' },
+    ];
+  } else if (step === 'step1d') {
+    routes = [
+      { name: 'home', path: '/' },
+      { name: 'profile', path: '/profile' },
+      { name: 'scout', path: '/scout' },
+      { name: 'settings', path: '/settings' },
+    ];
   }
 
   const widths = [390, 820, 1440];

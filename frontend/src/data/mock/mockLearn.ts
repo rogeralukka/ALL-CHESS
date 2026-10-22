@@ -93,7 +93,20 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     status: 'locked',
     xp: 100, // MOCK
     description: 'The premier defensive drawing technique in rook and pawn endgames.',
-    steps: []
+    steps: [
+      {
+        id: 'step-4-1',
+        title: '6th Rank Defense',
+        instruction: 'Keep your rook on the 6th rank to prevent the enemy king from advancing.',
+        buttonText: 'Hold the Rank',
+        fen: '8/8/8/4k3/8/2r5/4K3/R7 b - - 0 1',
+        requiredMove: 'Rc6',
+        arrows: [{ from: 'c3', to: 'c6', color: 'green' }],
+        highlightSquares: ['c6'],
+        isInteractive: true,
+        explanation: 'The 6th rank shield prevents the king from supporting the pawn forward.'
+      }
+    ]
   },
   {
     id: 'endgame-5',
@@ -102,7 +115,20 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     status: 'locked',
     xp: 80, // MOCK
     description: 'Tarrasch’s immortal rule: place your rook behind passed pawns, whether attacking or defending.',
-    steps: []
+    steps: [
+      {
+        id: 'step-5-1',
+        title: 'Occupy the File Behind',
+        instruction: 'Move your rook behind your passed pawn on a5.',
+        buttonText: 'Follow Tarrasch',
+        fen: '8/8/8/P7/8/8/4K3/4R2k w - - 0 1',
+        requiredMove: 'Ra1',
+        arrows: [{ from: 'e1', to: 'a1', color: 'green' }],
+        highlightSquares: ['a1'],
+        isInteractive: true,
+        explanation: 'Now the pawn is protected and the rook gains mobility as the pawn advances!'
+      }
+    ]
   },
   {
     id: 'endgame-6',
@@ -111,7 +137,20 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     status: 'locked',
     xp: 90, // MOCK
     description: 'Using file and rank cuts to isolate the enemy monarch from the critical passed pawn.',
-    steps: []
+    steps: [
+      {
+        id: 'step-6-1',
+        title: 'File Barrier',
+        instruction: 'Cut the black king off along the d-file.',
+        buttonText: 'Cut Off',
+        fen: '8/8/4k3/8/3P4/8/4K3/2R5 w - - 0 1',
+        requiredMove: 'Rd1',
+        arrows: [{ from: 'c1', to: 'd1', color: 'green' }],
+        highlightSquares: ['d1'],
+        isInteractive: true,
+        explanation: 'The king cannot cross the d-file to reach the d-pawn.'
+      }
+    ]
   },
   {
     id: 'endgame-7',
@@ -120,7 +159,20 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     status: 'locked',
     xp: 90, // MOCK
     description: 'Activity is worth a pawn! Keep your rook creating threats instead of passive defense.',
-    steps: []
+    steps: [
+      {
+        id: 'step-7-1',
+        title: 'Active Check',
+        instruction: 'Deliver a check from behind to disrupt the opponent.',
+        buttonText: 'Check!',
+        fen: '8/8/8/8/3k4/8/4K3/R7 w - - 0 1',
+        requiredMove: 'Ra4+',
+        arrows: [{ from: 'a1', to: 'a4', color: 'green' }],
+        highlightSquares: ['a4'],
+        isInteractive: true,
+        explanation: 'Active checking from the flank keeps the defender tied down.'
+      }
+    ]
   },
   {
     id: 'endgame-8',
@@ -129,7 +181,20 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     status: 'locked',
     xp: 150, // MOCK
     description: 'Put all your rook endgame techniques to the test against master-level positions.',
-    steps: []
+    steps: [
+      {
+        id: 'step-8-1',
+        title: 'Master Challenge',
+        instruction: 'Spot the winning deflection maneuver.',
+        buttonText: 'Deliver Mate',
+        fen: '6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1',
+        requiredMove: 'Re8#',
+        arrows: [{ from: 'e1', to: 'e8', color: 'green' }],
+        highlightSquares: ['e8'],
+        isInteractive: true,
+        explanation: 'Outstanding! You have mastered the fundamentals of rook endgames.'
+      }
+    ]
   },
 
   // --- OPENINGS PATH ---

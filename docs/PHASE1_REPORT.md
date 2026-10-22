@@ -127,3 +127,56 @@ npm run dev             # Starts Vite development server
   - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dawn-390.png)
   - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dawn-820.png)
   - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1b/gamesummary-dawn-1440.png)
+
+---
+
+## Step 1C: Play, Learn, Puzzles
+
+### 1. What was built
+- **Play Against Coach (`PlayGame.tsx` & `PlayLobby.tsx`):**
+  - **Pre-game Lobby:** Difficulty selection (presets: Casual 600, Balanced 1000, Challenging 1500; expandable ladder 400-2000), color choice (White, Black, Random), and coaching assistance toggles (coach speech feedback, hints, takebacks, eval bar, threat arrows, suggestion arrows, classification badges).
+  - **In-Game Flow:** Move execution with legal drag/drop and click-to-move, live eval bar, interactive MoveList, coach response move with delay and thinking expression, real-time speech bubbles reacting to both user and coach moves.
+  - **Tooling:** Hint request button displaying green arrows and coach advice, take-back button to undo last ply pair, PGN export and download, resign modal with confirmation.
+  - **Game Over Modal (`GameOverModal.tsx`):** Winner celebration or encouragement portrait, match summary badge, primary "Review Game" routing to Step 1B review flow, secondary "New Match".
+- **Learn Roadmap & Interactive Player (`LearnPath.tsx` & `LessonPlayer.tsx`):**
+  - **Roadmap:** 8-stage Endgame curriculum faithfully matching mockup (King + Rook vs King, Back-Rank Basics, Lucena Position, Philidor Position, Rook Behind the Pawn, Cutting Off the King, The Active Rook, Rook Endgame Test), plus Openings and Middlegame modules.
+  - Category tabs, overall progress bar with completion percentage, XP and daily streak badges.
+  - **Interactive Lesson Player:** Step-by-step guided instructions, green visual arrow targets, board square highlights, move validation enforcing the lesson's concept, instant coach celebratory feedback and explanation upon completion.
+- **Tactical Puzzles & Reward Cascade (`PuzzleScreen.tsx` & `RewardCascade.tsx`):**
+  - **Curated Puzzles:** 42 curated tactical puzzles in `mockPuzzles.ts` (beginning with Back-rank mate-in-1, Scholar's mate, Knight fork, Greek gift, etc.).
+  - **Daily Puzzle Solver:** Live elapsed timer, rating indicator, goal banner, hints, retry mechanism on mistake, and skip/next navigation.
+  - **3-Beat Reward Cascade (`RewardCascade.tsx`):**
+    - Beat 1: Green success checkmark banner with celebratory sound trigger hook and coach thumbs-up/brilliant expression.
+    - Beat 2: Rating point ticker bump (+10 pts) with animated rating progress bar.
+    - Beat 3: Rotating radiant light rays with sparkling particle cascade and Next Puzzle primary call to action.
+- **Unit Tests:**
+  - Added `src/test/play_learn_puzzles.test.ts` with 6 comprehensive tests asserting puzzle legality, back-rank mate-in-1 checkmate verification, daily puzzle access, 8 endgame stages, and lesson step FEN / move verification. All 16 tests in test suite pass.
+
+### 2. Deviations from Prompt
+- None.
+
+### 3. Screenshots (Step 1C)
+- **Play Coach (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/play-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/play-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/play-dusk-1440.png)
+- **Play Coach (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/play-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/play-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/play-dawn-1440.png)
+- **Learn Roadmap (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/learn-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/learn-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/learn-dusk-1440.png)
+- **Learn Roadmap (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/learn-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/learn-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/learn-dawn-1440.png)
+- **Puzzles (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dusk-1440.png)
+- **Puzzles (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dawn-1440.png)
