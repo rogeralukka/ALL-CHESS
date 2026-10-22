@@ -1,0 +1,90 @@
+:root,
+:root[data-theme="dusk"] {
+  --color-page: #141312;
+  --color-card: #1e1d1b;
+  --color-raised: #2a2826;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-text: rgba(255, 255, 255, 0.88);
+  --color-text-muted: rgba(255, 255, 255, 0.64);
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+  --color-accent-text: #141312;
+  
+  --btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%);
+  --btn-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.25);
+  --btn-secondary-bg: #2a2826;
+  --btn-secondary-border: rgba(255, 255, 255, 0.08);
+  
+  --color-eval-white: #ffffff;
+  --color-eval-black: #1a1918;
+  --color-eval-draw: #73706b;
+
+  --coach-bubble-bg: #ffffff;
+  --coach-bubble-text: #141312;
+  --coach-bubble-border: rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="dawn"] {
+  --color-page: #faf8f5;
+  --color-card: #ffffff;
+  --color-raised: #f2efe9;
+  --color-border: #e8e4df;
+  --color-text: #1e1b18;
+  --color-text-muted: #6b645d;
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+  --color-accent-text: #1e1b18;
+  
+  --btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%);
+  --btn-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.1);
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #e8e4df;
+
+  --color-eval-white: #ffffff;
+  --color-eval-black: #2b2824;
+  --color-eval-draw: #a8a29e;
+
+  --coach-bubble-bg: #ffffff;
+  --coach-bubble-text: #1e1b18;
+  --coach-bubble-border: #e8e4df;
+}
+
+:root {
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+
+  --motion-snappy: 50ms;
+  --motion-faster: 100ms;
+  --motion-fast: 150ms;
+  --motion-standard: 200ms;
+  --motion-steady: 300ms;
+  --motion-slow: 400ms;
+  --motion-crawl: 800ms;
+  --ease-default: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Classification tokens */
+  --class-brilliant: #2bc4b0;
+  --class-great: #6f9bd1;
+  --class-book: #c99a6e;
+  --class-best: #7bb661;
+  --class-excellent: #8cc46a;
+  --class-good: #9fbf86;
+  --class-inaccuracy: #f2c14e;
+  --class-mistake: #f59a4b;
+  --class-miss: #ef7d6e;
+  --class-blunder: #e8483b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-snappy: 0ms !important;
+    --motion-faster: 0ms !important;
+    --motion-fast: 0ms !important;
+    --motion-standard: 0ms !important;
+    --motion-steady: 0ms !important;
+    --motion-slow: 0ms !important;
+    --motion-crawl: 0ms !important;
+  }
+}

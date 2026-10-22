@@ -31,9 +31,12 @@ ALL-CHESS/
 ├── assets/
 │   ├── coach/               # Processed transparent bust and full-body coach assets
 │   └── previews/            # Studio screenshots and reference captures
-├── frontend/                # React / Vite responsive web app & PWA
-│   └── public/assets/coach/ # Client-ready coach avatar assets
-├── backend/                 # FastAPI service for native Stockfish & game ingestion
+├── frontend/                # React 18 / Vite / Tailwind / TypeScript frontend & PWA
+│   ├── public/              # Optimized WebP coach assets, open-source pieces & PWA manifest
+│   ├── src/                 # Application architecture (app, components, features, data, lib, styles)
+│   └── scripts/             # Sharp asset optimization and screenshot automation
+├── docs/                    # Phase reports, architecture decisions, reference guides & screenshots
+├── backend/                 # FastAPI service for native Stockfish & game ingestion (Phase 2)
 │   ├── main.py
 │   └── requirements.txt
 ├── avatar_showcase.html     # Standalone interactive Coach Studio & Playground
@@ -45,10 +48,23 @@ ALL-CHESS/
 
 ## 🚀 Quick Start
 
-### 1. Interactive Coach Studio
+### 1. Frontend Web App (Phase 1)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Run verification checks:
+```bash
+npm test     # Vitest unit test suite
+npm run lint # Strict ESLint validation
+npm run build# TypeScript type-check and production bundle
+```
+
+### 2. Interactive Coach Studio
 Double click and open `avatar_showcase.html` in any web browser to test all 6 authentic character expressions with live move simulations and dark/light mode toggles.
 
-### 2. Backend Engine Setup (Optional)
+### 3. Backend Engine Setup (Optional - Phase 2)
 ```bash
 cd backend
 python -m venv venv

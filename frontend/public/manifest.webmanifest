@@ -1,0 +1,17 @@
+{
+  "name": "ALL-CHESS Review & Coach",
+  "short_name": "ALL-CHESS",
+  "description": "Free, private chess review and coaching with real-time coach feedback.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141312",
+  "theme_color": "#f59e0b",
+  "icons": [
+    {
+      "src": "/pieces/cburnett/wK.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

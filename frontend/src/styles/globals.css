@@ -1,0 +1,76 @@
+@import './tokens.css';
+
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/nunito/700.css';
+@import '@fontsource/nunito/800.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--color-page);
+    color: var(--color-text);
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.25);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.45);
+}
+
+/* Speech bubble arrow tail */
+.bubble-tail-left {
+  position: relative;
+}
+.bubble-tail-left::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 24px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid var(--coach-bubble-bg);
+}
+
+/* Primary Button Styling */
+.btn-primary {
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
+  color: var(--color-accent-text);
+  font-weight: 600;
+  transition: transform var(--motion-fast) var(--ease-default), filter var(--motion-fast) var(--ease-default);
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) {
+  filter: brightness(0.96);
+  transform: translateY(0);
+}
