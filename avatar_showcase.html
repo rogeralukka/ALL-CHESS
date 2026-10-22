@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Coach Avatar - 5 Authentic Expressions</title>
+  <title>Your Coach Avatar - 6 Authentic Expressions</title>
   <style>
     :root {
       --bg-dark: #121110;
@@ -83,7 +83,6 @@
     }
     .theme-light p.subtitle { color: var(--text-muted-light); }
 
-    /* Main Showcase Grid */
     .showcase-grid {
       display: grid;
       grid-template-columns: 1.15fr 1fr;
@@ -165,6 +164,10 @@
     }
 
     /* Status glow on avatar frame */
+    .frame-welcome {
+      border-color: #81b64c !important;
+      box-shadow: 0 0 18px rgba(129, 182, 76, 0.45) !important;
+    }
     .frame-blunder {
       border-color: #ef4444 !important;
       box-shadow: 0 0 18px rgba(239, 68, 68, 0.45) !important;
@@ -229,6 +232,7 @@
       border-radius: 6px;
       width: fit-content;
     }
+    .badge-welcome { background: #81b64c; color: #141312; }
     .badge-blunder { background: #ef4444; color: #fff; }
     .badge-brilliant { background: #06b6d4; color: #fff; }
     .badge-best { background: #81b64c; color: #141312; }
@@ -277,7 +281,7 @@
       padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
     .theme-light .controls-panel {
       background: var(--card-light);
@@ -291,8 +295,8 @@
     }
 
     .exp-btn {
-      padding: 12px 16px;
-      border-radius: 12px;
+      padding: 10px 14px;
+      border-radius: 11px;
       border: 1px solid #36342e;
       background: #24231f;
       color: #e5e2db;
@@ -367,7 +371,7 @@
 
   <div class="header">
     <div class="badge">Authentic Coach Expressions</div>
-    <h1>Your 5 Coach Expressions in Action</h1>
+    <h1>Your 6 Coach Expressions in Action</h1>
     <p class="subtitle">Using your authentic, transparent character artwork mapped to Chess.com move classifications, speech bubbles, and reactive feedback states.</p>
   </div>
 
@@ -379,8 +383,8 @@
 
       <!-- Chess.com Style Coach Banner -->
       <div class="coach-banner" id="coachBanner">
-        <div class="coach-avatar-frame" id="avatarFrame">
-          <img id="avatarCircleImg" src="assets/coach/coach_neutral.png" alt="Coach Avatar" />
+        <div class="coach-avatar-frame frame-welcome" id="avatarFrame">
+          <img id="avatarCircleImg" src="assets/coach/coach_welcome.png" alt="Coach Avatar" />
         </div>
         <div class="coach-dialogue-content">
           <div class="coach-meta">
@@ -388,30 +392,38 @@
             <span class="coach-rating-tag">905 AUTO</span>
           </div>
           <div id="moveBadgeContainer">
-            <span class="move-badge badge-neutral">Pre-game</span>
+            <span class="move-badge badge-welcome">👋 Welcome / Hi</span>
           </div>
           <div class="coach-speech" id="coachText">
-            "Welcome! Let's play a game and I'll teach you strategy along the way. Whenever you're ready, let's begin."
+            "Hey there! Great to see you. Ready to play some chess or analyze your recent games? Let's do this!"
           </div>
         </div>
       </div>
 
-      <div class="card-title" style="margin-top: 6px;">Full Body Artwork View</div>
+      <div class="card-title" style="margin-top: 4px;">Full Body Artwork View</div>
       <div class="full-character-box">
-        <img id="fullCharacterImg" class="full-character-img" src="assets/coach/coach_neutral_full.png" alt="Full Character" />
+        <img id="fullCharacterImg" class="full-character-img" src="assets/coach/coach_welcome_full.png" alt="Full Character" />
       </div>
     </div>
 
     <!-- Right: Expression Switcher -->
     <div class="controls-panel">
       <div class="card-title">Select Expression & Trigger Reaction</div>
-      <p style="font-size: 13.5px; line-height: 1.5; color: var(--text-muted-dark);">
-        Click each authentic expression from your <code>avatar/</code> folder to see it seamlessly update the avatar, full artwork, and speech:
+      <p style="font-size: 13px; line-height: 1.5; color: var(--text-muted-dark);">
+        Click each authentic expression from your <code>avatar/</code> folder to test the live reaction:
       </p>
 
       <div class="expression-list">
+
+        <button class="exp-btn active" id="btn-welcome" onclick="setCoachState('welcome')">
+          <div>
+            <span style="font-size: 16px; margin-right: 8px;">👋</span>
+            <b>Friendly Waving</b> (Welcome / Hi)
+          </div>
+          <span class="exp-tag" style="background:#81b64c; color:#141312;">Home & Greeting</span>
+        </button>
         
-        <button class="exp-btn active" id="btn-neutral" onclick="setCoachState('neutral')">
+        <button class="exp-btn" id="btn-neutral" onclick="setCoachState('neutral')">
           <div>
             <span style="font-size: 16px; margin-right: 8px;">😐</span>
             <b>Aloof / Observant</b> (Default)
@@ -472,6 +484,13 @@
     const speech = document.getElementById('coachText');
 
     const states = {
+      welcome: {
+        circle: 'assets/coach/coach_welcome.png',
+        full: 'assets/coach/coach_welcome_full.png',
+        frameClass: 'frame-welcome',
+        badge: '<span class="move-badge badge-welcome">👋 Welcome / Hi</span>',
+        quote: '"Hey there! Great to see you. Ready to play some chess or analyze your recent games? Let\'s do this!"'
+      },
       neutral: {
         circle: 'assets/coach/coach_neutral.png',
         full: 'assets/coach/coach_neutral_full.png',

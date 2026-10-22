@@ -6,8 +6,9 @@ A completely free, private alternative to Chess.com's paid review tier—featuri
 
 ## 🌟 Key Features
 
-* **Authentic Coach Character:** Powered by 5 distinct, hand-crafted transparent expressions reacting in real time to your moves:
-  * 😐 **Aloof / Observant:** Idle, pre-game lobby, and balanced evaluations.
+* **Authentic Coach Character:** Powered by 6 distinct, hand-crafted transparent expressions reacting in real time to your moves:
+  * 👋 **Friendly Waving:** Welcome greeting on Home screen, pre-game lobby, and friendly rematch invites.
+  * 😐 **Aloof / Observant:** Idle, calm observation, and balanced positions ($0.0$).
   * 👉 **Cheeky Finger-Gun:** Brilliant sacrifices (`!!`), game wins, and tactical masterclasses.
   * 👍 **Cheerful Thumbs-Up:** Best moves (`★`), book openings, and solid piece development.
   * 😳 **Embarrassed:** Blunders (`??`), tactical misses, and hanging pieces.
@@ -26,7 +27,7 @@ A completely free, private alternative to Chess.com's paid review tier—featuri
 
 ```
 ALL-CHESS/
-├── avatar/                  # Original high-res source PNGs for the 5 expressions
+├── avatar/                  # Original high-res source PNGs for the 6 expressions
 ├── assets/
 │   ├── coach/               # Processed transparent bust and full-body coach assets
 │   └── previews/            # Studio screenshots and reference captures
@@ -45,7 +46,7 @@ ALL-CHESS/
 ## 🚀 Quick Start
 
 ### 1. Interactive Coach Studio
-Double click and open `avatar_showcase.html` in any web browser to test all 5 authentic character expressions with live move simulations and dark/light mode toggles.
+Double click and open `avatar_showcase.html` in any web browser to test all 6 authentic character expressions with live move simulations and dark/light mode toggles.
 
 ### 2. Backend Engine Setup (Optional)
 ```bash
