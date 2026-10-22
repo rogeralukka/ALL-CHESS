@@ -14,7 +14,8 @@ export interface BubbleMessage {
 }
 
 interface CoachBubbleProps {
-  messages: BubbleMessage[]; // Support stacked bubbles (max 3)
+  messages?: BubbleMessage[]; // Support stacked bubbles (max 3)
+  text?: string;
   onSkipTypewriter?: () => void;
   voiceEnabled?: boolean;
   onToggleVoice?: () => void;
@@ -22,11 +23,13 @@ interface CoachBubbleProps {
 }
 
 export const CoachBubble: React.FC<CoachBubbleProps> = ({
-  messages,
+  messages: propMessages,
+  text,
   voiceEnabled = false,
   onToggleVoice,
   className = '',
 }) => {
+  const messages = propMessages || (text ? [{ id: 'single', text }] : []);
   const [displayedTextMap, setDisplayedTextMap] = useState<Record<string, string>>({});
   const [completedMap, setCompletedMap] = useState<Record<string, boolean>>({});
   const [reduceMotion, setReduceMotion] = useState(false);

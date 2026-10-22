@@ -180,3 +180,110 @@ npm run dev             # Starts Vite development server
   - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dawn-390.png)
   - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dawn-820.png)
   - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1c/puzzles-dawn-1440.png)
+
+---
+
+## Step 1D: Profile, Scout, Home, Settings + Polish
+
+### 1. What was built
+- **Player Profile (`Profile.tsx`, `StatsSections.tsx`, `FriendsCompare.tsx`):**
+  - **Header Card:** User avatar, name ("You"), membership tenure, game count, and speed rating badges (Rapid 905, Blitz 870, Bullet 880).
+  - **Rating Trajectory Graph:** Interactive Recharts `AreaChart` with amber gradient fill, tooltips, and triple filters:
+    - Speed selector (Rapid, Blitz, Bullet)
+    - Time range selector (30D, 90D, All)
+    - Color segmenting (All, White, Black)
+  - **Game Record Bar:** Visual W/D/L distribution bar with precise game counts and win/draw/loss percentages.
+  - **Key Strengths & Areas to Polish:** Semantic chips displaying point-delta contributions (e.g. King Safety `+0.8`, Queen Development `+0.6` vs Hanging Minors `-1.2`).
+  - **Phase Points Lost Comparison:** Benchmark comparisons for Opening (0.3 vs 0.4 peer), Middlegame (1.6 vs 1.4 peer), and Endgame (1.0 vs 1.1 peer).
+  - **Opening Repertoire Mastery Table:** Tabular breakdown of ECO codes, opening names, games, win rates, and accuracy.
+  - **Friends Comparison Leaderboard (`FriendsCompare.tsx`):** Online status indicators, rating ranking, win rate percentages, with "You" highlighted with amber styling.
+- **Opponent Scout & Prep (`ScoutSearch.tsx` & `ScoutProfile.tsx`):**
+  - **Search & Quick Picks:** Live search filter with clear button and quick-scout chips for popular opponents (`PawnStorm22`, `TacticsKnight`, `GM_Example`).
+  - **Scout Profile View:** Opponent card, rating, BOT/Human badges, overall win rate.
+  - **Coach Repertoire Assessment:** Coach avatar and customized analysis bubble breaking down opponent playstyle and tactical vulnerabilities.
+  - **Opening Repertoire Breakdown:** Tabular stats for White and Black openings with win/draw/loss rates and accuracy.
+  - **Exploitable Tendencies & Strengths Cards:** Bulleted tactical pointers for match preparation.
+  - **Recent Games List:** Direct links to review analyzed matches against this opponent.
+- **Home Dashboard (`Home.tsx`):**
+  - **Streak & Sync Header:** 5-day streak counter with active burning fire icon, 7-day pill strip, and animated cloud sync button with auto-dismissing toast.
+  - **Coach Daily Drill Hero Card:** Coach avatar and daily mission speech bubble ("Mastering King & Pawn opposition"), with "Start Daily Drill" and "Maybe Later" actions.
+  - **Responsive Bento Grid:**
+    - Continue Learning Card: Active stage progress bar (62%) and resume action.
+    - Recent Game Card: 1-0 win vs PawnStorm22 with accuracy chips (You 84.2% vs Opponent 78.5%) and "Review Game" link.
+    - Daily Tactical Puzzle Widget: Rating 650 back-rank mate with solve action.
+  - **Quick Launch Panel & Friends Mini-Leaderboard:** Direct navigation shortcuts and online friends status.
+- **Settings Shell (`SettingsShell.tsx`):**
+  - **Board & Pieces:**
+    - Sub-tabs for Boards (8 themes), Pieces (`cburnett`), Canvas Background (Standard, Felt, Wood), and Presets (6 presets).
+    - **Live 3x3 Preview Chessboard:** Renders live piece SVGs, square color transitions, background canvas, and inside/outside coordinates.
+    - **Staged Settings Model:** Changes apply immediately to the 3x3 preview but only persist to global store and localStorage upon clicking "Save Changes". "Revert" restores current settings.
+  - **Gameplay Rules:** Auto-queen promotion, legal move target dots, sound effects, coordinates inside/outside, and engine analysis depth slider (10 to 30 plies).
+  - **Coach & AI Speech:** Coach speech bubbles toggle, browser speech synthesis voice output toggle, and commentary granularity selector.
+  - **Appearance & Accessibility:** Dual-theme picker (Duskboard, Dawnboard, System), piece sliding animation duration (instant, 100ms, 200ms, 400ms), and `prefers-reduced-motion` override documentation.
+  - **Connected Accounts (Mock):** Chess.com and Lichess username connection inputs with simulate-sync trigger.
+  - **Bring Your Own Key (BYOK) AI Seam:** Local storage (`localStorage.all_chess_byok`) management for Google Gemini, Groq, and OpenRouter API keys with password visibility toggle, clear keys action, and 100% client-side privacy guarantee.
+- **Unit Tests:**
+  - Added `src/test/profile_settings.test.ts` (9 tests) verifying stats repository, scout query matching, friends retrieval, 8 board themes, and presets. Entire test suite now features 25 passing tests.
+
+### 2. Deviations from Prompt
+- None. All architectural constraints, token values, privacy boundaries, and prompt specifications were strictly followed.
+
+### 3. Screenshots (Step 1D)
+- **Home Dashboard (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/home-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/home-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/home-dusk-1440.png)
+- **Home Dashboard (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/home-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/home-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/home-dawn-1440.png)
+- **Profile (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/profile-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/profile-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/profile-dusk-1440.png)
+- **Profile (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/profile-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/profile-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/profile-dawn-1440.png)
+- **Scout (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/scout-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/scout-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/scout-dusk-1440.png)
+- **Scout (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/scout-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/scout-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/scout-dawn-1440.png)
+- **Settings (Dusk):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/settings-dusk-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/settings-dusk-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/settings-dusk-1440.png)
+- **Settings (Dawn):**
+  - [390px (Mobile)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/settings-dawn-390.png)
+  - [820px (Tablet)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/settings-dawn-820.png)
+  - [1440px (Desktop)](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/step1d/settings-dawn-1440.png)
+
+---
+
+## Phase 1 Final Sign-off Summary
+
+1. **Scope Completion:** All screens from Section 4 and Section 19 of the reference specification are complete, responsive, and operational in mock mode:
+   - **Shell & Navigation:** Desktop sidebar, tablet collapsed icons, mobile 5-tab bottom navigation bar.
+   - **Board Engine:** Full custom drag/drop and click-to-move board, SVG arrows, classification badges, move list with figurine notation, eval bar with winPct model, interactive eval graph.
+   - **Coach System:** 6 authentic facial expressions (WebP optimized via Sharp), typewriter speech bubbles, event-to-expression mapping.
+   - **Review Flow:** Games list with multi-factor filters, game summary with phase grades and move quality table, interactive review board with Explain/Best/Next loop and retry mistake mode.
+   - **Play Coach:** Difficulty ladder (400-2000), real-time coaching assistance toggles, live game loop, hints, takebacks, PGN download, and game-over modal.
+   - **Learn Roadmap:** 8-stage endgame curriculum matching mockups, interactive lesson player with concept enforcement.
+   - **Tactical Puzzles:** 42 curated puzzles, daily puzzle solver, 3-beat reward cascade with rotating rays and rating ticker.
+   - **Profile & Analytics:** Dual-theme Recharts rating chart, W/D/L record, opening repertoire mastery, phase points lost, and friends leaderboard.
+   - **Opponent Scout:** Username search, opening repertoire analysis, exploitable tendencies, and coach notes.
+   - **Settings & Themes:** Live 3x3 board preview, 8 board themes, 6 presets, staged save/revert model, and BYOK AI keys seam.
+2. **Quality & Test Coverage:**
+   - 25 unit tests across 4 test suites passing (`foundation.test.ts`, `review.test.ts`, `play_learn_puzzles.test.ts`, `profile_settings.test.ts`).
+   - ESLint: 0 errors, 0 warnings (`--max-warnings 0`).
+   - TypeScript: Strict mode, 0 errors.
+   - Vite build: Production bundle with code-splitting and asset optimization.
+3. **Screenshot Log:** 66 responsive screenshots captured across Steps 1A, 1B, 1C, and 1D covering both Duskboard and Dawnboard at mobile (390px), tablet (820px), and desktop (1440px).
+4. **Clean Seams for Phases 2-4:**
+   - Phase 2 (Engine): `src/data/repositories/` has clear `IEngineService` interface and eval points.
+   - Phase 3 (Coach Brain): `localStorage.all_chess_byok` provides clean client-side keys seam.
+   - Phase 4 (Database & Sync): `IGameRepository` and `IScoutRepository` interfaces ready for real backend data source swap.

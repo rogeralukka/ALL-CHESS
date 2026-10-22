@@ -1,46 +1,188 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/Card';
-import { MOCK_OPENING_STATS, MOCK_STRENGTHS, MOCK_WEAKNESSES } from '@/data/mock/mockStats';
-import { Chip } from '@/components/Chip';
+import { Segmented } from '@/components/Segmented';
+import { CoachAvatar } from '@/features/coach/CoachAvatar';
+import { StatsSections } from './StatsSections';
+import { FriendsCompare } from './FriendsCompare';
+import { MOCK_RATING_HISTORY } from '@/data/mock/mockStats';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import { TrendingUp, Calendar } from 'lucide-react';
 
 export const Profile: React.FC = () => {
+  const [speed, setSpeed] = useState<'rapid' | 'blitz' | 'bullet'>('rapid');
+  const [timeRange, setTimeRange] = useState<'30d' | '90d' | 'all'>('all');
+  const [colorFilter, setColorFilter] = useState<'all' | 'white' | 'black'>('all');
+
+  // Filter or adjust mock data points
+  const chartData = MOCK_RATING_HISTORY.map((pt) => {
+    let score = pt[speed];
+    if (colorFilter === 'white') score += 15;
+    if (colorFilter === 'black') score -= 15;
+    return {
+      date: pt.date.slice(5), // mm-dd
+      fullDate: pt.date,
+      rating: score,
+    };
+  });
+
+  const currentRating = chartData[chartData.length - 1].rating;
+  const ratingDelta = currentRating - chartData[0].rating;
+
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-theme-text">Player Profile &amp; Performance</h1>
-          <p className="text-sm text-theme-muted">Rapid 905 AUTO • Member since Oct 2026</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <h3 className="font-bold text-theme-text mb-3">Strengths</h3>
-          <div className="flex flex-wrap gap-2">
-            {MOCK_STRENGTHS.map((s) => (
-              <Chip key={s.label} variant="success">{s.label} ({s.delta})</Chip>
-            ))}
-          </div>
-        </Card>
-        <Card>
-          <h3 className="font-bold text-theme-text mb-3">Areas to Polish</h3>
-          <div className="flex flex-wrap gap-2">
-            {MOCK_WEAKNESSES.map((w) => (
-              <Chip key={w.label} variant="danger">{w.label} ({w.delta})</Chip>
-            ))}
-          </div>
-        </Card>
-      </div>
-      <Card>
-        <h3 className="font-bold text-theme-text mb-3">Most Played Openings</h3>
-        <div className="space-y-2">
-          {MOCK_OPENING_STATS.map((o) => (
-            <div key={o.eco} className="flex justify-between items-center text-sm py-1 border-b border-theme-border/40">
-              <span className="font-semibold text-theme-text">{o.name}</span>
-              <span className="text-xs text-amber-500 font-bold">{o.winRate}% win rate ({o.games} games)</span>
+      {/* Header Profile Card */}
+      <Card className="p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <CoachAvatar expression="thumbsup" mode="bust" size={72} />
+              <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded-full border border-black/20">
+                PRO
+              </div>
             </div>
-          ))}
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black font-display text-theme-text">You</h1>
+                <span className="text-xs bg-emerald-500/20 text-emerald-500 font-bold px-2 py-0.5 rounded-full">
+                  Online
+                </span>
+              </div>
+              <p className="text-sm text-theme-muted mt-0.5 flex items-center gap-1.5">
+                <Calendar size={14} /> Member since October 2026 • 105 games played
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
+              <div className="text-[10px] uppercase font-bold text-theme-muted">Rapid</div>
+              <div className="text-lg font-black font-mono text-amber-500">905</div>
+            </div>
+            <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
+              <div className="text-[10px] uppercase font-bold text-theme-muted">Blitz</div>
+              <div className="text-lg font-black font-mono text-theme-text">870</div>
+            </div>
+            <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
+              <div className="text-[10px] uppercase font-bold text-theme-muted">Bullet</div>
+              <div className="text-lg font-black font-mono text-theme-text">880</div>
+            </div>
+          </div>
         </div>
       </Card>
+
+      {/* Rating History Graph */}
+      <Card className="p-6 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-theme-border pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <TrendingUp size={20} className="text-amber-500" />
+              <h2 className="text-lg font-bold font-display text-theme-text">Rating Trajectory</h2>
+            </div>
+            <p className="text-xs text-theme-muted mt-0.5">
+              Current: <strong className="text-amber-500 font-mono text-sm">{currentRating}</strong>{' '}
+              ({ratingDelta >= 0 ? `+${ratingDelta}` : ratingDelta} pts over period)
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Speed Selector */}
+            <Segmented<'rapid' | 'blitz' | 'bullet'>
+              value={speed}
+              onChange={setSpeed}
+              options={[
+                { value: 'rapid', label: 'Rapid' },
+                { value: 'blitz', label: 'Blitz' },
+                { value: 'bullet', label: 'Bullet' },
+              ]}
+            />
+
+            {/* Time Range */}
+            <Segmented<'30d' | '90d' | 'all'>
+              value={timeRange}
+              onChange={setTimeRange}
+              options={[
+                { value: '30d', label: '30D' },
+                { value: '90d', label: '90D' },
+                { value: 'all', label: 'All' },
+              ]}
+            />
+
+            {/* Color Segment */}
+            <Segmented<'all' | 'white' | 'black'>
+              value={colorFilter}
+              onChange={setColorFilter}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'white', label: 'White' },
+                { value: 'black', label: 'Black' },
+              ]}
+            />
+          </div>
+        </div>
+
+        {/* Recharts Area Container */}
+        <div className="h-64 w-full pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="ratingGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="date"
+                stroke="currentColor"
+                className="text-xs text-theme-muted"
+                tickLine={false}
+              />
+              <YAxis
+                domain={['dataMin - 20', 'dataMax + 20']}
+                stroke="currentColor"
+                className="text-xs text-theme-muted font-mono"
+                tickLine={false}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-theme-card border border-theme-border rounded-lg shadow-xl p-2.5 text-xs">
+                        <div className="font-semibold text-theme-muted">{data.fullDate}</div>
+                        <div className="text-amber-500 font-bold font-mono text-sm mt-0.5">
+                          Rating: {data.rating}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="rating"
+                stroke="#f59e0b"
+                strokeWidth={2.5}
+                fillOpacity={1}
+                fill="url(#ratingGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {/* Stats Sections (Record, Strengths/Weaknesses, Phase points lost, Openings) */}
+      <StatsSections />
+
+      {/* Friends Comparison */}
+      <FriendsCompare />
     </div>
   );
 };

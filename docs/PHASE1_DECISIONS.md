@@ -48,3 +48,19 @@ This document records all architectural choices, design trade-offs, and open-sou
 - **No API Keys or Secrets:** Phase 1 uses zero API keys. `.env*` is strictly ignored in `.gitignore`.
 - **Fictional Usernames Only:** All mock games, friends, and opponents strictly use fictional names (`You`, `PawnStorm22`, `GM_Example`, `TacticsKnight`, `BishopSniper`, `RookRoller`, `friend_01`, `CoachAllChess`).
 - **Legal Move Verification:** 100% of mock games and puzzles are verified via `chess.js` unit tests.
+
+---
+
+## 5. Step 1D: Settings Staging, BYOK Architecture & Profile Charts
+- **Settings Staging Model:**
+  - Board, piece set, and background selections update a local staged state immediately to provide instant real-time feedback on the live 3x3 preview chessboard.
+  - Changes only propagate to the global Zustand store and persistent `localStorage` when the user clicks **Save Changes**. The **Revert** button cleanly resets staged state to store values.
+- **BYOK (Bring Your Own Key) Clean Architectural Seam:**
+  - Designed specifically for the transition to Phase 3 without any breaking changes.
+  - Stores keys strictly inside browser `localStorage.all_chess_byok`.
+  - Keys never touch network requests or server instances in Phase 1. Masked inputs with show/hide password toggles ensure shoulder-surfing privacy.
+- **Recharts Integration & Theme Consistency:**
+  - The `Profile` rating trajectory uses an `AreaChart` with an amber linear gradient (`#f59e0b` at 40% opacity fading to 0%) and custom tooltip rendered with theme tokens (`bg-theme-card border-theme-border text-theme-text`).
+  - Works seamlessly across Duskboard and Dawnboard without hardcoding dark or light backgrounds into the SVG canvas.
+- **Opponent Scout Decoupling:**
+  - Scout analysis is built around public player identities with zero authentication requirements, preparing the application for direct Chess.com / Lichess public API ingestion in Phase 4.

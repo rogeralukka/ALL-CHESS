@@ -48,7 +48,7 @@ ALL-CHESS/
 
 ## 🚀 Quick Start
 
-### 1. Frontend Web App (Phase 1)
+### 1. Frontend Web App (Phase 1 — Complete)
 ```bash
 cd frontend
 npm install
@@ -56,15 +56,15 @@ npm run dev
 ```
 Run verification checks:
 ```bash
-npm test     # Vitest unit test suite
-npm run lint # Strict ESLint validation
+npm test     # 25 Vitest unit tests across 4 test suites
+npm run lint # Strict ESLint validation (0 errors, 0 warnings)
 npm run build# TypeScript type-check and production bundle
 ```
 
 ### 2. Interactive Coach Studio
 Double click and open `avatar_showcase.html` in any web browser to test all 6 authentic character expressions with live move simulations and dark/light mode toggles.
 
-### 3. Backend Engine Setup (Optional - Phase 2)
+### 3. Backend Engine Setup (Out of scope for Phase 1 — Phase 2 Seam)
 ```bash
 cd backend
 python -m venv venv
@@ -74,14 +74,9 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-### 3. Environment Configuration
-Copy `.env.example` to `.env.local` and add your free Google Gemini API key:
-```env
-VITE_GEMINI_API_KEY_1=your_key_here
-```
-
 ---
 
 ## 🛡️ Privacy & Security
-* API keys are kept strictly local in `.env.local` and `localStorage` (BYOK pattern).
-* Public game fetching requires zero passwords.
+* **Phase 1 is 100% Mock & Zero-Secret:** Operates entirely with mock data and fictional usernames. No API keys or environment variables required.
+* **BYOK AI Architecture (Phase 3 Seam):** When users configure custom AI keys in Settings, keys are stored strictly in client-side `localStorage.all_chess_byok` and never leave the browser.
+* **Public Data Ingestion (Phase 4 Seam):** Public profile and game syncing requires zero passwords or credentials.
