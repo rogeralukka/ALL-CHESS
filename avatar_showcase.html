@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Coach Avatar - 5 Authentic Expressions</title>
+  <style>
+    :root {
+      --bg-dark: #121110;
+      --card-dark: #1c1b18;
+      --border-dark: #2d2b27;
+      --text-dark: #f3efe6;
+      --text-muted-dark: #9e978e;
+      --accent-dark: #81b64c;
+
+      --bg-light: #f5f4ef;
+      --card-light: #ffffff;
+      --border-light: #e2dcd2;
+      --text-light: #1f1e1d;
+      --text-muted-light: #6b6a68;
+      --accent-light: #588e33;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px 60px;
+      transition: background-color 0.25s, color 0.25s;
+    }
+
+    body.theme-light {
+      background-color: var(--bg-light);
+      color: var(--text-light);
+    }
+
+    .header {
+      text-align: center;
+      max-width: 760px;
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      background: rgba(129, 182, 76, 0.15);
+      color: #a3e635;
+      border: 1px solid rgba(129, 182, 76, 0.3);
+      margin-bottom: 12px;
+    }
+
+    .theme-light .badge {
+      background: rgba(88, 142, 51, 0.12);
+      color: #3f6212;
+      border-color: rgba(88, 142, 51, 0.25);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      font-size: 15px;
+      color: var(--text-muted-dark);
+      line-height: 1.5;
+    }
+    .theme-light p.subtitle { color: var(--text-muted-light); }
+
+    /* Main Showcase Grid */
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 28px;
+      width: 100%;
+      max-width: 1060px;
+    }
+
+    @media (max-width: 860px) {
+      .showcase-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preview-card {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 18px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .theme-light .preview-card {
+      background: var(--card-light);
+      border-color: var(--border-light);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #a3e635;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .theme-light .card-title { color: #4d7c0f; }
+
+    /* Chess.com Coach Banner Component */
+    .coach-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #24231f;
+      border: 1px solid #36342e;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+    .theme-light .coach-banner {
+      background: #f8f6f0;
+      border-color: #e5dfd5;
+    }
+
+    /* Circle Avatar Frame */
+    .coach-avatar-frame {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid #36342e;
+      background: #181715;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      transition: all 0.25s ease;
+    }
+
+    .coach-avatar-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 15%;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    /* Status glow on avatar frame */
+    .frame-blunder {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.45) !important;
+      animation: shake 0.35s ease;
+    }
+    .frame-brilliant {
+      border-color: #06b6d4 !important;
+      box-shadow: 0 0 18px rgba(6, 182, 212, 0.45) !important;
+    }
+    .frame-best {
+      border-color: #81b64c !important;
+      box-shadow: 0 0 18px rgba(129, 182, 76, 0.4) !important;
+    }
+    .frame-thinking {
+      border-color: #f59e0b !important;
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.4) !important;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px) rotate(-2deg); }
+      75% { transform: translateX(4px) rotate(2deg); }
+    }
+
+    /* Dialogue Content */
+    .coach-dialogue-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .coach-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .coach-name {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .theme-light .coach-name { color: #1f1e1d; }
+
+    .coach-rating-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #81b64c;
+      color: #141312;
+    }
+
+    .move-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+    .badge-blunder { background: #ef4444; color: #fff; }
+    .badge-brilliant { background: #06b6d4; color: #fff; }
+    .badge-best { background: #81b64c; color: #141312; }
+    .badge-thinking { background: #f59e0b; color: #141312; }
+    .badge-neutral { background: #3f3d37; color: #d6d3cd; }
+
+    .coach-speech {
+      font-size: 13.5px;
+      line-height: 1.45;
+      color: #e5e2db;
+      margin-top: 2px;
+    }
+    .theme-light .coach-speech { color: #374151; }
+
+    /* Full Character Showcase Viewport */
+    .full-character-box {
+      width: 100%;
+      height: 320px;
+      border-radius: 12px;
+      background: #181715;
+      border: 1px solid #33302a;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .theme-light .full-character-box {
+      background: #ece8df;
+      border-color: #dcd6cb;
+    }
+
+    .full-character-img {
+      max-height: 94%;
+      max-width: 90%;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 20px rgba(0,0,0,0.3));
+      transition: transform 0.25s ease, opacity 0.2s ease;
+    }
+
+    /* Right: Controls Panel */
+    .controls-panel {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 18px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .theme-light .controls-panel {
+      background: var(--card-light);
+      border-color: var(--border-light);
+    }
+
+    .expression-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .exp-btn {
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #36342e;
+      background: #24231f;
+      color: #e5e2db;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+    .theme-light .exp-btn {
+      background: #f8f6f0;
+      border-color: #e5dfd5;
+      color: #1f1e1d;
+    }
+
+    .exp-btn:hover {
+      border-color: #81b64c;
+      background: #2a2924;
+    }
+    .theme-light .exp-btn:hover {
+      background: #f0ece3;
+      border-color: #81b64c;
+    }
+
+    .exp-btn.active {
+      border-color: #81b64c;
+      background: rgba(129, 182, 76, 0.15);
+      color: #a3e635;
+    }
+    .theme-light .exp-btn.active {
+      color: #3f6212;
+      background: rgba(88, 142, 51, 0.12);
+    }
+
+    .exp-tag {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 5px;
+    }
+
+    /* Theme Toggle */
+    .theme-toggle-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-dark);
+    }
+    .theme-light .theme-toggle-bar { border-color: var(--border-light); }
+
+    .btn-toggle {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #3d3a33;
+      background: transparent;
+      color: #d1ccc4;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .theme-light .btn-toggle {
+      border-color: #dcd6cb;
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">Authentic Coach Expressions</div>
+    <h1>Your 5 Coach Expressions in Action</h1>
+    <p class="subtitle">Using your authentic, transparent character artwork mapped to Chess.com move classifications, speech bubbles, and reactive feedback states.</p>
+  </div>
+
+  <div class="showcase-grid">
+    
+    <!-- Left: Live Coach Review & Full Character -->
+    <div class="preview-card">
+      <div class="card-title">Live Coach Banner (In-Game / Review)</div>
+
+      <!-- Chess.com Style Coach Banner -->
+      <div class="coach-banner" id="coachBanner">
+        <div class="coach-avatar-frame" id="avatarFrame">
+          <img id="avatarCircleImg" src="assets/coach/coach_neutral.png" alt="Coach Avatar" />
+        </div>
+        <div class="coach-dialogue-content">
+          <div class="coach-meta">
+            <span class="coach-name">Your Coach</span>
+            <span class="coach-rating-tag">905 AUTO</span>
+          </div>
+          <div id="moveBadgeContainer">
+            <span class="move-badge badge-neutral">Pre-game</span>
+          </div>
+          <div class="coach-speech" id="coachText">
+            "Welcome! Let's play a game and I'll teach you strategy along the way. Whenever you're ready, let's begin."
+          </div>
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top: 6px;">Full Body Artwork View</div>
+      <div class="full-character-box">
+        <img id="fullCharacterImg" class="full-character-img" src="assets/coach/coach_neutral_full.png" alt="Full Character" />
+      </div>
+    </div>
+
+    <!-- Right: Expression Switcher -->
+    <div class="controls-panel">
+      <div class="card-title">Select Expression & Trigger Reaction</div>
+      <p style="font-size: 13.5px; line-height: 1.5; color: var(--text-muted-dark);">
+        Click each authentic expression from your <code>avatar/</code> folder to see it seamlessly update the avatar, full artwork, and speech:
+      </p>
+
+      <div class="expression-list">
+        
+        <button class="exp-btn active" id="btn-neutral" onclick="setCoachState('neutral')">
+          <div>
+            <span style="font-size: 16px; margin-right: 8px;">😐</span>
+            <b>Aloof / Observant</b> (Default)
+          </div>
+          <span class="exp-tag" style="background:#3f3d37; color:#d6d3cd;">Pre-Game / Idle</span>
+        </button>
+
+        <button class="exp-btn" id="btn-brilliant" onclick="setCoachState('brilliant')">
+          <div>
+            <span style="font-size: 16px; margin-right: 8px;">👉</span>
+            <b>Cheeky Finger-Gun</b> (Brilliant)
+          </div>
+          <span class="exp-tag" style="background:#06b6d4; color:#fff;">!! Brilliant (+4.2)</span>
+        </button>
+
+        <button class="exp-btn" id="btn-best" onclick="setCoachState('best')">
+          <div>
+            <span style="font-size: 16px; margin-right: 8px;">👍</span>
+            <b>Cheerful Thumbs-Up</b> (Best Move)
+          </div>
+          <span class="exp-tag" style="background:#81b64c; color:#141312;">★ Best Move (+0.4)</span>
+        </button>
+
+        <button class="exp-btn" id="btn-blunder" onclick="setCoachState('blunder')">
+          <div>
+            <span style="font-size: 16px; margin-right: 8px;">😳</span>
+            <b>Embarrassed</b> (Blunder / Mistake)
+          </div>
+          <span class="exp-tag" style="background:#ef4444; color:#fff;">?? Blunder (−2.7)</span>
+        </button>
+
+        <button class="exp-btn" id="btn-thinking" onclick="setCoachState('thinking')">
+          <div>
+            <span style="font-size: 16px; margin-right: 8px;">🤔</span>
+            <b>Thoughtful</b> (Calculating / Hints)
+          </div>
+          <span class="exp-tag" style="background:#f59e0b; color:#141312;">Thinking / Puzzle</span>
+        </button>
+
+      </div>
+
+      <div class="theme-toggle-bar">
+        <span style="font-size: 13px; font-weight: 600;">Theme:</span>
+        <div>
+          <button class="btn-toggle" onclick="setTheme('dark')">🌙 Dark</button>
+          <button class="btn-toggle" onclick="setTheme('light')">☀️ Light</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const frame = document.getElementById('avatarFrame');
+    const avatarCircleImg = document.getElementById('avatarCircleImg');
+    const fullCharacterImg = document.getElementById('fullCharacterImg');
+    const badgeContainer = document.getElementById('moveBadgeContainer');
+    const speech = document.getElementById('coachText');
+
+    const states = {
+      neutral: {
+        circle: 'assets/coach/coach_neutral.png',
+        full: 'assets/coach/coach_neutral_full.png',
+        frameClass: '',
+        badge: '<span class="move-badge badge-neutral">Pre-game</span>',
+        quote: '"Welcome! Let\'s play a game and I\'ll teach you strategy along the way. Whenever you\'re ready, let\'s begin."'
+      },
+      brilliant: {
+        circle: 'assets/coach/coach_brilliant.png',
+        full: 'assets/coach/coach_brilliant_full.png',
+        frameClass: 'frame-brilliant',
+        badge: '<span class="move-badge badge-brilliant">!! Brilliant (+4.2)</span>',
+        quote: '"Boom! You saw the sacrifice and cracked open the king\'s defenses. Absolute masterclass move!"'
+      },
+      best: {
+        circle: 'assets/coach/coach_best.png',
+        full: 'assets/coach/coach_best_full.png',
+        frameClass: 'frame-best',
+        badge: '<span class="move-badge badge-best">★ Best Move (+0.4)</span>',
+        quote: '"Nice work! That develops your knight while defending the center pawn. Exactly the right idea."'
+      },
+      blunder: {
+        circle: 'assets/coach/coach_blunder.png',
+        full: 'assets/coach/coach_blunder_full.png',
+        frameClass: 'frame-blunder',
+        badge: '<span class="move-badge badge-blunder">?? Blunder (−2.7)</span>',
+        quote: '"Uh oh... that was a blunder. You hung your bishop for just a pawn, and Black can take with the king with no follow-up."'
+      },
+      thinking: {
+        circle: 'assets/coach/coach_thinking.png',
+        full: 'assets/coach/coach_thinking_full.png',
+        frameClass: 'frame-thinking',
+        badge: '<span class="move-badge badge-thinking">Calculating</span>',
+        quote: '"Hmm... this position is sharp. Look for tactical motifs: is there an undefended piece or a fork opportunity?"'
+      }
+    };
+
+    function setTheme(t) {
+      document.body.className = t === 'light' ? 'theme-light' : '';
+    }
+
+    function setCoachState(key) {
+      const s = states[key];
+      if (!s) return;
+
+      // Update active button
+      document.querySelectorAll('.exp-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById(`btn-${key}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Update Images
+      avatarCircleImg.src = s.circle;
+      fullCharacterImg.src = s.full;
+
+      // Update Frame Aura
+      frame.className = 'coach-avatar-frame ' + s.frameClass;
+
+      // Update Text and Badges
+      badgeContainer.innerHTML = s.badge;
+      speech.innerText = s.quote;
+    }
+  </script>
+</body>
+</html>
