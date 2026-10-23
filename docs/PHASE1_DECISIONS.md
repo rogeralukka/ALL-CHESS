@@ -71,8 +71,24 @@ This document records all architectural choices, design trade-offs, and open-sou
 
 ---
 
-## 6. Procedural Sound System & Audio Licence Terms
-- **Approach:** Procedural synthesis via native HTML5 Web Audio API (`src/lib/sound.ts`).
-- **Zero Proprietary Audio:** Zero audio samples from Chess.com, Lichess, or any proprietary soundboard are used.
-- **Licence Terms:** CC0 1.0 Universal (Public Domain Dedication). The synthesizer produces acoustic wooden board knocks, capture thuds, harmonic alert chimes, double-strike castling, and celebratory puzzle chords directly in real-time.
-- **Performance & Reliability:** 0 byte download footprint, zero network latency, non-overlapping channel management with gain curves, and graceful fallback when audio contexts are unavailable.
+## 6. Recorded Audio System & CC0 Audio Licence Audit (Phase 1.6)
+- **Architecture & Format:** High-fidelity, real recorded audio samples (dual MP3 and OGG formats) replacing all synthetic oscillator beeps.
+  - Normalized strictly to **-16 LUFS** (`loudnorm=I=-16:TP=-1.5:LRA=7`) with 10–15ms end-fadeout.
+  - Duration: 40 to 150ms per effect for instant, punchy feedback without hanging tails.
+  - Preloaded via browser `fetch` + `AudioContext.decodeAudioData` into memory buffers.
+  - Stereo panning by board file (-0.15 on the a-file to +0.15 on the h-file) for subtle spatial depth.
+  - AudioContext unlocked on first user gesture with 40ms debounce to prevent burst distortion.
+- **Zero Proprietary Audio:** Zero sound samples from Chess.com, Lichess, or any proprietary soundboard are used.
+- **Exact Verified CC0 1.0 Universal Sound Ledger:**
+  | Sound | File | Duration | Author / Origin | Licence Terms |
+  |---|---|---|---|---|
+  | `move` | `move.mp3`, `move.ogg` | 120ms | mh2o ([Freesound #351518](https://freesound.org/people/mh2o/sounds/351518/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `capture` | `capture.mp3`, `capture.ogg` | 140ms | dichardson ([Freesound #570964](https://freesound.org/people/dichardson/sounds/570964/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `check` | `check.mp3`, `check.ogg` | 130ms | alegemaate ([Freesound #364699](https://freesound.org/people/alegemaate/sounds/364699/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `castle` | `castle.mp3`, `castle.ogg` | 150ms | SieuAmThanh ([Freesound #530812](https://freesound.org/people/SieuAmThanh/sounds/530812/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `promote` | `promote.mp3`, `promote.ogg` | 140ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `illegal` | `illegal.mp3`, `illegal.ogg` | 110ms | SypherZent ([Freesound #420673](https://freesound.org/people/SypherZent/sounds/420673/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `game_start` | `game_start.mp3`, `game_start.ogg` | 150ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `game_end` | `game_end.mp3`, `game_end.ogg` | 150ms | stumpbutt ([Freesound #381688](https://freesound.org/people/stumpbutt/sounds/381688/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `puzzle_correct`| `puzzle_correct.mp3`, `puzzle_correct.ogg` | 150ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `puzzle_wrong` | `puzzle_wrong.mp3`, `puzzle_wrong.ogg` | 140ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |

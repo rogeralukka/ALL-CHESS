@@ -146,8 +146,37 @@ export const Board: React.FC<BoardProps> = ({
 
   // --- STABLE PIECE POSITION TRACKING FOR ANIMATIONS ---
   const [boardPieces, setBoardPieces] = useState<PieceOnBoard[]>([]);
+  const [fadingPieces, setFadingPieces] = useState<
+    Array<{ id: string; col: number; row: number; color: Color; type: PieceSymbol }>
+  >([]);
+  const [checkFlashSquare, setCheckFlashSquare] = useState<string | null>(null);
   const lastFrom = lastMove?.from;
   const lastTo = lastMove?.to;
+
+  // Flash attacked king for 400ms when in check (skip initial mount to avoid unprompted audio)
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    try {
+      if (chessInstance.current.inCheck()) {
+        const turn = chessInstance.current.turn();
+        const king = boardPieces.find((p) => p.type === 'k' && p.color === turn);
+        if (king) {
+          setCheckFlashSquare(king.square);
+          sound.check(king.square);
+          const t = setTimeout(() => setCheckFlashSquare(null), 400);
+          return () => clearTimeout(t);
+        }
+      } else {
+        setCheckFlashSquare(null);
+      }
+    } catch {
+      // ignore
+    }
+  }, [fen, boardPieces]);
 
   useEffect(() => {
     let chess: Chess;
@@ -186,6 +215,21 @@ export const Board: React.FC<BoardProps> = ({
           targetItem.matched = true;
           usedPrevIds.add(movedPrev.id);
           result.push({ ...targetItem, id: movedPrev.id });
+        }
+
+        // Capture check: piece on destination square in prev fades out over 100ms
+        const capturedPiece = prev.find((p) => p.square === lastTo && p.id !== movedPrev?.id);
+        if (capturedPiece) {
+          setFadingPieces([
+            {
+              id: `cap-${capturedPiece.id}-${Date.now()}`,
+              col: capturedPiece.col,
+              row: capturedPiece.row,
+              color: capturedPiece.color,
+              type: capturedPiece.type,
+            },
+          ]);
+          setTimeout(() => setFadingPieces([]), 100);
         }
 
         // Check castling rook
@@ -287,13 +331,13 @@ export const Board: React.FC<BoardProps> = ({
       const success = onMove?.(from, to, isPawnPromotion ? 'q' : undefined);
       if (success !== false) {
         if (isPawnPromotion) {
-          sound.promote();
+          sound.promote(to);
         } else if (isCastle) {
           sound.castle();
         } else if (isCapture) {
-          sound.capture();
+          sound.capture(to);
         } else {
-          sound.move();
+          sound.move(to);
         }
       }
       setSelectedSquare(null);
@@ -539,6 +583,18 @@ export const Board: React.FC<BoardProps> = ({
                   {/* Tint overlay */}
                   {tintClass && <div className={`absolute inset-0 pointer-events-none ${tintClass}`} />}
 
+                  {/* 400ms Red radial check flash */}
+                  {checkFlashSquare === sq && (
+                    <div
+                      className="absolute inset-0 pointer-events-none z-10 animate-fade-out"
+                      style={{
+                        background:
+                          'radial-gradient(circle, rgba(239, 68, 68, 0.85) 0%, rgba(220, 38, 38, 0.45) 55%, transparent 85%)',
+                        animationDuration: '400ms',
+                      }}
+                    />
+                  )}
+
                   {/* Inside Coordinates */}
                   {coordinates === 'inside' && (
                     <>
@@ -577,6 +633,23 @@ export const Board: React.FC<BoardProps> = ({
 
         {/* --- DEDICATED ABSOLUTE PIECE LAYER (Sliding Transform Animations) --- */}
         <div className="absolute inset-0 w-full h-full pointer-events-none z-15">
+          {/* Captured pieces fading out over 100ms */}
+          {fadingPieces.map((p) => (
+            <div
+              key={p.id}
+              className="absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-none p-0.5 opacity-0 transition-opacity duration-100 ease-out z-10"
+              style={{
+                transform: `translate3d(${p.col * 100}%, ${p.row * 100}%, 0)`,
+              }}
+            >
+              <img
+                src={`${pieceSet.basePath}/${p.color}${p.type.toUpperCase()}.svg`}
+                alt="captured"
+                className="w-full h-full object-contain pointer-events-none select-none drop-shadow"
+              />
+            </div>
+          ))}
+
           {boardPieces.map((p) => {
             const isBeingDragged = draggedPiece?.sq === p.square && draggedPiece.isDragging;
             const pieceImg = `${pieceSet.basePath}/${p.color}${p.type.toUpperCase()}.svg`;
@@ -592,7 +665,7 @@ export const Board: React.FC<BoardProps> = ({
                 onPointerMove={handlePiecePointerMove}
                 onPointerUp={handlePiecePointerUp}
                 onPointerCancel={handlePiecePointerCancel}
-                className="absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-auto cursor-grab active:cursor-grabbing p-0.5 will-change-transform transition-transform duration-100 hover:scale-[1.04]"
+                className="group absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-auto cursor-grab active:cursor-grabbing p-0.5 will-change-transform"
                 style={{
                   transform: `translate3d(${p.col * 100}%, ${p.row * 100}%, 0)`,
                   transition:
@@ -607,7 +680,7 @@ export const Board: React.FC<BoardProps> = ({
                   src={pieceImg}
                   alt={`${p.color}${p.type}`}
                   draggable={false}
-                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow"
+                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow transition-transform duration-100 group-hover:scale-[1.04]"
                 />
               </div>
             );
@@ -617,6 +690,28 @@ export const Board: React.FC<BoardProps> = ({
         {/* Vector Overlays: Arrows & Badges */}
         <ArrowLayer arrows={arrows} orientation={orientation} />
         <BadgeLayer badges={badges} orientation={orientation} />
+
+        {/* Promotion Choice Dialog: Vertical strip positioned directly over the promotion square */}
+        {pendingPromotion && (
+          <PromotionDialog
+            isOpen={true}
+            color={pendingPromotion.color}
+            square={pendingPromotion.to}
+            orientation={orientation}
+            displayFiles={displayFiles}
+            displayRanks={displayRanks}
+            pieceBasePath={pieceSet.basePath}
+            onSelect={(promPiece) => {
+              onMove?.(pendingPromotion.from, pendingPromotion.to, promPiece);
+              setPendingPromotion(null);
+              setSelectedSquare(null);
+            }}
+            onCancel={() => {
+              setPendingPromotion(null);
+              setSelectedSquare(null);
+            }}
+          />
+        )}
       </div>
 
       {/* Floating Ghost Piece Following Pointer During Drag */}
@@ -637,24 +732,6 @@ export const Board: React.FC<BoardProps> = ({
             draggable={false}
           />
         </div>
-      )}
-
-      {/* Promotion Choice Dialog */}
-      {pendingPromotion && (
-        <PromotionDialog
-          isOpen={true}
-          color={pendingPromotion.color}
-          pieceBasePath={pieceSet.basePath}
-          onSelect={(promPiece) => {
-            onMove?.(pendingPromotion.from, pendingPromotion.to, promPiece);
-            setPendingPromotion(null);
-            setSelectedSquare(null);
-          }}
-          onCancel={() => {
-            setPendingPromotion(null);
-            setSelectedSquare(null);
-          }}
-        />
       )}
     </div>
   );

@@ -97,3 +97,19 @@
   box-shadow: var(--btn-secondary-shadow-active);
   transform: translateY(1px);
 }
+
+/* Accessible focus: visible 2px accent ring with offset on every interactive element */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-page), 0 0 0 4px var(--color-accent) !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-page), 0 0 0 4px var(--color-accent) !important;
+}

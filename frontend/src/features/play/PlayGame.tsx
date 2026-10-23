@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Chess, Square } from 'chess.js';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
 import { MoveList } from '@/features/board/MoveList';
@@ -516,16 +517,33 @@ export const PlayGame: React.FC = () => {
           )}
         </div>
 
-        {/* Panel Content (Scrollable) */}
+        {/* Panel Content (Scrollable with fixed container for 200ms cross-fade) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {!activeConfig ? (
-            <PlayLobby
-              onStartGame={handleStartGame}
-              selectedLevel={lobbyLevel}
-              onLevelChange={setLobbyLevel}
-            />
-          ) : (
-            <>
+          <AnimatePresence mode="wait">
+            {!activeConfig ? (
+              <motion.div
+                key="lobby"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                <PlayLobby
+                  onStartGame={handleStartGame}
+                  selectedLevel={lobbyLevel}
+                  onLevelChange={setLobbyLevel}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="game"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
               {/* Coach Portrait + Stacked Speech Bubbles */}
               <div className="flex items-start gap-3">
                 <div className="w-[84px] flex-shrink-0">
@@ -642,9 +660,10 @@ export const PlayGame: React.FC = () => {
                   onSelectMove={() => {}}
                 />
               </Card>
-            </>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+      </div>
       </div>
     </div>
   );

@@ -44,22 +44,54 @@ describe('Phase 1.5 Motion, Sound & Feedback Suite', () => {
       expect(typeof sound.castle).toBe('function');
       expect(typeof sound.promote).toBe('function');
       expect(typeof sound.illegal).toBe('function');
+      expect(typeof sound.gameStart).toBe('function');
       expect(typeof sound.gameEnd).toBe('function');
       expect(typeof sound.puzzleCorrect).toBe('function');
       expect(typeof sound.puzzleWrong).toBe('function');
 
       // Calling them does not throw
       expect(() => {
-        sound.move();
-        sound.capture();
-        sound.check();
+        sound.move('e4');
+        sound.capture('d5');
+        sound.check('e8');
         sound.castle();
-        sound.promote();
+        sound.promote('e8');
         sound.illegal();
+        sound.gameStart();
         sound.gameEnd();
         sound.puzzleCorrect();
         sound.puzzleWrong();
       }).not.toThrow();
+    });
+
+    it('has all 10 CC0 audio samples in both MP3 and OGG formats in public/assets/sound', () => {
+      const soundDir = path.resolve(__dirname, '../../public/assets/sound');
+      const soundNames = [
+        'move',
+        'capture',
+        'check',
+        'castle',
+        'promote',
+        'illegal',
+        'game_start',
+        'game_end',
+        'puzzle_correct',
+        'puzzle_wrong',
+      ];
+
+      for (const name of soundNames) {
+        const mp3Path = path.join(soundDir, `${name}.mp3`);
+        const oggPath = path.join(soundDir, `${name}.ogg`);
+
+        expect(fs.existsSync(mp3Path)).toBe(true);
+        expect(fs.existsSync(oggPath)).toBe(true);
+
+        const mp3Stats = fs.statSync(mp3Path);
+        const oggStats = fs.statSync(oggPath);
+
+        expect(mp3Stats.size).toBeGreaterThan(100);
+        expect(oggStats.size).toBeGreaterThan(100);
+      }
     });
   });
 

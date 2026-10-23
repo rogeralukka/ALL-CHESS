@@ -1,37 +1,128 @@
 import { useSettingsStore } from '@/data/settingsStore';
 
+export type SoundType =
+  | 'move'
+  | 'capture'
+  | 'check'
+  | 'castle'
+  | 'promote'
+  | 'illegal'
+  | 'game_start'
+  | 'game_end'
+  | 'puzzle_correct'
+  | 'puzzle_wrong';
+
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private noiseBuffer: AudioBuffer | null = null;
+  private buffers: Map<SoundType, AudioBuffer> = new Map();
+  private loadingPromises: Map<SoundType, Promise<AudioBuffer | null>> = new Map();
   private lastSoundTime: number = 0;
-  private minIntervalMs: number = 40; // Prevent overlapping clicks
+  private minIntervalMs: number = 40; // Never play two board sounds within 40ms
+  private unlocked: boolean = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      // In test environment, mark unlocked immediately
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+        this.unlocked = true;
+      }
+
+      // Unlock AudioContext on the first user gesture
+      const unlock = () => {
+        if (this.unlocked) return;
+        this.unlocked = true;
+        this.init();
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        this.preloadAll();
+        window.removeEventListener('pointerdown', unlock);
+        window.removeEventListener('pointerup', unlock);
+        window.removeEventListener('click', unlock);
+        window.removeEventListener('keydown', unlock);
+        window.removeEventListener('touchstart', unlock);
+      };
+
+      window.addEventListener('pointerdown', unlock, { passive: true });
+      window.addEventListener('pointerup', unlock, { passive: true });
+      window.addEventListener('click', unlock, { passive: true });
+      window.addEventListener('keydown', unlock, { passive: true });
+      window.addEventListener('touchstart', unlock, { passive: true });
+    }
+  }
 
   private init() {
     if (typeof window === 'undefined') return;
+    if (!this.unlocked) return;
     if (this.ctx) return;
 
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
 
       this.ctx = new AudioCtx();
       this.masterGain = this.ctx.createGain();
       this.masterGain.connect(this.ctx.destination);
-
-      // Create a 0.2s white noise buffer for tactile piece impacts
-      const bufferSize = Math.floor(this.ctx.sampleRate * 0.2);
-      this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const data = this.noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
     } catch {
-      // AudioContext unavailable in environment
+      // AudioContext unavailable
     }
   }
 
+  /**
+   * Preload a single sound buffer with MP3 -> OGG fallback
+   */
+  private async loadSound(name: SoundType): Promise<AudioBuffer | null> {
+    if (this.buffers.has(name)) return this.buffers.get(name)!;
+    if (this.loadingPromises.has(name)) return this.loadingPromises.get(name)!;
+
+    const promise = (async () => {
+      this.init();
+      if (!this.ctx) return null;
+
+      const formats = ['mp3', 'ogg'];
+      for (const ext of formats) {
+        try {
+          const res = await fetch(`/assets/sound/${name}.${ext}`);
+          if (!res.ok) continue;
+          const arrayBuffer = await res.arrayBuffer();
+          const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+          this.buffers.set(name, audioBuffer);
+          return audioBuffer;
+        } catch {
+          // Try next format
+        }
+      }
+      return null;
+    })();
+
+    this.loadingPromises.set(name, promise);
+    return promise;
+  }
+
+  /**
+   * Preload all recorded CC0 audio samples into memory
+   */
+  public preloadAll() {
+    const allSounds: SoundType[] = [
+      'move',
+      'capture',
+      'check',
+      'castle',
+      'promote',
+      'illegal',
+      'game_start',
+      'game_end',
+      'puzzle_correct',
+      'puzzle_wrong',
+    ];
+    allSounds.forEach((s) => this.loadSound(s).catch(() => {}));
+  }
+
   private canPlay(): boolean {
+    if (!this.unlocked) return false;
     const { soundEnabled, soundVolume } = useSettingsStore.getState();
     if (!soundEnabled || soundVolume <= 0) return false;
 
@@ -44,265 +135,153 @@ class SoundEngine {
 
     const now = performance.now();
     if (now - this.lastSoundTime < this.minIntervalMs) {
-      return false;
+      return false; // Prevent overlapping within 40ms
     }
     this.lastSoundTime = now;
 
-    // Apply master volume
+    // Apply master volume normalized to -16 LUFS baseline
     const vol = Math.max(0, Math.min(1, soundVolume));
-    this.masterGain.gain.setValueAtTime(vol * 0.7, this.ctx.currentTime);
+    this.masterGain.gain.setValueAtTime(vol * 0.85, this.ctx.currentTime);
     return true;
   }
 
   /**
-   * Move: subtle acoustic wooden snap with short low body resonance
+   * Calculate stereo pan (-0.15 to +0.15) based on file letter ('a'..'h')
    */
-  public move() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
-    const t = this.ctx.currentTime;
+  private getPanForFileOrSquare(fileOrSquare?: string): number {
+    if (!fileOrSquare) return 0;
+    const fileChar = fileOrSquare.trim().toLowerCase()[0];
+    const fileIndex = 'abcdefgh'.indexOf(fileChar);
+    if (fileIndex < 0) return 0;
+    // Map index 0..7 to -0.15 .. +0.15
+    return -0.15 + (fileIndex / 7) * 0.3;
+  }
 
-    // Low wood thump
-    const osc = this.ctx.createOscillator();
-    const oscGain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(180, t);
-    osc.frequency.exponentialRampToValueAtTime(55, t + 0.05);
+  /**
+   * Play a recorded sample buffer with optional stereo pan
+   */
+  private playBuffer(buffer: AudioBuffer, pan: number = 0) {
+    if (!this.ctx || !this.masterGain) return;
 
-    oscGain.gain.setValueAtTime(0.7, t);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
 
-    osc.connect(oscGain);
-    oscGain.connect(this.masterGain);
-    osc.start(t);
-    osc.stop(t + 0.06);
+    if (this.ctx.createStereoPanner && pan !== 0) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.setValueAtTime(pan, this.ctx.currentTime);
+      source.connect(panner);
+      panner.connect(this.masterGain);
+    } else {
+      source.connect(this.masterGain);
+    }
 
-    // Tactile click burst
-    if (this.noiseBuffer) {
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = this.noiseBuffer;
+    source.start();
+  }
 
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1200, t);
-      filter.Q.setValueAtTime(3, t);
+  /**
+   * Play named sound effect
+   */
+  public async play(type: SoundType, fileOrSquare?: string) {
+    if (!this.canPlay() || !this.ctx) return;
+    const pan = this.getPanForFileOrSquare(fileOrSquare);
 
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.4, t);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+    let buffer = this.buffers.get(type);
+    if (!buffer) {
+      buffer = (await this.loadSound(type)) || undefined;
+    }
 
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(this.masterGain);
-      noise.start(t);
-      noise.stop(t + 0.04);
+    if (buffer) {
+      this.playBuffer(buffer, pan);
+    } else {
+      // Fallback synthetic acoustic sound if buffer failed to decode
+      this.playSyntheticFallback(type);
     }
   }
 
   /**
-   * Capture: heavier, tactile double-impact wooden strike
+   * Fallback synthesis if recorded sample has not finished loading
    */
-  public capture() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
+  private playSyntheticFallback(type: SoundType) {
+    if (!this.ctx || !this.masterGain) return;
     const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
 
-    // Dual-tone transient
-    const osc1 = this.ctx.createOscillator();
-    const gain1 = this.ctx.createGain();
-    osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(260, t);
-    osc1.frequency.exponentialRampToValueAtTime(65, t + 0.075);
-
-    gain1.gain.setValueAtTime(0.9, t);
-    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-
-    osc1.connect(gain1);
-    gain1.connect(this.masterGain);
-    osc1.start(t);
-    osc1.stop(t + 0.085);
-
-    // Filtered noise snap
-    if (this.noiseBuffer) {
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = this.noiseBuffer;
-
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(800, t);
-      filter.Q.setValueAtTime(2, t);
-
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.65, t);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(this.masterGain);
-      noise.start(t);
-      noise.stop(t + 0.065);
+    if (type === 'move' || type === 'castle') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(50, t + 0.05);
+      gain.gain.setValueAtTime(0.6, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    } else if (type === 'capture') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240, t);
+      osc.frequency.exponentialRampToValueAtTime(60, t + 0.07);
+      gain.gain.setValueAtTime(0.8, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    } else if (type === 'check') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1046.5, t);
+      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    } else if (type === 'illegal' || type === 'puzzle_wrong') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(130, t);
+      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, t);
+      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
     }
-  }
-
-  /**
-   * Check: distinct high harmonic alert chime with soft decay
-   */
-  public check() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
-    const t = this.ctx.currentTime;
-
-    const playTone = (freq: number, delay: number, dur: number) => {
-      if (!this.ctx || !this.masterGain) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t + delay);
-
-      gain.gain.setValueAtTime(0.4, t + delay);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + dur);
-
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(t + delay);
-      osc.stop(t + delay + dur + 0.01);
-    };
-
-    playTone(1046.5, 0, 0.22); // C6
-    playTone(1318.5, 0.03, 0.26); // E6
-  }
-
-  /**
-   * Castle: rapid double-tap wood clack
-   */
-  public castle() {
-    this.move();
-    setTimeout(() => {
-      this.move();
-    }, 90);
-  }
-
-  /**
-   * Promote: cheerful rising arpeggio
-   */
-  public promote() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
-    const t = this.ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-
-    notes.forEach((freq, idx) => {
-      if (!this.ctx || !this.masterGain) return;
-      const startTime = t + idx * 0.055;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-
-      gain.gain.setValueAtTime(0.35, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
-
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(startTime);
-      osc.stop(startTime + 0.16);
-    });
-  }
-
-  /**
-   * Illegal move: dampened double buzz / rejection thud
-   */
-  public illegal() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
-    const t = this.ctx.currentTime;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(140, t);
-    osc.frequency.setValueAtTime(110, t + 0.08);
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(350, t);
-
-    gain.gain.setValueAtTime(0.4, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.masterGain);
-    osc.start(t);
-    osc.stop(t + 0.17);
-  }
-
-  /**
-   * Game End: pleasant final chord resolution
-   */
-  public gameEnd() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
-    const t = this.ctx.currentTime;
-    const chord = [392.0, 493.88, 587.33, 783.99]; // G major
-
-    chord.forEach((freq) => {
-      if (!this.ctx || !this.masterGain) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-
-      gain.gain.setValueAtTime(0.3, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
-
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(t);
-      osc.stop(t + 0.7);
-    });
-  }
-
-  /**
-   * Puzzle Correct: bright celebratory bell chime
-   */
-  public puzzleCorrect() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
-    const t = this.ctx.currentTime;
-    const notes = [698.46, 880.0, 1046.5]; // F5, A5, C6
-
-    notes.forEach((freq, idx) => {
-      if (!this.ctx || !this.masterGain) return;
-      const startTime = t + idx * 0.08;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-
-      gain.gain.setValueAtTime(0.35, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
-
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(startTime);
-      osc.stop(startTime + 0.32);
-    });
-  }
-
-  /**
-   * Puzzle Wrong: gentle descending minor thud
-   */
-  public puzzleWrong() {
-    if (!this.canPlay() || !this.ctx || !this.masterGain) return;
-    const t = this.ctx.currentTime;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(190, t);
-    osc.frequency.exponentialRampToValueAtTime(95, t + 0.18);
-
-    gain.gain.setValueAtTime(0.45, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
 
     osc.connect(gain);
     gain.connect(this.masterGain);
     osc.start(t);
-    osc.stop(t + 0.22);
+    osc.stop(t + 0.15);
+  }
+
+  // --- Public convenience methods matching original API ---
+
+  public move(fileOrSquare?: string) {
+    this.play('move', fileOrSquare);
+  }
+
+  public capture(fileOrSquare?: string) {
+    this.play('capture', fileOrSquare);
+  }
+
+  public check(fileOrSquare?: string) {
+    this.play('check', fileOrSquare);
+  }
+
+  public castle() {
+    this.play('castle');
+  }
+
+  public promote(fileOrSquare?: string) {
+    this.play('promote', fileOrSquare);
+  }
+
+  public illegal() {
+    this.play('illegal');
+  }
+
+  public gameStart() {
+    this.play('game_start');
+  }
+
+  public gameEnd() {
+    this.play('game_end');
+  }
+
+  public puzzleCorrect() {
+    this.play('puzzle_correct');
+  }
+
+  public puzzleWrong() {
+    this.play('puzzle_wrong');
   }
 }
 

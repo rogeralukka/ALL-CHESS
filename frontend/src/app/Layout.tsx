@@ -21,6 +21,24 @@ export const Layout: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const location = useLocation();
 
+  // One-time notice when system reports reduced motion while defaulting to Full
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const alreadyPrompted = localStorage.getItem('all_chess_motion_prompted');
+      if (mediaQuery.matches && !alreadyPrompted) {
+        localStorage.setItem('all_chess_motion_prompted', 'true');
+        toast.info(
+          'Your system prefers less motion. Switch to Reduced?',
+          'We kept Full motion on by default. You can adjust in Settings > Appearance.'
+        );
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const handleSync = () => {
     if (isSyncing) return;
     setIsSyncing(true);
