@@ -8,6 +8,8 @@ import { Segmented } from '@/components/Segmented';
 import { ProgressBar } from '@/components/ProgressBar';
 import { toast } from '@/components/Toast';
 import { IsoLevelMap } from '@/features/map/IsoLevelMap';
+import { PageContainer, PageHeader } from '@/components/PageHeader';
+import { Pill } from '@/components/Bits';
 import {
   Play,
   Flame,
@@ -51,37 +53,22 @@ export const LearnPath: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-theme-raised via-theme-card to-theme-card p-6 rounded-2xl border border-theme-border shadow-md">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-xs font-bold uppercase bg-amber-500/20 text-amber-500 border border-amber-500/30">
-              Interactive Path
-            </span>
-            <span className="flex items-center gap-1 text-xs font-bold text-orange-400">
-              <Flame size={14} /> 5 Day Streak
-            </span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold font-display text-theme-text">
-            Chess Mastery Roadmap
-          </h1>
-          <p className="text-xs md:text-sm text-theme-muted mt-1">
-            Recommended from your recent games: Master critical rook endgames.
-          </p>
-        </div>
-
-        {/* XP & Progress Widget */}
-        <div className="flex items-center gap-4 bg-theme-card p-3 rounded-xl border border-theme-border/60">
-          <div className="flex items-center gap-2">
-            <Award className="text-amber-500" size={24} />
-            <div>
-              <span className="text-xs uppercase font-bold text-theme-muted block">Total XP</span>
-              <span className="text-lg font-black font-display text-theme-text">420 XP</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <PageContainer wide>
+      <PageHeader
+        title="Learn"
+        icon="/assets/ui/icon_learn.webp"
+        subtitle="Your roadmap, built from your own games. This week: master the critical rook endgames."
+        eyebrow={
+          <>
+            <Pill tone="amber">
+              <Flame size={12} /> 5 day streak
+            </Pill>
+            <Pill>
+              <Award size={12} /> 420 XP
+            </Pill>
+          </>
+        }
+      />
 
       {/* Category Tabs: Openings, Middlegame, Endgame with Mobile Overflow Fix */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -135,7 +122,7 @@ export const LearnPath: React.FC = () => {
             onSelect={(i) => setSelectedStage(stages[i])}
             tileWidth={isPhone ? 84 : 104}
             seed={activeCategory === 'endgame' ? 7 : activeCategory === 'openings' ? 19 : 31}
-            className="h-[520px] lg:h-[640px]"
+            maxHeight={isPhone ? 520 : 640}
           />
         </div>
 
@@ -247,7 +234,7 @@ export const LearnPath: React.FC = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 
