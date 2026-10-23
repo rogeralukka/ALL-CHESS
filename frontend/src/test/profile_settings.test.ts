@@ -89,8 +89,10 @@ describe('ALL-CHESS Step 1D: Profile, Scout, Settings Suite', () => {
     it('ships 6 board presets and open-license piece set', () => {
       expect(BOARD_PRESETS.length).toBe(6);
       expect(PIECE_SETS.length).toBeGreaterThan(0);
-      expect(PIECE_SETS[0].id).toBe('cburnett');
-      expect(PIECE_SETS[0].license).toContain('CC BY-SA 3.0');
+      // default is the shaded Staunty set; the classic cburnett set is still offered
+      expect(PIECE_SETS[0].id).toBe('staunty');
+      expect(PIECE_SETS.every((p) => p.license.length > 0)).toBe(true);
+      expect(PIECE_SETS.find((p) => p.id === 'cburnett')?.license).toContain('CC BY-SA 3.0');
     });
   });
 });
