@@ -36,7 +36,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/40 select-none">
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

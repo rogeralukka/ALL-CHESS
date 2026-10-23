@@ -23,15 +23,17 @@ export const RewardCascade: React.FC<RewardCascadeProps> = ({
   return (
     <AnimatePresence>
       <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none">
-        {/* Rotating Light Rays Background (Full mode only) */}
+        {/* Rotating Light Rays Background (Soft Edges, Full mode only) */}
         {isFull && (
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-            className="absolute w-[500px] h-[500px] opacity-20 pointer-events-none"
+            className="absolute w-[600px] h-[600px] opacity-30 pointer-events-none"
             style={{
               background:
-                'conic-gradient(from 0deg, transparent 0deg, #f59e0b 20deg, transparent 40deg, #f59e0b 60deg, transparent 80deg, #f59e0b 100deg, transparent 120deg, #f59e0b 140deg, transparent 160deg, #f59e0b 180deg, transparent 200deg, #f59e0b 220deg, transparent 240deg, #f59e0b 260deg, transparent 280deg, #f59e0b 300deg, transparent 320deg, #f59e0b 340deg, transparent 360deg)',
+                'conic-gradient(from 0deg, transparent 0deg, rgba(245,158,11,0.4) 15deg, transparent 30deg, rgba(245,158,11,0.4) 45deg, transparent 60deg, rgba(245,158,11,0.4) 75deg, transparent 90deg, rgba(245,158,11,0.4) 105deg, transparent 120deg, rgba(245,158,11,0.4) 135deg, transparent 150deg, rgba(245,158,11,0.4) 165deg, transparent 180deg, rgba(245,158,11,0.4) 195deg, transparent 210deg, rgba(245,158,11,0.4) 225deg, transparent 240deg, rgba(245,158,11,0.4) 255deg, transparent 270deg, rgba(245,158,11,0.4) 285deg, transparent 300deg, rgba(245,158,11,0.4) 315deg, transparent 330deg, rgba(245,158,11,0.4) 345deg, transparent 360deg)',
+              maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 70%)',
+              WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 70%)',
             }}
           />
         )}

@@ -16,6 +16,10 @@ import {
   RatingSummary,
 } from '@/data/repositories';
 import { Game, Friend, LessonStage, Puzzle } from '@/data/types';
+import { MOCK_GAMES } from '@/data/mock/mockGames';
+import { MOCK_FRIENDS } from '@/data/mock/mockFriends';
+import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
+import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
 import { useNavigate } from 'react-router-dom';
 import {
   Flame,
@@ -32,14 +36,22 @@ import {
   RotateCw,
 } from 'lucide-react';
 
+const DEFAULT_RATINGS: RatingSummary[] = [
+  { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
+  { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
+  { mode: 'Bullet', rating: 880, deltaWeekly: 5 },
+];
+
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const [coachDismissed, setCoachDismissed] = useState(false);
-  const [recentGames, setRecentGames] = useState<Game[]>([]);
-  const [ratings, setRatings] = useState<RatingSummary[]>([]);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [currentStage, setCurrentStage] = useState<LessonStage | null>(null);
-  const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(null);
+  const [recentGames, setRecentGames] = useState<Game[]>(() => MOCK_GAMES.slice(0, 3));
+  const [ratings, setRatings] = useState<RatingSummary[]>(() => DEFAULT_RATINGS);
+  const [friends, setFriends] = useState<Friend[]>(() => MOCK_FRIENDS);
+  const [currentStage, setCurrentStage] = useState<LessonStage | null>(
+    () => MOCK_LEARN_STAGES.find((s) => s.status === 'current') || MOCK_LEARN_STAGES[1] || MOCK_LEARN_STAGES[0]
+  );
+  const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(() => MOCK_PUZZLES[0]);
 
   useEffect(() => {
     let mounted = true;

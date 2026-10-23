@@ -292,11 +292,11 @@ async function run() {
 
       // Make a move: e2 to e4
       console.log('  Making move e2 to e4 and verifying opponent reply within 1.5s...');
-      const e2Piece = page.locator('[data-piece="true"][data-square="e2"]').first();
-      await e2Piece.click();
+      const e2Square = page.locator('[data-square="e2"]').first();
+      await e2Square.dispatchEvent('click');
       await page.waitForTimeout(150);
       const e4Square = page.locator('[data-square="e4"]').first();
-      await e4Square.click({ force: true });
+      await e4Square.dispatchEvent('click');
       
       // Wait for opponent reply within 1.5s (opponent move adds the 2nd move button)
       const moveStartTime = Date.now();
@@ -323,12 +323,12 @@ async function run() {
 
       // Solve puzzle #1: Rd1 to d8 (back-rank mate)
       console.log('  Solving back-rank mate: Rd1 to d8...');
-      const d1Piece = page.locator('[data-piece="true"][data-square="d1"]');
-      if (await d1Piece.count() > 0) {
-        await d1Piece.click();
+      const d1Square = page.locator('[data-square="d1"]').first();
+      if (await d1Square.count() > 0) {
+        await d1Square.dispatchEvent('click');
         await page.waitForTimeout(150);
         const d8Square = page.locator('[data-square="d8"]').first();
-        await d8Square.click({ force: true });
+        await d8Square.dispatchEvent('click');
         await page.waitForTimeout(400);
 
         // Check for success badge on destination square d8

@@ -322,6 +322,19 @@ export const Board: React.FC<BoardProps> = ({
         executeMoveAttempt(selectedSquare, sq);
         return;
       }
+
+      // Check if clicking another piece of the player's own color (to change selection)
+      const currentPiece = chessInstance.current.get(selectedSquare as Square);
+      const clickedPiece = chessInstance.current.get(sq as Square);
+      if (currentPiece && clickedPiece && currentPiece.color === clickedPiece.color) {
+        setSelectedSquare(sq);
+        return;
+      }
+
+      // User clicked an illegal destination (empty square or opponent piece that cannot be captured):
+      // Execute the illegal move path: shake, sound, onIllegalMove callback, and keep piece selected with legal dots
+      executeMoveAttempt(selectedSquare, sq);
+      return;
     }
 
     const pieceOnSquare = chessInstance.current.get(sq as Square);

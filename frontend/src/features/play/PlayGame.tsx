@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Chess, Square } from 'chess.js';
 import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
@@ -15,6 +15,8 @@ import { Move, CoachExpression, Arrow } from '@/data/types';
 import { getExpressionForEvent } from '@/features/coach/expressionMap';
 import { ILLEGAL_MOVE_TEACHING_LINES } from '@/features/coach/coachLines';
 import { sound } from '@/lib/sound';
+import { EngineService } from '@/services/engineService';
+import { OpeningService, OpeningMatch } from '@/services/openingService';
 import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,10 +30,13 @@ export const PlayGame: React.FC = () => {
   const [chess] = useState(() => new Chess());
   const [fen, setFen] = useState<string>(chess.fen());
   const [moves, setMoves] = useState<Move[]>([]);
+  const movesRef = useRef<Move[]>([]);
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
   const [arrows, setArrows] = useState<Arrow[]>([]);
   const [highlights, setHighlights] = useState<string[]>([]);
+  const [currentOpening, setCurrentOpening] = useState<OpeningMatch | null>(null);
   const [showResignPopover, setShowResignPopover] = useState(false);
+  const resignPopoverRef = useRef<HTMLDivElement>(null);
   const [gameOver, setGameOver] = useState<{
     winner: 'user' | 'coach' | 'draw';
     reason: string;
@@ -47,12 +52,42 @@ export const PlayGame: React.FC = () => {
 
   const coachThinking = useRef(false);
 
+  const updateMoves = useCallback((updater: (prev: Move[]) => Move[]) => {
+    setMoves((prev) => {
+      const next = updater(prev);
+      movesRef.current = next;
+      return next;
+    });
+  }, []);
+
+  // Close resign popover on Escape and click outside
+  useEffect(() => {
+    if (!showResignPopover) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowResignPopover(false);
+      }
+    };
+    const handleClickOutside = (e: MouseEvent) => {
+      if (resignPopoverRef.current && !resignPopoverRef.current.contains(e.target as Node)) {
+        setShowResignPopover(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showResignPopover]);
+
   // Setup game when config is provided
   const handleStartGame = (cfg: PlayConfig) => {
     chess.reset();
     setFen(chess.fen());
-    setMoves([]);
+    updateMoves(() => []);
     setArrows([]);
+    setCurrentOpening(null);
     setGameOver(null);
     setShowResignPopover(false);
 
@@ -67,7 +102,9 @@ export const PlayGame: React.FC = () => {
 
     // If user is Black, coach (White) plays first move
     if (chosenColor === 'black') {
-      setTimeout(() => makeCoachMove(), 600);
+      setTimeout(() => {
+        makeCoachMove();
+      }, 300);
     }
   };
 
@@ -81,6 +118,14 @@ export const PlayGame: React.FC = () => {
         reason: 'by checkmate',
       });
       setCoachExpression(userWon ? 'brilliant' : 'embarrassed');
+      const closingMsg: BubbleMessage = {
+        id: `gameover-${Date.now()}`,
+        text: userWon
+          ? "Outstanding performance! You delivered a decisive checkmate. Great tactical vision!"
+          : "Checkmate! Well played. Review the game to analyze where the initiative slipped.",
+        classification: userWon ? 'brilliant' : 'mistake',
+      };
+      setStackedMessages((prev) => [...prev.slice(-2), closingMsg]);
     } else if (chess.isDraw()) {
       sound.gameEnd();
       setGameOver({
@@ -88,66 +133,110 @@ export const PlayGame: React.FC = () => {
         reason: 'by draw / stalemate',
       });
       setCoachExpression('neutral');
+      const closingMsg: BubbleMessage = {
+        id: `gameover-${Date.now()}`,
+        text: "It's a draw! Both sides defended solidly. A very balanced game.",
+      };
+      setStackedMessages((prev) => [...prev.slice(-2), closingMsg]);
     }
   }, [chess, orientation]);
 
-  // Coach Move Execution via mock engine
-  const makeCoachMove = useCallback(() => {
+  // Coach Move Execution via search engine
+  const makeCoachMove = useCallback(async () => {
     if (chess.isGameOver()) return;
     coachThinking.current = true;
     setCoachExpression('thinking');
 
-    setTimeout(() => {
-      const legalMoves = chess.moves({ verbose: true });
-      if (legalMoves.length === 0) return;
+    const searchResult = await EngineService.searchBestMove(chess.fen(), {
+      levelRating: activeConfig?.levelRating || 800,
+      timeDelayMin: 400,
+      timeDelayMax: 750,
+    });
 
-      // Choose a sensible move (prefer center e4/d4/Nf3 or random)
-      const move = legalMoves[Math.floor(Math.random() * Math.min(legalMoves.length, 4))];
-      const result = chess.move(move);
+    if (!searchResult) {
+      coachThinking.current = false;
+      return;
+    }
 
-      if (result) {
-        if (result.captured) {
-          sound.capture();
-        } else if (chess.isCheck()) {
-          sound.check();
-        } else if (result.san.includes('O-O')) {
-          sound.castle();
-        } else {
-          sound.move();
+    const { move: bestMove, evalScore, isNotable, notableReason } = searchResult;
+    const result = chess.move({
+      from: bestMove.from as Square,
+      to: bestMove.to as Square,
+      promotion: bestMove.promotion || 'q',
+    });
+
+    if (result) {
+      if (result.captured) {
+        sound.capture();
+      } else if (chess.isCheck()) {
+        sound.check();
+      } else if (result.san.includes('O-O')) {
+        sound.castle();
+      } else {
+        sound.move();
+      }
+
+      const newFen = chess.fen();
+      setFen(newFen);
+
+      const currentHistory = movesRef.current;
+      const newMoveObj: Move = {
+        san: result.san,
+        from: result.from,
+        to: result.to,
+        color: result.color,
+        fen: newFen,
+        moveNumber: Math.floor(currentHistory.length / 2) + 1,
+        classification: 'good',
+        eval: { eval: evalScore },
+      };
+
+      const updatedMoves = [...currentHistory, newMoveObj];
+      updateMoves(() => updatedMoves);
+
+      // Check opening name
+      const opening = OpeningService.identifyOpening(updatedMoves.map((m) => m.san));
+      if (opening && (!currentOpening || currentOpening.name !== opening.name)) {
+        setCurrentOpening(opening);
+        if (activeConfig?.coachComments) {
+          const msg: BubbleMessage = {
+            id: `coach-op-${Date.now()}`,
+            text: `We are playing the ${opening.name}. ${opening.idea}`,
+            moveSan: `${newMoveObj.moveNumber}. ${result.san}`,
+            evalText: evalScore >= 0 ? `+${evalScore}` : `${evalScore}`,
+            evalScore,
+          };
+          setStackedMessages((prev) => [...prev.slice(-2), msg]);
+          setCoachExpression('thumbsup');
+        }
+      } else if (isNotable && activeConfig?.coachComments) {
+        let noteText = `I play ${result.san}.`;
+        if (notableReason === 'capture') {
+          noteText = `I capture on ${result.to} to contest the position.`;
+        } else if (notableReason === 'check') {
+          noteText = `Check! Forcing your king to respond immediately.`;
+        } else if (notableReason === 'castle') {
+          noteText = `I castle to tuck my king safely away and connect my rooks.`;
+        } else if (notableReason === 'development') {
+          noteText = `Developing my ${result.san[0] === 'N' ? 'knight' : 'bishop'} toward active central diagonals.`;
         }
 
-        const newFen = chess.fen();
-        setFen(newFen);
-
-        const newMoveObj: Move = {
-          san: result.san,
-          from: result.from,
-          to: result.to,
-          color: result.color,
-          fen: newFen,
-          moveNumber: Math.floor(moves.length / 2) + 1,
-          classification: 'good',
-          eval: { eval: 0.1 },
-        };
-
-        setMoves((prev) => [...prev, newMoveObj]);
-
-        // Coach feedback on its own move
         const msg: BubbleMessage = {
           id: `coach-${Date.now()}`,
-          text: `I play ${result.san}. Watch how this coordinates with the center.`,
+          text: noteText,
           moveSan: `${newMoveObj.moveNumber}. ${result.san}`,
-          evalText: '+0.1',
-          evalScore: 0.1,
+          evalText: evalScore >= 0 ? `+${evalScore}` : `${evalScore}`,
+          evalScore,
         };
         setStackedMessages((prev) => [...prev.slice(-2), msg]);
         setCoachExpression('thumbsup');
       }
+      // On non-notable moves, coach remains silent
+    }
 
-      coachThinking.current = false;
-      checkGameStatus();
-    }, 500);
-  }, [chess, moves.length, checkGameStatus]);
+    coachThinking.current = false;
+    checkGameStatus();
+  }, [chess, activeConfig, currentOpening, checkGameStatus, updateMoves]);
 
   // User Move Handler
   const handleUserMove = (from: string, to: string, promotion?: string) => {
@@ -172,18 +261,19 @@ export const PlayGame: React.FC = () => {
       setArrows([]); // clear hint arrows on move
       setHighlights([]); // clear illegal highlights on legal move
 
+      const currentHistory = movesRef.current;
       const newMoveObj: Move = {
         san: result.san,
         from: result.from,
         to: result.to,
         color: result.color,
         fen: newFen,
-        moveNumber: Math.floor(moves.length / 2) + 1,
+        moveNumber: Math.floor(currentHistory.length / 2) + 1,
         classification: 'best',
         eval: { eval: 0.2 },
       };
 
-      setMoves((prev) => [...prev, newMoveObj]);
+      updateMoves((prev) => [...prev, newMoveObj]);
 
       // Reaction
       const exp = getExpressionForEvent('best');
@@ -199,7 +289,9 @@ export const PlayGame: React.FC = () => {
 
       // Trigger coach reply if game isn't over
       if (!chess.isGameOver()) {
-        setTimeout(() => makeCoachMove(), 150);
+        setTimeout(() => {
+          makeCoachMove();
+        }, 100);
       } else {
         checkGameStatus();
       }
@@ -259,7 +351,7 @@ export const PlayGame: React.FC = () => {
     chess.undo(); // undo coach move
     chess.undo(); // undo user move
     setFen(chess.fen());
-    setMoves((prev) => prev.slice(0, -2));
+    updateMoves((prev) => prev.slice(0, -2));
     setArrows([]);
 
     const tbMsg: BubbleMessage = {
@@ -271,6 +363,18 @@ export const PlayGame: React.FC = () => {
   };
 
   // Download PGN
+  const handleResign = () => {
+    setShowResignPopover(false);
+    setGameOver({ winner: 'coach', reason: 'by resignation' });
+    sound.gameEnd();
+    setCoachExpression('thumbsup');
+    const resignMsg: BubbleMessage = {
+      id: `resign-${Date.now()}`,
+      text: "Game concluded by resignation. Good game! Analyzing this match will help you spot key tactical resources.",
+    };
+    setStackedMessages((prev) => [...prev.slice(-2), resignMsg]);
+  };
+
   const handleDownloadPgn = () => {
     const pgnData = chess.pgn();
     const blob = new Blob([pgnData], { type: 'text/plain' });
@@ -433,55 +537,26 @@ export const PlayGame: React.FC = () => {
                 </div>
               </div>
 
-              {/* Live Action Controls: Hint, Takeback, Resign, PGN */}
-              <div className="flex flex-wrap gap-2 pt-1">
-                {activeConfig.showHints && (
-                  <Button
-                    variant="highlight"
-                    size="sm"
-                    icon={<Lightbulb size={15} />}
-                    onClick={handleHint}
-                    disabled={Boolean(gameOver)}
-                  >
-                    Hint
-                  </Button>
-                )}
-
-                {activeConfig.allowTakebacks && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<RotateCcw size={15} />}
-                    onClick={handleTakeback}
-                    disabled={moves.length < 2 || Boolean(gameOver)}
-                  >
-                    Take Back
-                  </Button>
-                )}
-
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={<Download size={15} />}
-                  onClick={handleDownloadPgn}
-                >
-                  PGN
-                </Button>
-
+              {/* Live Action Controls: Resign, Hint, Takeback, PGN - 48px tall */}
+              <div className="flex items-center gap-2 pt-1 w-full">
                 {/* Resign with Confirmation Popover */}
                 <div className="relative">
                   <Button
                     variant="danger"
-                    size="sm"
-                    icon={<Flag size={15} />}
-                    onClick={() => setShowResignPopover(true)}
+                    size="md"
+                    className="!h-12 px-4"
+                    icon={<Flag size={18} />}
+                    onClick={() => setShowResignPopover((v) => !v)}
                     disabled={Boolean(gameOver)}
                   >
                     Resign
                   </Button>
 
                   {showResignPopover && (
-                    <div className="absolute right-0 bottom-full mb-2 w-48 p-3 rounded-lg bg-theme-raised border border-theme-border shadow-2xl z-30 flex flex-col gap-2">
+                    <div
+                      ref={resignPopoverRef}
+                      className="absolute left-0 bottom-full mb-3 w-56 p-3 rounded-lg bg-theme-raised border border-theme-border shadow-2xl z-40 flex flex-col gap-2 after:content-[''] after:absolute after:top-full after:left-8 after:border-[6px] after:border-transparent after:border-t-theme-border after:-mb-1.5"
+                    >
                       <span className="text-xs font-bold text-theme-text text-center">Confirm Resignation?</span>
                       <div className="flex gap-2">
                         <Button
@@ -496,10 +571,7 @@ export const PlayGame: React.FC = () => {
                           size="sm"
                           variant="danger"
                           fullWidth
-                          onClick={() => {
-                            setShowResignPopover(false);
-                            setGameOver({ winner: 'coach', reason: 'by resignation' });
-                          }}
+                          onClick={handleResign}
                         >
                           Resign
                         </Button>
@@ -507,13 +579,58 @@ export const PlayGame: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {activeConfig.showHints && (
+                  <Button
+                    variant="highlight"
+                    size="md"
+                    className="!h-12 flex-1"
+                    icon={<Lightbulb size={18} />}
+                    onClick={handleHint}
+                    disabled={Boolean(gameOver)}
+                  >
+                    Hint
+                  </Button>
+                )}
+
+                {activeConfig.allowTakebacks && (
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    className="!h-12"
+                    icon={<RotateCcw size={18} />}
+                    onClick={handleTakeback}
+                    disabled={moves.length < 2 || Boolean(gameOver)}
+                    title="Take Back Move"
+                  >
+                    Takeback
+                  </Button>
+                )}
+
+                <Button
+                  variant="secondary"
+                  size="md"
+                  className="!h-12 px-3"
+                  icon={<Download size={18} />}
+                  onClick={handleDownloadPgn}
+                  title="Download PGN"
+                >
+                  PGN
+                </Button>
               </div>
 
               {/* Live Move List */}
               <Card className="p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-theme-muted">Game Notation</span>
-                  <span className="text-[11px] text-theme-muted">Live Tracking</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-theme-text">Game Notation</span>
+                    {currentOpening && (
+                      <span className="text-[11px] font-semibold text-amber-500">
+                        {currentOpening.eco}: {currentOpening.name}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-theme-muted font-mono">{moves.length} plies</span>
                 </div>
                 <MoveList
                   moves={moves}

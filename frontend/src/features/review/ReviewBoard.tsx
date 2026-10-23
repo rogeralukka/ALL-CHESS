@@ -359,9 +359,13 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     coachText = `${targetBestMove} was best. ${currentMove?.eval?.lines?.[0]?.why || 'It maintains tactical harmony and central control.'}`;
   } else if (explaining) {
     coachExpression = 'thinking';
-    coachText = `Step ${variationStep + 1} of ${refutationMoves.length}: ${
-      refutationMoves[variationStep] ? `Refutation continues with ${refutationMoves[variationStep]}.` : 'End of critical refutation line.'
-    }`;
+    if (isBookMove) {
+      coachText = `Opening: ${game.opening || 'Book Opening'}. Main Idea: Control key central squares, develop minor pieces toward the center, and prepare king safety through early castling.`;
+    } else {
+      coachText = `Step ${variationStep + 1} of ${refutationMoves.length}: ${
+        refutationMoves[variationStep] ? `Refutation continues with ${refutationMoves[variationStep]}.` : 'End of critical refutation line.'
+      }`;
+    }
   } else if (retryMode) {
     if (retrySuccess) {
       coachExpression = 'brilliant';
@@ -629,67 +633,70 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             </div>
           ) : (
             <div className="space-y-1.5 pt-1">
-              <div className="grid grid-cols-3 gap-2 w-full">
-                {/* 1. EXPLAIN BUTTON */}
-                {explaining ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    onClick={resetModes}
-                  >
-                    Got it!
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    icon={<HelpCircle size={15} />}
-                    onClick={() => {
-                      setExplaining(true);
-                      setShowingBest(false);
-                      setRetryMode(false);
-                      setVariationStep(0);
-                    }}
-                  >
-                    Explain
-                  </Button>
+              <div className="flex items-center gap-2 w-full">
+                {/* 1. EXPLAIN BUTTON (Shown for Mistake/Blunder and Book; hidden on Best/Excellent) */}
+                {(isMistakeOrBlunder || isBookMove) && (
+                  explaining ? (
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="!h-12 flex-1"
+                      onClick={resetModes}
+                    >
+                      Got it!
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="!h-12 flex-1"
+                      icon={<HelpCircle size={18} />}
+                      onClick={() => {
+                        setExplaining(true);
+                        setShowingBest(false);
+                        setRetryMode(false);
+                        setVariationStep(0);
+                      }}
+                    >
+                      Explain
+                    </Button>
+                  )
                 )}
 
-                {/* 2. BEST BUTTON */}
-                {showingBest ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    onClick={resetModes}
-                  >
-                    Resume
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    icon={<Sparkles size={15} />}
-                    onClick={() => {
-                      setShowingBest(true);
-                      setExplaining(false);
-                      setRetryMode(false);
-                    }}
-                    disabled={isBestMove || isBookMove}
-                  >
-                    Best
-                  </Button>
+                {/* 2. BEST BUTTON (Shown for Mistake/Blunder; hidden on Best/Excellent/Book) */}
+                {isMistakeOrBlunder && !isBestMove && !isBookMove && (
+                  showingBest ? (
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="!h-12 flex-1"
+                      onClick={resetModes}
+                    >
+                      Resume
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="!h-12 flex-1"
+                      icon={<Sparkles size={18} />}
+                      onClick={() => {
+                        setShowingBest(true);
+                        setExplaining(false);
+                        setRetryMode(false);
+                      }}
+                    >
+                      Best
+                    </Button>
+                  )
                 )}
 
-                {/* 3. NEXT BUTTON (PRIMARY) */}
+                {/* 3. NEXT BUTTON (PRIMARY - Full width if sole button) */}
                 <Button
                   variant="primary"
-                  size="sm"
-                  fullWidth
-                  icon={<ArrowRight size={15} />}
+                  size="md"
+                  className="!h-12 flex-1"
+                  icon={<ArrowRight size={18} />}
                   onClick={handleNext}
                   disabled={currentMoveIndex >= game.moves.length - 1}
                 >
@@ -697,9 +704,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 </Button>
               </div>
 
-              {/* Variation stepper controls if in explain mode */}
-              {explaining && refutationMoves.length > 0 && (
-                <div className="flex items-center justify-between px-2 py-1 bg-theme-raised/50 rounded border border-theme-border/40 text-xs">
+              {/* Variation stepper controls if in explain mode (only for tactical refutations, not book) */}
+              {explaining && !isBookMove && refutationMoves.length > 0 && (
+                <div className="flex items-center justify-between px-3 py-2 bg-theme-raised/50 rounded border border-theme-border/40 text-xs">
                   <Button
                     variant="ghost"
                     size="sm"

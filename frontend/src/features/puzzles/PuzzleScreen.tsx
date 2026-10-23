@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Chess } from 'chess.js';
-import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
 import { Board } from '@/features/board/Board';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { CoachBubble, BubbleMessage } from '@/features/coach/CoachBubble';
@@ -12,18 +12,36 @@ import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { storage } from '@/lib/storage';
 import { formatTime } from '@/lib/formatters';
-import { CoachExpression, BoardBadge } from '@/data/types';
+import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
+import { BoardBadge, CoachExpression } from '@/data/types';
 import { sound } from '@/lib/sound';
-import {
-  Lightbulb,
-  RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
-  Flame,
-  CheckCircle2,
-  XCircle,
-} from 'lucide-react';
+import { Flame, Lightbulb, RotateCcw, Sparkles, ChevronLeft, ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
+
+function animateCountUp(start: number, end: number, duration: number, callback: (v: number) => void) {
+  const startTime = performance.now();
+  const step = (now: number) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const current = Math.round(start + (end - start) * progress);
+    callback(current);
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    }
+  };
+  requestAnimationFrame(step);
+}
+
+function getSquareCenterStyle(sq: string, orientation: 'white' | 'black') {
+  const file = sq.charCodeAt(0) - 97;
+  const rank = parseInt(sq[1], 10) - 1;
+  const col = orientation === 'white' ? file : 7 - file;
+  const row = orientation === 'white' ? 7 - rank : rank;
+  return {
+    left: `${(col + 0.5) * 12.5}%`,
+    top: `${(row + 0.5) * 12.5}%`,
+    transform: 'translate(-50%, -50%)',
+  };
+}
 
 export const PuzzleScreen: React.FC = () => {
   const { boardThemeId, pieceSetId, animationSpeed } = useSettingsStore();
@@ -33,42 +51,55 @@ export const PuzzleScreen: React.FC = () => {
   const [puzzleIndex, setPuzzleIndex] = useState<number>(0);
   const currentPuzzle = MOCK_PUZZLES[puzzleIndex] || MOCK_PUZZLES[0];
 
-  const [chess] = useState(() => new Chess());
+  const [chess] = useState(() => new Chess(currentPuzzle.fen));
   const [fen, setFen] = useState<string>(currentPuzzle.fen);
-  const [status, setStatus] = useState<'solving' | 'solved' | 'failed'>('solving');
   const [solutionStep, setSolutionStep] = useState<number>(0);
+  const [status, setStatus] = useState<'solving' | 'solved' | 'failed'>('solving');
+  const [lastSolvedSquare, setLastSolvedSquare] = useState<string | null>(null);
+  const [floatingChip, setFloatingChip] = useState<number | null>(null);
   const [timerSeconds, setTimerSeconds] = useState<number>(0);
   const [showRewardCascade, setShowRewardCascade] = useState<boolean>(false);
+  const [showLevelMap, setShowLevelMap] = useState<boolean>(false);
+  const [avatarHopIndex, setAvatarHopIndex] = useState<number>(0);
+
   const [puzzleRating, setPuzzleRating] = useState<number>(() =>
     storage.get('all_chess_puzzle_rating', 1200)
   );
-  const [lastSolvedSquare, setLastSolvedSquare] = useState<string | null>(null);
+  const [displayedRating, setDisplayedRating] = useState<number>(puzzleRating);
+  const [progressValue, setProgressValue] = useState<number>(0);
 
   const [coachExp, setCoachExp] = useState<CoachExpression>('thinking');
   const [bubbleText, setBubbleText] = useState<string>(currentPuzzle.goal);
 
-  // Timer loop
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (status === 'solving') {
-      interval = setInterval(() => setTimerSeconds((s) => s + 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [status]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load new puzzle
   useEffect(() => {
     chess.load(currentPuzzle.fen);
     setFen(currentPuzzle.fen);
-    setStatus('solving');
     setSolutionStep(0);
+    setStatus('solving');
+    setLastSolvedSquare(null);
+    setFloatingChip(null);
+    setShowLevelMap(false);
     setTimerSeconds(0);
     setShowRewardCascade(false);
+    setProgressValue(puzzleIndex);
+    setAvatarHopIndex(puzzleIndex % 5);
     setCoachExp('thinking');
     setBubbleText(currentPuzzle.goal);
-  }, [currentPuzzle, chess]);
+  }, [currentPuzzle, chess, puzzleIndex]);
 
-  // Handle Move
+  useEffect(() => {
+    if (status === 'solving') {
+      timerRef.current = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [status]);
+
   const handleMove = (_from: string, _to: string, promotion?: string) => {
     if (status !== 'solving') return false;
 
@@ -76,7 +107,6 @@ export const PuzzleScreen: React.FC = () => {
       const legalMoves = chess.moves({ verbose: true });
       const expectedMoveSan = currentPuzzle.solution[solutionStep];
 
-      // Find matching move
       const matchingMove = legalMoves.find(
         (m) =>
           m.from === _from &&
@@ -86,30 +116,44 @@ export const PuzzleScreen: React.FC = () => {
 
       if (!matchingMove) return false;
 
-      // Check if move matches solution SAN
       if (matchingMove.san === expectedMoveSan || currentPuzzle.solution.length === 1) {
         chess.move(matchingMove);
         setFen(chess.fen());
 
         const nextStep = solutionStep + 1;
         if (nextStep >= currentPuzzle.solution.length) {
-          // --- BEAT 1: Immediate solve state ---
+          // --- BEAT 1 (0ms): Immediate solve state ---
           setLastSolvedSquare(_to);
+          setFloatingChip(15);
           setStatus('solved');
           setCoachExp('brilliant');
-          setBubbleText('Bingo! You got it. Outstanding tactical foresight!');
+          setBubbleText('Solved! Brilliant tactical foresight.');
           sound.puzzleCorrect();
-          const newRating = puzzleRating + 15;
-          setPuzzleRating(newRating);
-          storage.set('all_chess_puzzle_rating', newRating);
 
-          // --- BEAT 3: Trigger celebration cascade after 2.5s ---
+          const targetRating = puzzleRating + 15;
+          setPuzzleRating(targetRating);
+          storage.set('all_chess_puzzle_rating', targetRating);
+          animateCountUp(displayedRating, targetRating, 400, setDisplayedRating);
+          setProgressValue(puzzleIndex + 1);
+
           setTimeout(() => {
-            setShowRewardCascade(true);
-          }, 2500);
+            setFloatingChip(null);
+          }, 900);
+
+          // --- BEAT 2 (1000ms): Cross-fade to level map ---
+          setTimeout(() => {
+            setShowLevelMap(true);
+            setAvatarHopIndex((puzzleIndex + 1) % 5);
+          }, 1000);
+
+          // Only when a level completes (every 5 puzzles)
+          if ((puzzleIndex + 1) % 5 === 0) {
+            setTimeout(() => {
+              setShowRewardCascade(true);
+            }, 1800);
+          }
         } else {
           setSolutionStep(nextStep);
-          // Play opponent auto-reply
           setTimeout(() => {
             const oppMove = currentPuzzle.solution[nextStep];
             chess.move(oppMove);
@@ -120,7 +164,6 @@ export const PuzzleScreen: React.FC = () => {
         }
         return true;
       } else {
-        // Mistake / Fail
         setStatus('failed');
         setCoachExp('embarrassed');
         setBubbleText("That move leaves tactical counterplay. Let's retry and find the cleaner strike.");
@@ -137,31 +180,40 @@ export const PuzzleScreen: React.FC = () => {
     setFen(currentPuzzle.fen);
     setStatus('solving');
     setLastSolvedSquare(null);
+    setFloatingChip(null);
+    setShowLevelMap(false);
     setSolutionStep(0);
     setCoachExp('thinking');
     setBubbleText(currentPuzzle.goal);
   };
 
   const handleNext = () => {
+    setShowLevelMap(false);
     setShowRewardCascade(false);
     setLastSolvedSquare(null);
+    setFloatingChip(null);
     setPuzzleIndex((prev) => (prev + 1) % MOCK_PUZZLES.length);
   };
 
   const handlePrev = () => {
+    setShowLevelMap(false);
     setShowRewardCascade(false);
     setLastSolvedSquare(null);
+    setFloatingChip(null);
     setPuzzleIndex((prev) => (prev - 1 + MOCK_PUZZLES.length) % MOCK_PUZZLES.length);
   };
 
-  const isWhiteToMove = currentPuzzle.fen.includes(' w ');
+  const isWhiteToMove = currentPuzzle.fen.split(' ')[1] === 'w';
 
   const bubbleMessages: BubbleMessage[] = useMemo(
     () => [
       {
-        id: `puz-msg-${puzzleIndex}-${status}`,
+        id: `puzzle-${puzzleIndex}-${status}-${bubbleText.slice(0, 10)}`,
         text: bubbleText,
-        evalText: `${isWhiteToMove ? 'White' : 'Black'} to move`,
+        classification: status === 'solved' ? 'best' : status === 'failed' ? 'mistake' : undefined,
+        moveSan: status === 'solved' ? 'Solved' : undefined,
+        evalText: isWhiteToMove ? '+2.4' : '-2.4',
+        evalScore: isWhiteToMove ? 2.4 : -2.4,
       },
     ],
     [puzzleIndex, status, bubbleText, isWhiteToMove]
@@ -176,24 +228,25 @@ export const PuzzleScreen: React.FC = () => {
   );
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden relative">
-      {/* Center Zone: Board */}
-      <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0 relative">
-        <div className="w-full max-w-[min(88vh,680px)] flex flex-col gap-2">
-          {/* Header Row: Puzzle Level, Timer, Rating */}
-          <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted font-semibold">
+    <div className="flex flex-col lg:flex-row h-full w-full bg-theme-bg select-none">
+      {/* Left/Main Zone: Board + Top Status Bar */}
+      <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
+        <div className="w-full max-w-[min(88vh,720px)] flex flex-col items-center">
+          {/* Header Row: Single User Rating + Muted Puzzle Rating */}
+          <div className="w-full flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 font-bold flex items-center justify-center text-[10px] border border-amber-500/40">
-                🧩
+              <span className="font-extrabold font-display text-theme-text text-base">
+                Rating {displayedRating}
               </span>
-              <span className="font-bold text-theme-text">Puzzle #{puzzleIndex + 1}</span>
-              <span className="font-mono">({currentPuzzle.rating})</span>
+              <span className="text-xs text-theme-muted font-mono">
+                Puzzle {currentPuzzle.rating}
+              </span>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="font-mono">{formatTime(timerSeconds)}</span>
-              <span className="px-2 py-0.5 rounded-full bg-theme-raised font-mono font-bold text-amber-500 border border-theme-border">
-                Rating {puzzleRating}
+              <span className="font-mono text-xs text-theme-muted">{formatTime(timerSeconds)}</span>
+              <span className="px-2 py-0.5 rounded-full bg-theme-raised font-mono font-bold text-amber-500 border border-theme-border text-xs">
+                Level {Math.floor(puzzleIndex / 5) + 1}
               </span>
             </div>
           </div>
@@ -211,34 +264,47 @@ export const PuzzleScreen: React.FC = () => {
               onMove={handleMove}
             />
 
-            {/* Reward Cascade Celebration Overlay */}
+            {/* Floating Points Chip Over Destination Square (+15) */}
+            {floatingChip && lastSolvedSquare && (
+              <motion.div
+                initial={{ opacity: 1, y: 0, scale: 0.9 }}
+                animate={{ opacity: 0, y: -16, scale: 1.15 }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                className="absolute z-40 px-2 py-0.5 rounded bg-emerald-500 text-black font-extrabold text-sm shadow-xl pointer-events-none"
+                style={getSquareCenterStyle(lastSolvedSquare, isWhiteToMove ? 'white' : 'black')}
+              >
+                +{floatingChip}
+              </motion.div>
+            )}
+
+            {/* Reward Cascade Celebration Overlay (Only on level completion) */}
             <RewardCascade
               isOpen={showRewardCascade}
-              levelNumber={puzzleIndex + 1}
+              levelNumber={Math.floor(puzzleIndex / 5) + 1}
               pointsEarned={15}
               onNextPuzzle={handleNext}
             />
           </div>
 
           {/* Bottom Bar: Prev/Next & Themes */}
-          <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
+          <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted w-full">
             <span className="capitalize">{currentPuzzle.theme.join(' • ')}</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handlePrev}
-                className="hover:text-theme-text transition-colors p-1"
+                className="hover:text-theme-text transition-colors p-2.5 rounded hover:bg-theme-raised min-w-[36px] min-h-[36px] flex items-center justify-center"
                 title="Previous puzzle"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={18} />
               </button>
               <button
                 type="button"
                 onClick={handleNext}
-                className="hover:text-theme-text transition-colors p-1"
+                className="hover:text-theme-text transition-colors p-2.5 rounded hover:bg-theme-raised min-w-[36px] min-h-[36px] flex items-center justify-center"
                 title="Next puzzle"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={18} />
               </button>
             </div>
           </div>
@@ -262,77 +328,159 @@ export const PuzzleScreen: React.FC = () => {
 
         {/* Panel Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Coach Portrait + Speech Bubble */}
-          <div className="flex items-start gap-3">
-            <CoachAvatar expression={coachExp} mode="bust" size={68} />
-            <div className="flex-1 min-w-0">
-              <CoachBubble messages={bubbleMessages} />
-            </div>
-          </div>
-
-          {/* Feedback Card */}
-          {status === 'solved' && (
-            <Card className="p-3 bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-semibold text-sm flex items-center gap-2">
-              <CheckCircle2 size={18} />
-              <span>Solved! +15 Rating Points Earned</span>
-            </Card>
-          )}
-
-          {status === 'failed' && (
-            <Card className="p-3 bg-red-500/15 border-red-500/40 text-red-400 font-semibold text-sm flex items-center gap-2">
-              <XCircle size={18} />
-              <span>Incorrect move. Review the position and retry!</span>
-            </Card>
-          )}
-
-          {/* Puzzle Progress */}
-          <Card className="p-4 space-y-3 bg-theme-raised/30">
-            <div className="flex justify-between items-center text-xs font-bold text-theme-muted">
-              <span>Level Progress</span>
-              <span>Level {puzzleIndex + 1}</span>
-            </div>
-            <ProgressBar value={puzzleIndex + 1} max={MOCK_PUZZLES.length} height={6} />
-          </Card>
-
-          {/* Actions: Retry / Next / Hint */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            {status === 'failed' && (
-              <Button
-                variant="secondary"
-                size="md"
-                icon={<RotateCcw size={16} />}
-                onClick={handleRetry}
+          <AnimatePresence mode="wait">
+            {showLevelMap ? (
+              <motion.div
+                key="level-map"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
               >
-                Retry
-              </Button>
-            )}
+                {/* Level Map Progression Track */}
+                <Card className="p-4 bg-theme-raised/50 border border-theme-border/60 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-theme-muted">
+                    <span>Level {Math.floor(puzzleIndex / 5) + 1} Map</span>
+                    <span className="text-amber-500 font-mono">Tile {avatarHopIndex + 1} of 5</span>
+                  </div>
 
-            {status === 'solving' && (
-              <Button
-                variant="highlight"
-                size="md"
-                icon={<Lightbulb size={16} />}
-                onClick={() => {
-                  const firstSolutionMove = currentPuzzle.solution[solutionStep];
-                  setBubbleText(`Hint: Look for a forcing move starting with ${firstSolutionMove[0]}!`);
-                }}
-              >
-                Get Hint
-              </Button>
-            )}
+                  {/* Visual Step Track with Hopping Avatar */}
+                  <div className="flex items-center justify-between py-6 px-2 relative">
+                    <div className="absolute left-6 right-6 h-1 bg-theme-border rounded-full -z-0" />
+                    <div
+                      className="absolute left-6 h-1 bg-amber-500 rounded-full transition-all duration-500 -z-0"
+                      style={{ width: `${Math.min(100, (avatarHopIndex / 4) * 85)}%` }}
+                    />
 
-            {status === 'solved' && (
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth
-                icon={<Sparkles size={16} />}
-                onClick={handleNext}
+                    {[0, 1, 2, 3, 4].map((tileIdx) => {
+                      const isCompleted = tileIdx < avatarHopIndex;
+                      const isCurrent = tileIdx === avatarHopIndex;
+                      return (
+                        <div key={tileIdx} className="relative z-10 flex flex-col items-center">
+                          {isCurrent && (
+                            <motion.div
+                              initial={{ y: -10, scale: 0.8 }}
+                              animate={{ y: 0, scale: 1 }}
+                              transition={{ type: 'spring', stiffness: 350, damping: 20 }}
+                              className="absolute -top-8"
+                            >
+                              <CoachAvatar expression="thumbsup" mode="bust" size={28} />
+                            </motion.div>
+                          )}
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs border-2 transition-all ${
+                              isCompleted
+                                ? 'bg-amber-500 border-amber-500 text-black'
+                                : isCurrent
+                                ? 'bg-amber-500/20 border-amber-500 text-amber-500 ring-4 ring-amber-500/20'
+                                : 'bg-theme-card border-theme-border text-theme-muted'
+                            }`}
+                          >
+                            {isCompleted ? '✓' : tileIdx + 1}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+
+                {/* Next Puzzle Action (48px tall) */}
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="!h-12 w-full"
+                  icon={<Sparkles size={18} />}
+                  onClick={handleNext}
+                >
+                  Next Puzzle
+                </Button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="puzzle-solving"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-4"
               >
-                Next Puzzle
-              </Button>
+                {/* Coach Portrait + Speech Bubble */}
+                <div className="flex items-start gap-3">
+                  <CoachAvatar expression={coachExp} mode="bust" size={68} />
+                  <div className="flex-1 min-w-0">
+                    <CoachBubble messages={bubbleMessages} />
+                  </div>
+                </div>
+
+                {/* Feedback Card */}
+                {status === 'solved' && (
+                  <Card className="p-3 bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-semibold text-sm flex items-center gap-2">
+                    <CheckCircle2 size={18} />
+                    <span>Solved! +15 Rating Points Earned</span>
+                  </Card>
+                )}
+
+                {status === 'failed' && (
+                  <Card className="p-3 bg-red-500/15 border-red-500/40 text-red-400 font-semibold text-sm flex items-center gap-2">
+                    <XCircle size={18} />
+                    <span>Incorrect move. Review the position and retry!</span>
+                  </Card>
+                )}
+
+                {/* Puzzle Progress */}
+                <Card className="p-4 space-y-3 bg-theme-raised/30">
+                  <div className="flex justify-between items-center text-xs font-bold text-theme-muted">
+                    <span>Level Progress</span>
+                    <span>Level {Math.floor(puzzleIndex / 5) + 1}</span>
+                  </div>
+                  <ProgressBar value={progressValue} max={MOCK_PUZZLES.length} height={6} />
+                </Card>
+
+                {/* Actions: Retry / Next / Hint (48px tall buttons) */}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {status === 'failed' && (
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="!h-12 flex-1"
+                      icon={<RotateCcw size={18} />}
+                      onClick={handleRetry}
+                    >
+                      Retry
+                    </Button>
+                  )}
+
+                  {status === 'solving' && (
+                    <Button
+                      variant="highlight"
+                      size="md"
+                      className="!h-12 w-full"
+                      icon={<Lightbulb size={18} />}
+                      onClick={() => {
+                        const firstSolutionMove = currentPuzzle.solution[solutionStep];
+                        setBubbleText(`Hint: Look for a forcing move starting with ${firstSolutionMove[0]}!`);
+                      }}
+                    >
+                      Get Hint
+                    </Button>
+                  )}
+
+                  {status === 'solved' && (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      className="!h-12 w-full"
+                      icon={<Sparkles size={18} />}
+                      onClick={handleNext}
+                    >
+                      Next Puzzle
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
         </div>
       </div>
     </div>
