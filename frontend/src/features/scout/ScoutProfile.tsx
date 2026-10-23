@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
-import { CoachAvatar } from '@/features/coach/CoachAvatar';
-import { CoachBubble } from '@/features/coach/CoachBubble';
+import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { ScoutProfile as ScoutProfileType } from '@/data/types';
 import { ArrowLeft, Swords, ShieldAlert, BookOpen, History, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -72,14 +71,9 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
       </Card>
 
       {/* Coach Prep Assessment */}
-      <div className="flex items-start gap-4 p-5 rounded-xl bg-theme-card border border-theme-border shadow-sm">
-        <CoachAvatar expression="thinking" mode="bust" size={60} />
-        <div className="flex-1">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">
-            Coach Repertoire Assessment
-          </h4>
-          <CoachBubble text={coachNotes} />
-        </div>
+      <div className="p-5 rounded-xl bg-theme-card border border-theme-border shadow-sm space-y-3">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500">Coach Repertoire Assessment</h4>
+        <CoachSpeech expression="thinking" size={80} text={coachNotes} />
       </div>
 
       {/* Opening Repertoire Breakdown */}
