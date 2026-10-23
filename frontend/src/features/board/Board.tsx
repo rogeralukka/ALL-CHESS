@@ -21,6 +21,7 @@ export interface BoardProps {
   legalTargets?: string[];
   interactive?: boolean;
   onMove?: (from: string, to: string, promotion?: string) => boolean | void;
+  onIllegalMove?: (from: string, attemptedTo: string) => void;
   boardTheme: BoardTheme;
   pieceSet: PieceSet;
   animationSpeed?: 'off' | 'fast' | 'medium' | 'slow';
@@ -61,6 +62,7 @@ export const Board: React.FC<BoardProps> = ({
   legalTargets = [],
   interactive = true,
   onMove,
+  onIllegalMove,
   boardTheme,
   pieceSet,
   animationSpeed = 'medium',
@@ -250,6 +252,8 @@ export const Board: React.FC<BoardProps> = ({
       const success = onMove?.(from, to, isPawnPromotion ? 'q' : undefined);
       setSelectedSquare(null);
       return success !== false;
+    } else {
+      onIllegalMove?.(from, to);
     }
     return false;
   };

@@ -13,6 +13,7 @@ import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { Move, CoachExpression, Arrow } from '@/data/types';
 import { getExpressionForEvent } from '@/features/coach/expressionMap';
+import { ILLEGAL_MOVE_TEACHING_LINES } from '@/features/coach/coachLines';
 import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,6 +29,7 @@ export const PlayGame: React.FC = () => {
   const [moves, setMoves] = useState<Move[]>([]);
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
   const [arrows, setArrows] = useState<Arrow[]>([]);
+  const [highlights, setHighlights] = useState<string[]>([]);
   const [showResignPopover, setShowResignPopover] = useState(false);
   const [gameOver, setGameOver] = useState<{
     winner: 'user' | 'coach' | 'draw';
@@ -155,6 +157,7 @@ export const PlayGame: React.FC = () => {
       const newFen = chess.fen();
       setFen(newFen);
       setArrows([]); // clear hint arrows on move
+      setHighlights([]); // clear illegal highlights on legal move
 
       const newMoveObj: Move = {
         san: result.san,
@@ -194,12 +197,40 @@ export const PlayGame: React.FC = () => {
     }
   };
 
+  // Illegal Move Handler (Item 8)
+  const handleIllegalMove = (from: string, _attemptedTo: string) => {
+    try {
+      const legalMoves = chess.moves({ square: from as Square, verbose: true });
+      const targetSquares = legalMoves.map((m) => m.to);
+      setHighlights([from, ...targetSquares]);
+    } catch {
+      setHighlights([from]);
+    }
+
+    setCoachExpression('thinking');
+
+    const line =
+      ILLEGAL_MOVE_TEACHING_LINES[Math.floor(Math.random() * ILLEGAL_MOVE_TEACHING_LINES.length)];
+
+    const illegalMsg: BubbleMessage = {
+      id: `illegal-${Date.now()}`,
+      text: line,
+      classification: 'mistake',
+      moveSan: 'Illegal Move',
+    };
+    setStackedMessages((prev) => [...prev.slice(-2), illegalMsg]);
+
+    setTimeout(() => {
+      setHighlights([]);
+    }, 3500);
+  };
+
   // Provide Hint
   const handleHint = () => {
     const legalMoves = chess.moves({ verbose: true });
     if (legalMoves.length === 0) return;
     const bestCandidate = legalMoves[0];
-    setArrows([{ from: bestCandidate.from, to: bestCandidate.to, color: 'green' }]);
+    setArrows([{ from: bestCandidate.from, to: bestCandidate.to, color: 'orange' }]);
 
     const hintMsg: BubbleMessage = {
       id: `hint-${Date.now()}`,
@@ -279,6 +310,7 @@ export const PlayGame: React.FC = () => {
                 animationSpeed={animationSpeed}
                 coordinates={coordinates}
                 arrows={arrows}
+                highlights={highlights}
                 lastMove={
                   lastMoveObj
                     ? { from: lastMoveObj.from, to: lastMoveObj.to }
@@ -286,6 +318,7 @@ export const PlayGame: React.FC = () => {
                 }
                 interactive={!gameOver}
                 onMove={handleUserMove}
+                onIllegalMove={handleIllegalMove}
               />
 
               {/* Game Over Modal Over Board */}

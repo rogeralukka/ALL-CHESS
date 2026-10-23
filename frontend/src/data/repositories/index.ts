@@ -22,8 +22,15 @@ export interface IGameRepository {
   getGameById(id: string): Promise<Game | null>;
 }
 
+export interface RatingSummary {
+  mode: 'Rapid' | 'Blitz' | 'Bullet';
+  rating: number;
+  deltaWeekly: number;
+}
+
 export interface IStatsRepository {
   getRatingHistory(range?: '30d' | '90d' | 'all'): Promise<RatingPoint[]>;
+  getUserRatings(): Promise<RatingSummary[]>;
   getOpeningStats(): Promise<OpeningStat[]>;
   getPhasePointsLost(): Promise<{ opening: number; middlegame: number; endgame: number }>;
   getStrengthsAndWeaknesses(): Promise<{ strengths: typeof MOCK_STRENGTHS; weaknesses: typeof MOCK_WEAKNESSES }>;
@@ -106,6 +113,13 @@ export const gameRepository: IGameRepository = {
 export const statsRepository: IStatsRepository = {
   async getRatingHistory() {
     return MOCK_RATING_HISTORY;
+  },
+  async getUserRatings() {
+    return [
+      { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
+      { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
+      { mode: 'Bullet', rating: 880, deltaWeekly: 5 },
+    ];
   },
   async getOpeningStats() {
     return MOCK_OPENING_STATS;

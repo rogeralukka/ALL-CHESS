@@ -136,7 +136,7 @@ export interface LessonStage {
   id: string;
   title: string;
   category: 'openings' | 'middlegame' | 'endgame';
-  status: 'locked' | 'current' | 'done';
+  status: 'locked' | 'current' | 'done' | 'unlocked';
   xp: number;
   description: string;
   steps: LessonStep[];

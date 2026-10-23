@@ -5,10 +5,14 @@ This document records all architectural choices, design trade-offs, and open-sou
 ---
 
 ## 1. Piece Set Selection & Licence Terms
-- **Chosen Set:** `cburnett` (Colin M.L. Burnett), the standard open-source piece set used by Lichess and Wikimedia Commons.
-- **Licence Terms:** Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) / GPL.
+- **Chosen Set:** `cburnett` (Colin M.L. Burnett), the standard open-source piece set used across Lichess and Wikimedia Commons.
+- **Source & Author:** Colin M.L. Burnett (User:Cburnett on Wikimedia Commons; packaged in Lichess).
+- **Exact Licence Terms:** Tri-licensed under:
+  1. GNU General Public License version 2 or later (GPLv2+)
+  2. Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+  3. Free Art License 1.3 (Licence Art Libre)
 - **Attribution & Compliance:**
-  - Attribution file created at `frontend/public/pieces/cburnett/LICENSE`.
+  - Full licence declaration and attribution text maintained at `frontend/public/pieces/cburnett/LICENSE`.
   - Piece loading is designed completely data-driven through `PIECE_SETS` array in `src/data/boardThemes.ts` so additional piece sets can be added without modifying the board renderer.
 
 ---

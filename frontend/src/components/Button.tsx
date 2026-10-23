@@ -36,7 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
     danger:
       'bg-red-600 hover:bg-red-700 text-white shadow-sm',
     highlight:
-      'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm',
+      'bg-amber-500 hover:bg-amber-600 text-black dark:text-neutral-900 font-bold shadow-sm',
   };
 
   return (

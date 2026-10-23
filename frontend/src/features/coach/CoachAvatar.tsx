@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CoachExpression } from '@/data/types';
+import { COACH_MANIFEST, getCoachAsset } from '@/data/coachManifest';
 
 interface CoachAvatarProps {
   expression: CoachExpression;
@@ -8,46 +9,6 @@ interface CoachAvatarProps {
   size?: number; // size in px, defaults to 96 for bust, 320 for full
   className?: string;
 }
-
-// Expression to asset path mapping
-const AVATAR_ASSETS: Record<CoachExpression, { bust: string; full: string; fallbackBust: string; fallbackFull: string }> = {
-  neutral: {
-    bust: '/assets/coach/coach_neutral.webp',
-    full: '/assets/coach/coach_neutral_full.webp',
-    fallbackBust: '/assets/coach/coach_neutral.png',
-    fallbackFull: '/assets/coach/coach_neutral_full.png',
-  },
-  thinking: {
-    bust: '/assets/coach/coach_thinking.webp',
-    full: '/assets/coach/coach_thinking_full.webp',
-    fallbackBust: '/assets/coach/coach_thinking.png',
-    fallbackFull: '/assets/coach/coach_thinking_full.png',
-  },
-  thumbsup: {
-    bust: '/assets/coach/coach_thumbsup.webp',
-    full: '/assets/coach/coach_thumbsup_full.webp',
-    fallbackBust: '/assets/coach/coach_best.png',
-    fallbackFull: '/assets/coach/coach_best_full.png',
-  },
-  brilliant: {
-    bust: '/assets/coach/coach_brilliant.webp',
-    full: '/assets/coach/coach_brilliant_full.webp',
-    fallbackBust: '/assets/coach/coach_brilliant.png',
-    fallbackFull: '/assets/coach/coach_brilliant_full.png',
-  },
-  embarrassed: {
-    bust: '/assets/coach/coach_embarrassed.webp',
-    full: '/assets/coach/coach_embarrassed_full.webp',
-    fallbackBust: '/assets/coach/coach_blunder.png',
-    fallbackFull: '/assets/coach/coach_blunder_full.png',
-  },
-  wave: {
-    bust: '/assets/coach/coach_wave.webp',
-    full: '/assets/coach/coach_wave_full.webp',
-    fallbackBust: '/assets/coach/coach_welcome.png',
-    fallbackFull: '/assets/coach/coach_welcome_full.png',
-  },
-};
 
 export const CoachAvatar: React.FC<CoachAvatarProps> = ({
   expression,
@@ -58,10 +19,10 @@ export const CoachAvatar: React.FC<CoachAvatarProps> = ({
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    // Preload all expression assets on mount
-    Object.values(AVATAR_ASSETS).forEach((asset) => {
+    // Preload all expression assets from manifest on mount
+    Object.values(COACH_MANIFEST.expressions).forEach((entry) => {
       const img = new Image();
-      img.src = mode === 'full' ? asset.full : asset.bust;
+      img.src = mode === 'full' ? entry.full : entry.bust;
     });
 
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -71,7 +32,7 @@ export const CoachAvatar: React.FC<CoachAvatarProps> = ({
     return () => mq.removeEventListener('change', handler);
   }, [mode]);
 
-  const asset = AVATAR_ASSETS[expression] || AVATAR_ASSETS.neutral;
+  const asset = getCoachAsset(expression);
   const src = mode === 'full' ? asset.full : asset.bust;
   const fallback = mode === 'full' ? asset.fallbackFull : asset.fallbackBust;
 

@@ -18,27 +18,37 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     steps: [
       {
         id: 'step-1-1',
-        title: 'Cut off the King',
-        instruction: 'Place your rook on the 4th rank to build a fence and prevent the enemy king from advancing.',
-        buttonText: "Let's Start!",
+        title: 'The Cut-Off Concept',
+        instruction: 'To box in the enemy king, our first goal is establishing an impassable wall along a rank or file with the rook.',
+        buttonText: 'Next: Demonstration',
+        fen: '8/8/8/4k3/8/8/4K3/R7 w - - 0 1',
+        arrows: [{ from: 'a1', to: 'a4', color: 'green' }],
+        highlightSquares: ['a4'],
+        isInteractive: false,
+        explanation: "Notice how the green arrow on rank 4 prevents Black's king from ever approaching the white half of the board."
+      },
+      {
+        id: 'step-1-2',
+        title: 'Marching the King',
+        instruction: 'The rook holds the fence while our king marches forward into opposition to push Black backward.',
+        buttonText: 'Next: Your Move',
+        fen: '8/8/8/4k3/R7/8/4K3/8 w - - 0 2',
+        arrows: [{ from: 'e2', to: 'e3', color: 'green' }],
+        highlightSquares: ['e3'],
+        isInteractive: false,
+        explanation: 'King opposition takes away squares directly opposite, compelling the defender to give ground.'
+      },
+      {
+        id: 'step-1-3',
+        title: 'Establish the Fence',
+        instruction: 'Your turn! Move the white rook from a1 to a4 to establish the fourth-rank barrier.',
+        buttonText: 'Complete Stage',
         fen: '8/8/8/4k3/8/8/4K3/R7 w - - 0 1',
         requiredMove: 'Ra4',
         arrows: [{ from: 'a1', to: 'a4', color: 'green' }],
         highlightSquares: ['a4'],
         isInteractive: true,
-        explanation: 'Great! The rook acts as an impassable wall along the 4th rank.'
-      },
-      {
-        id: 'step-1-2',
-        title: 'Bring up the King',
-        instruction: 'Your king must work in tandem with the rook to push the enemy king back. Step toward the center.',
-        buttonText: 'Continue',
-        fen: '8/8/8/4k3/R7/8/4K3/8 w - - 0 2',
-        requiredMove: 'Ke3',
-        arrows: [{ from: 'e2', to: 'e3', color: 'green' }],
-        highlightSquares: ['e3'],
-        isInteractive: true,
-        explanation: 'Direct opposition! Now the enemy king is forced to retreat.'
+        explanation: 'Excellent! The rook fence is locked in place.'
       }
     ]
   },
@@ -52,15 +62,37 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     steps: [
       {
         id: 'step-2-1',
-        title: 'Identify the Weak Rank',
-        instruction: 'The black king is trapped behind a wall of pawns on f7, g7, and h7. Deliver checkmate on d8!',
-        buttonText: "Let's Play!",
+        title: 'The Trapped King',
+        instruction: 'Look at the black king on g8. The f7, g7, and h7 pawns prevent it from stepping forward. When a king has no flight squares, the back rank is lethal.',
+        buttonText: 'Next: Demonstration',
+        fen: '3r2k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',
+        arrows: [{ from: 'd1', to: 'd8', color: 'green' }],
+        highlightSquares: ['d8', 'f7', 'g7', 'h7'],
+        isInteractive: false,
+        explanation: 'Because of the pawn wall, any check along the 8th rank that cannot be blocked is immediate checkmate.'
+      },
+      {
+        id: 'step-2-2',
+        title: 'Back-Rank Checkmate',
+        instruction: "White's rook delivers check on d8. Black's king is suffocated behind its own pawn shield and has no legal escape.",
+        buttonText: 'Next: Your Move',
+        fen: '3R2k1/5ppp/8/8/8/8/5PPP/6K1 b - - 0 1',
+        arrows: [{ from: 'd8', to: 'g8', color: 'red' }],
+        highlightSquares: ['g8', 'd8'],
+        isInteractive: false,
+        explanation: "The hallmark of back-rank checkmate: the defender's own pieces become their downfall."
+      },
+      {
+        id: 'step-2-3',
+        title: 'Deliver Checkmate',
+        instruction: 'Your turn! The black rook sits unprotected on d8. Capture it with your rook to deliver back-rank checkmate!',
+        buttonText: 'Complete Stage',
         fen: '3r2k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',
         requiredMove: 'Rxd8#',
         arrows: [{ from: 'd1', to: 'd8', color: 'green' }],
         highlightSquares: ['d8'],
         isInteractive: true,
-        explanation: 'Checkmate! The pawns blocked all king flight squares.'
+        explanation: 'Checkmate! 1. Rxd8# finishes the game on the spot.'
       }
     ]
   },
@@ -74,15 +106,37 @@ export const MOCK_LEARN_STAGES: LessonStage[] = [
     steps: [
       {
         id: 'step-3-1',
-        title: 'Rook to the 4th rank',
-        instruction: 'Place your rook on the 4th rank to prepare the bridge maneuver.',
-        buttonText: 'Start Bridge',
+        title: 'The Lucena Strategy',
+        instruction: "In rook endgames with a pawn on the 7th rank, the Lucena bridge is the winning method. The key is positioning our rook on the 4th rank to shield our king from distant checks.",
+        buttonText: 'Next: Demonstration',
+        fen: '1K1k4/1P6/8/8/8/8/r7/5R2 w - - 0 1',
+        arrows: [{ from: 'f1', to: 'f4', color: 'green' }],
+        highlightSquares: ['f4'],
+        isInteractive: false,
+        explanation: 'Placing the rook on the 4th rank allows White to shelter the king on d4 or e4 when stepping out.'
+      },
+      {
+        id: 'step-3-2',
+        title: 'Building the Shield',
+        instruction: "With the rook placed on f4, White's king can safely step out of the pawn's path without fear of perpetual checks.",
+        buttonText: 'Next: Your Move',
+        fen: '1K1k4/1P6/8/8/5R2/8/r7/8 b - - 0 1',
+        arrows: [{ from: 'f4', to: 'd4', color: 'green' }],
+        highlightSquares: ['f4', 'd4'],
+        isInteractive: false,
+        explanation: 'Once the king reaches d5 or e5, the rook on f4 bridges across to block checks and queen the pawn.'
+      },
+      {
+        id: 'step-3-3',
+        title: 'Place the Rook on the 4th Rank',
+        instruction: 'Your turn! Play the critical first move: advance the rook to f4 to prepare the bridge.',
+        buttonText: 'Complete Stage',
         fen: '1K1k4/1P6/8/8/8/8/r7/5R2 w - - 0 1',
         requiredMove: 'Rf4',
         arrows: [{ from: 'f1', to: 'f4', color: 'green' }],
         highlightSquares: ['f4'],
         isInteractive: true,
-        explanation: 'The 4th rank rook is ready to shield the king from lateral checks.'
+        explanation: 'Superb! 1. Rf4! sets up the unstoppable Lucena bridge.'
       }
     ]
   },

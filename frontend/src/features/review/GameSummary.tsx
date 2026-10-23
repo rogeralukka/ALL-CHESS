@@ -1,5 +1,5 @@
 import React from 'react';
-import { Game } from '@/data/types';
+import { Game, CoachExpression } from '@/data/types';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
@@ -23,13 +23,31 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
   const userWon = (userIsWhite && isWhiteWin) || (!userIsWhite && isBlackWin);
   const userLost = (userIsWhite && isBlackWin) || (!userIsWhite && isWhiteWin);
 
-  const coachExp = userWon ? 'brilliant' : userLost ? 'embarrassed' : 'thumbsup';
+  // Find biggest swing move
+  let biggestSwingMove = game.moves[0];
+  let maxSwing = 0;
+  game.moves.forEach((m, idx) => {
+    const prev = idx === 0 ? 0.2 : (game.moves[idx - 1].eval?.eval ?? 0);
+    const curr = m.eval?.eval ?? 0;
+    const diff = Math.abs(curr - prev);
+    if (diff > maxSwing) {
+      maxSwing = diff;
+      biggestSwingMove = m;
+    }
+  });
 
-  const coachText = userWon
-    ? `Great game! You maintained consistent pressure in the ${game.opening.name} and capitalized on the decisive tactical opening.`
-    : userLost
-    ? `A hard-fought contest in the ${game.opening.name}. Reviewing the critical turning points will help eliminate those middle-game inaccuracies.`
-    : `A balanced and instructive draw in the ${game.opening.name}. Solid defensive technique held the position.`;
+  const coachExp: CoachExpression = userWon ? 'brilliant' : userLost ? 'embarrassed' : 'thumbsup';
+  const swingText = biggestSwingMove
+    ? `on move ${biggestSwingMove.moveNumber} (${biggestSwingMove.san})`
+    : 'in the middlegame';
+
+  const coachText = userLost
+    ? `You built a lead, then rushed an attack ${swingText}. Stepping through the review will show the winning continuation.`
+    : userWon
+    ? `Great game! You took control of the ${game.opening.name} and capitalized decisively ${swingText}.`
+    : `A balanced and instructive draw in the ${game.opening.name}. The sharpest moment came ${swingText}.`;
+
+  const fullMoves = Math.ceil(game.moves.length / 2);
 
   return (
     <div className="flex flex-col h-full max-w-xl mx-auto w-full p-4 space-y-4">
@@ -124,18 +142,18 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
         )}
       </Card>
 
-      {/* Mini Eval Graph with Key-Move Dots */}
+      {/* Mini Eval Graph with Key-Move Dots & Biggest Swing Label */}
       <Card className="p-3">
         <div className="flex justify-between items-center mb-1 text-xs font-bold text-theme-muted">
           <span>Advantage Momentum</span>
-          <span>{game.moves.length} moves</span>
+          <span>{fullMoves} moves</span>
         </div>
         <EvalGraph
           moves={game.moves}
           currentMoveIndex={-1}
           onSeek={() => {}}
-          height={70}
-          mini={true}
+          height={80}
+          mini={false}
         />
       </Card>
 

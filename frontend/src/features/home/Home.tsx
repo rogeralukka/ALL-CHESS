@@ -1,45 +1,72 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { ProgressBar } from '@/components/ProgressBar';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { CoachBubble } from '@/features/coach/CoachBubble';
-import { MOCK_FRIENDS } from '@/data/mock/mockFriends';
+import {
+  gameRepository,
+  statsRepository,
+  friendRepository,
+  learnRepository,
+  puzzleRepository,
+  RatingSummary,
+} from '@/data/repositories';
+import { Game, Friend, LessonStage, Puzzle } from '@/data/types';
 import { useNavigate } from 'react-router-dom';
 import {
   Flame,
-  RefreshCw,
   Swords,
   BookOpen,
-  Puzzle,
+  Puzzle as PuzzleIcon,
   TrendingUp,
   ChevronRight,
   Sparkles,
   Users,
-  CheckCircle,
+  Clock,
+  ArrowUpRight,
+  SlidersHorizontal,
+  RotateCw,
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncToast, setSyncToast] = useState<string | null>(null);
   const [coachDismissed, setCoachDismissed] = useState(false);
+  const [recentGames, setRecentGames] = useState<Game[]>([]);
+  const [ratings, setRatings] = useState<RatingSummary[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [currentStage, setCurrentStage] = useState<LessonStage | null>(null);
+  const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(null);
 
-  const handleSync = () => {
-    setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
-      setSyncToast('Synced 3 new games from linked accounts!');
-      setTimeout(() => setSyncToast(null), 3000);
-    }, 900);
-  };
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      gameRepository.getGames(),
+      statsRepository.getUserRatings(),
+      friendRepository.getFriends(),
+      learnRepository.getStages(),
+      puzzleRepository.getDailyPuzzle(),
+    ]).then(([games, userRatings, friendList, stages, puzzle]) => {
+      if (!mounted) return;
+      setRecentGames(games.slice(0, 3));
+      setRatings(userRatings);
+      setFriends(friendList);
+      const active = stages.find((s) => s.status === 'current') || stages[1] || stages[0];
+      setCurrentStage(active || null);
+      setDailyPuzzle(puzzle);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const streakDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const streakCompleted = [true, true, true, true, true, false, false];
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-      {/* Top Header Row: Streak & Sync Button */}
+      {/* Top Header Row: Streak & Sync Status */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* Streak Tracker */}
         <div className="flex items-center gap-3">
@@ -72,23 +99,11 @@ export const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Sync Status Button */}
-        <div className="relative">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />}
-            onClick={handleSync}
-            disabled={isSyncing}
-          >
-            {isSyncing ? 'Syncing Games...' : 'Sync Accounts'}
-          </Button>
-          {syncToast && (
-            <div className="absolute right-0 top-12 z-50 bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-xl border border-emerald-400 flex items-center gap-2 whitespace-nowrap animate-in fade-in slide-in-from-top-2">
-              <CheckCircle size={14} />
-              <span>{syncToast}</span>
-            </div>
-          )}
+        {/* Sync Status Badge (Single sync control: Status here, trigger in sidebar) */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-raised border border-theme-border/60 text-xs text-theme-muted shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <Clock size={13} className="text-theme-muted" />
+          <span>Synced 12m ago</span>
         </div>
       </div>
 
@@ -127,8 +142,48 @@ export const Home: React.FC = () => {
         </div>
       )}
 
-      {/* 3-Column Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* Your Ratings Section */}
+      <Card className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={18} className="text-amber-500" />
+            <h2 className="font-bold font-display text-theme-text text-base">Your Ratings</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-amber-500 hover:text-amber-400 transition-colors"
+          >
+            <SlidersHorizontal size={13} />
+            <span>Adjust</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {ratings.map((r) => (
+            <div
+              key={r.mode}
+              className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 flex items-center justify-between"
+            >
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
+                  {r.mode}
+                </span>
+                <span className="text-2xl font-black font-mono text-theme-text mt-0.5 block">
+                  {r.rating}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold font-mono px-2 py-1 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                <ArrowUpRight size={14} />
+                <span>+{r.deltaWeekly}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* 2-Column Section: Continue Learning & Daily Tactical Puzzle */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Card 1: Continue Learning */}
         <Card className="p-5 flex flex-col justify-between space-y-4 hover:border-amber-500/50 transition-colors">
           <div className="space-y-3">
@@ -140,10 +195,11 @@ export const Home: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold font-display text-theme-text text-base">
-                Endgame: Back-Rank Basics
+                {currentStage?.title || 'Endgame: Back-Rank Basics'}
               </h3>
-              <p className="text-xs text-theme-muted mt-1">
-                Spotting back-rank pawn barriers and delivering deflection checkmates.
+              <p className="text-xs text-theme-muted mt-1 leading-relaxed">
+                {currentStage?.description ||
+                  'Spotting back-rank pawn barriers and delivering deflection checkmates.'}
               </p>
             </div>
             <div className="space-y-1">
@@ -165,67 +221,32 @@ export const Home: React.FC = () => {
           </Button>
         </Card>
 
-        {/* Card 2: Recent Match Review */}
-        <Card className="p-5 flex flex-col justify-between space-y-4 hover:border-amber-500/50 transition-colors">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                <TrendingUp size={18} />
-              </div>
-              <span className="text-xs font-mono font-bold bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded">
-                1-0 Win
-              </span>
-            </div>
-            <div>
-              <h3 className="font-bold font-display text-theme-text text-base">
-                vs PawnStorm22
-              </h3>
-              <p className="text-xs text-theme-muted mt-1">
-                Italian Game • Rapid 10+0 • 27 moves
-              </p>
-            </div>
-            <div className="flex justify-between items-center p-2.5 rounded bg-theme-raised text-xs">
-              <div>
-                <div className="text-[10px] uppercase font-bold text-theme-muted">Your Acc.</div>
-                <div className="font-mono font-bold text-emerald-500 text-sm">84.2%</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase font-bold text-theme-muted">Opponent</div>
-                <div className="font-mono font-semibold text-neutral-400 text-sm">78.5%</div>
-              </div>
-            </div>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            fullWidth
-            icon={<ChevronRight size={16} />}
-            onClick={() => navigate('/review/game-01')}
-          >
-            Review Game
-          </Button>
-        </Card>
-
-        {/* Card 3: Daily Tactical Puzzle */}
+        {/* Card 2: Daily Tactical Puzzle */}
         <Card className="p-5 flex flex-col justify-between space-y-4 hover:border-amber-500/50 transition-colors">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="w-9 h-9 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                <Puzzle size={18} />
+                <PuzzleIcon size={18} />
               </div>
-              <span className="text-xs font-mono font-bold text-purple-400">Rating 650</span>
+              <span className="text-xs font-mono font-bold text-purple-400">
+                Rating {dailyPuzzle?.rating || 650}
+              </span>
             </div>
             <div>
               <h3 className="font-bold font-display text-theme-text text-base">
-                Daily Mate in 1
+                {dailyPuzzle?.goal || 'Daily Mate in 1'}
               </h3>
-              <p className="text-xs text-theme-muted mt-1">
-                White to move. Strike the back rank and box the king behind pawns!
+              <p className="text-xs text-theme-muted mt-1 leading-relaxed">
+                {dailyPuzzle
+                  ? `Tactical theme: ${dailyPuzzle.theme.join(', ')}. White to move!`
+                  : 'White to move. Strike the back rank and box the king behind pawns!'}
               </p>
             </div>
             <div className="p-2.5 rounded bg-theme-raised text-xs flex items-center gap-2">
               <Flame size={14} className="text-amber-500" />
-              <span className="text-theme-muted">Average solve time: <strong>14s</strong></span>
+              <span className="text-theme-muted">
+                Average solve time: <strong>14s</strong>
+              </span>
             </div>
           </div>
           <Button
@@ -239,6 +260,104 @@ export const Home: React.FC = () => {
           </Button>
         </Card>
       </div>
+
+      {/* Review Your Games Section (3 Recent Games from Repository) */}
+      <Card className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-amber-500" />
+            <h2 className="font-bold font-display text-theme-text text-base">Review your games</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/review')}
+            className="text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors"
+          >
+            View All ({recentGames.length > 0 ? '12' : '0'}) →
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {recentGames.map((game, index) => {
+            const isUserWhite = game.white.username === 'You';
+            const userWon =
+              (isUserWhite && game.result === '1-0') || (!isUserWhite && game.result === '0-1');
+            const userLost =
+              (isUserWhite && game.result === '0-1') || (!isUserWhite && game.result === '1-0');
+            const opponent = isUserWhite ? game.black : game.white;
+            const fullMoves = Math.ceil(game.moves.length / 2);
+            const userAccuracy = isUserWhite ? game.accuracy?.white : game.accuracy?.black;
+            const isAnalyzing = index === 2; // 3rd game shows analyzing 62% badge
+
+            return (
+              <div
+                key={game.id}
+                className="p-4 rounded-xl bg-theme-raised border border-theme-border/60 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              >
+                {/* Left: Result Chip + Game Info */}
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {/* Result Chip */}
+                  <span
+                    className={`font-mono text-xs font-bold px-2.5 py-1 rounded border flex-shrink-0 ${
+                      userWon
+                        ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                        : userLost
+                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                        : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                    }`}
+                  >
+                    {game.result} {userWon ? 'Win' : userLost ? 'Loss' : 'Draw'}
+                  </span>
+
+                  {/* Metadata */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-theme-text truncate">
+                        vs {opponent.username}
+                      </span>
+                      {opponent.title && (
+                        <span className="text-[10px] font-black bg-amber-500/20 text-amber-500 px-1 py-0.2 rounded">
+                          {opponent.title}
+                        </span>
+                      )}
+                      <span className="text-xs text-theme-muted font-mono">({opponent.rating})</span>
+                    </div>
+                    <p className="text-xs text-theme-muted truncate mt-0.5">
+                      {game.opening.name} • {game.timeControl} • {fullMoves} moves
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: Accuracy or Analyzing State & Review Action */}
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                  {isAnalyzing ? (
+                    <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-semibold">
+                      <RotateCw size={12} className="animate-spin" />
+                      <span>Analyzing 62%</span>
+                    </div>
+                  ) : userAccuracy !== undefined ? (
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase font-bold text-theme-muted">Accuracy</div>
+                      <div className="font-mono font-bold text-emerald-500 text-sm">
+                        {userAccuracy}%
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={<ChevronRight size={15} />}
+                    onClick={() => navigate(`/review/${game.id}`)}
+                  >
+                    Review
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* Quick Launch & Friends Mini Leaderboard Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -305,7 +424,7 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            {MOCK_FRIENDS.map((f) => (
+            {friends.map((f) => (
               <div
                 key={f.id}
                 className="flex items-center justify-between p-2.5 rounded-lg bg-theme-raised border border-theme-border/60"
@@ -326,9 +445,9 @@ export const Home: React.FC = () => {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => navigate('/play')}
+                    onClick={() => navigate('/profile')}
                   >
-                    Challenge
+                    Compare
                   </Button>
                 </div>
               </div>
@@ -339,4 +458,5 @@ export const Home: React.FC = () => {
     </div>
   );
 };
+
 export default Home;
