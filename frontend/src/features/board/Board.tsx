@@ -3,6 +3,7 @@ import { Chess, Square, PieceSymbol, Color } from 'chess.js';
 import { BoardTheme, PieceSet, Arrow, BoardBadge, MoveClassification } from '@/data/types';
 import { ArrowLayer } from './ArrowLayer';
 import { BadgeLayer } from './BadgeLayer';
+import { MateBadges } from './MateBadges';
 import { PromotionDialog } from './PromotionDialog';
 import { motion } from 'framer-motion';
 import { useMotion } from '@/lib/useMotion';
@@ -31,8 +32,12 @@ export interface BoardProps {
   pieceSet: PieceSet;
   animationSpeed?: 'off' | 'fast' | 'medium' | 'slow';
   coordinates?: 'inside' | 'outside' | 'none';
+  /** Width cap for the board square. Pages that size the board themselves pass 'max-w-none'. */
+  maxWidthClass?: string;
   autoQueen?: boolean;
   tippingPieceSquare?: string | null;
+  /** Show the built-in checkmate sequence (king tips over, # and crown badges). Play Coach turns this off and runs its own. */
+  autoMateEffects?: boolean;
   className?: string;
 }
 
@@ -105,8 +110,10 @@ export const Board: React.FC<BoardProps> = ({
   pieceSet,
   animationSpeed = 'medium',
   coordinates = 'inside',
+  maxWidthClass = 'max-w-[min(calc(100vh-120px),900px)]',
   autoQueen = true,
   tippingPieceSquare = null,
+  autoMateEffects = true,
   className = '',
 }) => {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
@@ -118,6 +125,13 @@ export const Board: React.FC<BoardProps> = ({
   const boardRef = useRef<HTMLDivElement>(null);
   const idPrefix = useId();
   const counterRef = useRef<number>(1);
+  const deselectOnUpRef = useRef<boolean>(false);
+
+  // Right-click annotations: right-click a square to mark it, right-drag to draw an arrow.
+  // Shift = green, Ctrl/Cmd = red arrow / orange mark, Alt = blue. A left click clears them.
+  const [userMarks, setUserMarks] = useState<Array<{ sq: string; color: string }>>([]);
+  const [userArrows, setUserArrows] = useState<Arrow[]>([]);
+  const [drawing, setDrawing] = useState<{ from: string; to: string; mod: 'none' | 'shift' | 'ctrl' | 'alt' } | null>(null);
 
   const { pieceMs, isFull, isOff } = useMotion();
   const appTheme = useSettingsStore((s) => s.appTheme);
@@ -159,6 +173,47 @@ export const Board: React.FC<BoardProps> = ({
   const [inCheckSquare, setInCheckSquare] = useState<string | null>(null);
   const [pulseCheckSquare, setPulseCheckSquare] = useState<string | null>(null);
   const [wigglingKingSquare, setWigglingKingSquare] = useState<string | null>(null);
+  // Checkmate sequence state: which king fell, which king won, and whether to animate
+  const [mateInfo, setMateInfo] = useState<{ loser: string; winner: string; animate: boolean } | null>(null);
+  const mateMountRef = useRef(true);
+  useEffect(() => {
+    const firstRender = mateMountRef.current;
+    mateMountRef.current = false;
+    if (!autoMateEffects) {
+      setMateInfo(null);
+      return;
+    }
+    let c: Chess;
+    try {
+      c = new Chess(fen);
+    } catch {
+      setMateInfo(null);
+      return;
+    }
+    if (!c.isCheckmate()) {
+      setMateInfo(null);
+      return;
+    }
+    const loserColor = c.turn();
+    let loser = '';
+    let winner = '';
+    c.board().forEach((row, r) =>
+      row.forEach((pc, f) => {
+        if (pc && pc.type === 'k') {
+          const sq = `${BOARD_FILES[f]}${8 - r}`;
+          if (pc.color === loserColor) loser = sq;
+          else winner = sq;
+        }
+      })
+    );
+    // On first render (e.g. opening a finished game) show the end state without animating or sound
+    const animate = !firstRender;
+    setMateInfo({ loser, winner, animate });
+    if (animate) {
+      setTimeout(() => sound.gameEnd(), 450);
+    }
+  }, [fen, autoMateEffects]);
+
   const lastFrom = lastMove?.from;
   const lastTo = lastMove?.to;
 
@@ -368,6 +423,84 @@ export const Board: React.FC<BoardProps> = ({
     return false;
   };
 
+
+  // ----- right-click annotations -----
+  const squareFromPoint = (clientX: number, clientY: number): string | null => {
+    const el = boardRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const col = Math.floor(((clientX - r.left) / r.width) * 8);
+    const row = Math.floor(((clientY - r.top) / r.height) * 8);
+    if (col < 0 || col > 7 || row < 0 || row > 7) return null;
+    const file = orientation === 'white' ? col : 7 - col;
+    const rank = orientation === 'white' ? 7 - row : row;
+    return `${BOARD_FILES[file]}${rank + 1}`;
+  };
+  const modOf = (e: React.PointerEvent): 'none' | 'shift' | 'ctrl' | 'alt' =>
+    e.shiftKey ? 'shift' : e.ctrlKey || e.metaKey ? 'ctrl' : e.altKey ? 'alt' : 'none';
+  const ARROW_COLOR_FOR: Record<string, Arrow['color']> = { none: 'orange', shift: 'green', ctrl: 'red', alt: 'blue' };
+  const MARK_COLOR_FOR: Record<string, string> = {
+    none: 'rgba(235, 97, 80, 0.8)',
+    shift: 'rgba(172, 206, 89, 0.8)',
+    ctrl: 'rgba(255, 170, 0, 0.8)',
+    alt: 'rgba(82, 176, 220, 0.8)',
+  };
+
+  const handleBoardPointerDownCapture = (e: React.PointerEvent) => {
+    if (e.button === 2) {
+      e.preventDefault();
+      e.stopPropagation();
+      const sq = squareFromPoint(e.clientX, e.clientY);
+      if (!sq) return;
+      setSelectedSquare(null);
+      setDrawing({ from: sq, to: sq, mod: modOf(e) });
+      try {
+        boardRef.current?.setPointerCapture?.(e.pointerId);
+      } catch {
+        /* not supported */
+      }
+      return;
+    }
+    if (e.button === 0 && (userMarks.length || userArrows.length)) {
+      setUserMarks([]);
+      setUserArrows([]);
+    }
+  };
+  const handleBoardPointerMove = (e: React.PointerEvent) => {
+    if (!drawing) return;
+    const sq = squareFromPoint(e.clientX, e.clientY);
+    if (sq && sq !== drawing.to) setDrawing({ ...drawing, to: sq });
+  };
+  const handleBoardPointerUp = (e: React.PointerEvent) => {
+    if (!drawing || e.button !== 2) return;
+    const to = squareFromPoint(e.clientX, e.clientY) || drawing.to;
+    if (to === drawing.from) {
+      const color = MARK_COLOR_FOR[drawing.mod];
+      setUserMarks((prev) =>
+        prev.some((m) => m.sq === to && m.color === color)
+          ? prev.filter((m) => m.sq !== to)
+          : [...prev.filter((m) => m.sq !== to), { sq: to, color }]
+      );
+    } else {
+      const color = ARROW_COLOR_FOR[drawing.mod];
+      setUserArrows((prev) =>
+        prev.some((a) => a.from === drawing.from && a.to === to && a.color === color)
+          ? prev.filter((a) => !(a.from === drawing.from && a.to === to))
+          : [...prev.filter((a) => !(a.from === drawing.from && a.to === to)), { from: drawing.from, to, color }]
+      );
+    }
+    setDrawing(null);
+  };
+
+  // annotations belong to a position: a new position clears them
+  useEffect(() => {
+    setUserMarks([]);
+    setUserArrows([]);
+    setDrawing(null);
+  }, [fen]);
+
+  const allArrows = useMemo(() => (userArrows.length ? [...arrows, ...userArrows] : arrows), [arrows, userArrows]);
+
   const handleSquareClick = (sq: string) => {
     if (!interactive) return;
 
@@ -390,9 +523,8 @@ export const Board: React.FC<BoardProps> = ({
         return;
       }
 
-      // User clicked an illegal destination (empty square or opponent piece that cannot be captured):
-      // Execute the illegal move path: shake, sound, onIllegalMove callback, and keep piece selected with legal dots
-      executeMoveAttempt(selectedSquare, sq);
+      // Clicking anywhere else just drops the selection, like the reference
+      setSelectedSquare(null);
       return;
     }
 
@@ -410,6 +542,30 @@ export const Board: React.FC<BoardProps> = ({
 
     const piece = chessInstance.current.get(sq as Square);
     if (!piece) return;
+
+    // Click-to-move onto an occupied square: if a piece is already selected and this square is
+    // one of its legal targets (a capture), make the move instead of selecting the clicked piece.
+    // Previously this always selected the clicked piece, so captures could only be made by dragging.
+    const sideToMove = chessInstance.current.turn();
+    if (selectedSquare && selectedSquare !== sq) {
+      if (computedLegalTargets.includes(sq)) {
+        e.preventDefault();
+        executeMoveAttempt(selectedSquare, sq);
+        return;
+      }
+      if (piece.color !== sideToMove) {
+        // clicking an enemy piece that can't be captured just drops the selection (no shake);
+        // the illegal-move feedback is kept for drag-and-drop attempts
+        e.preventDefault();
+        setSelectedSquare(null);
+        return;
+      }
+    }
+    // Only the side to move can pick up pieces (as on the reference site)
+    if (piece.color !== sideToMove) return;
+
+    // Clicking the already-selected piece again deselects it (on pointer up, if it wasn't dragged)
+    deselectOnUpRef.current = selectedSquare === sq;
 
     setSelectedSquare(sq);
 
@@ -469,6 +625,11 @@ export const Board: React.FC<BoardProps> = ({
     } catch {
       // ignore
     }
+
+    if (!draggedPiece.isDragging && deselectOnUpRef.current) {
+      setSelectedSquare(null);
+    }
+    deselectOnUpRef.current = false;
 
     if (draggedPiece.isDragging && boardRef.current) {
       const rect = boardRef.current.getBoundingClientRect();
@@ -560,12 +721,18 @@ export const Board: React.FC<BoardProps> = ({
       <div
         ref={boardRef}
         data-board="true"
-        className={`relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm shadow-2xl border border-black/20 touch-none ${
+        className={`relative aspect-square w-full ${maxWidthClass} rounded-sm shadow-2xl border border-black/20 touch-none ${
           isShaking ? 'animate-shake' : ''
         }`}
         style={{
           boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.5)',
+          // lets coordinates use cqw units so they scale with the board (2.8% of its width)
+          containerType: 'inline-size',
         }}
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerDownCapture={handleBoardPointerDownCapture}
+        onPointerMove={drawing ? handleBoardPointerMove : undefined}
+        onPointerUp={drawing ? handleBoardPointerUp : undefined}
       >
         {/* 8x8 Board Grid (Squares, Tints, Coordinates, Legal Targets) */}
         <div className="w-full h-full grid grid-cols-8 grid-rows-8 rounded-sm overflow-hidden">
@@ -603,16 +770,23 @@ export const Board: React.FC<BoardProps> = ({
                   {/* Tint overlay */}
                   {tintClass && <div className={`absolute inset-0 pointer-events-none ${tintClass}`} />}
 
-                  {/* Selected square: Tint fades in over 100ms with a 0.9 to 1 scale */}
+                  {/* Right-click mark */}
+                  {userMarks.some((m) => m.sq === sq) && (
+                    <div
+                      data-testid={`mark-${sq}`}
+                      className="absolute inset-0 pointer-events-none z-5"
+                      style={{ backgroundColor: userMarks.find((m) => m.sq === sq)!.color }}
+                    />
+                  )}
+
+                  {/* Selected square: same yellow tint as the last move, grows in over 100ms */}
                   {selectedSquare === sq && (
                     <div
-                      className="absolute inset-0 pointer-events-none bg-amber-400/50 shadow-inner ring-2 ring-amber-400 z-5"
+                      data-testid="selected-square"
+                      className="absolute inset-0 pointer-events-none z-5"
                       style={{
-                        animation: isFull
-                          ? 'selectGrowIn 100ms cubic-bezier(0, 0, 0.2, 1) forwards'
-                          : isOff
-                          ? 'none'
-                          : 'selectGrowIn 100ms ease-out forwards',
+                        backgroundColor: 'rgba(255, 214, 79, 0.5)',
+                        animation: isOff ? 'none' : 'selectGrowIn 100ms cubic-bezier(0, 0, 0.2, 1) forwards',
                       }}
                     />
                   )}
@@ -639,21 +813,21 @@ export const Board: React.FC<BoardProps> = ({
                     />
                   )}
 
-                  {/* Inside Coordinates */}
+                  {/* Inside coordinates: 2.8% of the board, semibold, in the opposite square colour */}
                   {coordinates === 'inside' && (
                     <>
                       {fileIndex === 0 && (
                         <span
-                          className="absolute top-1 left-1.5 text-[11px] md:text-xs font-bold leading-none pointer-events-none select-none opacity-80"
-                          style={{ color: coordColor }}
+                          className="absolute leading-none pointer-events-none select-none font-semibold"
+                          style={{ color: coordColor, fontSize: '2.8cqw', left: '0.6cqw', top: '0.5cqw' }}
                         >
                           {rank}
                         </span>
                       )}
                       {rankIndex === 7 && (
                         <span
-                          className="absolute bottom-1 right-1.5 text-[11px] md:text-xs font-bold leading-none pointer-events-none select-none opacity-80"
-                          style={{ color: coordColor }}
+                          className="absolute leading-none pointer-events-none select-none font-semibold"
+                          style={{ color: coordColor, fontSize: '2.8cqw', right: '0.6cqw', bottom: '0.45cqw' }}
                         >
                           {file}
                         </span>
@@ -661,12 +835,17 @@ export const Board: React.FC<BoardProps> = ({
                     </>
                   )}
 
-                  {/* Legal move target dot */}
+                  {/* Legal move hints: a soft dark dot (33% of the square) on empty squares,
+                      a ring around the edge of an occupied square */}
                   {isTarget && (
                     <div
-                      className={`absolute pointer-events-none rounded-full z-10 transition-opacity duration-150 ${
-                        piece ? 'inset-1 ring-4 ring-emerald-500/60 bg-transparent' : 'w-3.5 h-3.5 bg-emerald-500/60'
-                      }`}
+                      data-testid="legal-hint"
+                      className="absolute pointer-events-none z-10 rounded-full"
+                      style={
+                        piece
+                          ? { inset: 0, background: 'radial-gradient(circle, transparent 0 79%, rgba(0, 0, 0, 0.14) 80%)' }
+                          : { width: '33%', height: '33%', background: 'rgba(0, 0, 0, 0.14)' }
+                      }
                     />
                   )}
                 </div>
@@ -727,6 +906,7 @@ export const Board: React.FC<BoardProps> = ({
             const pieceImg = `${pieceSet.basePath}/${p.color}${p.type.toUpperCase()}.svg`;
             const isWiggling = wigglingKingSquare === p.square && isFull;
             const isTipping = tippingPieceSquare === p.square && isFull;
+            const isMatedKing = !!mateInfo && mateInfo.loser === p.square && p.type === 'k';
 
             return (
               <div
@@ -759,9 +939,12 @@ export const Board: React.FC<BoardProps> = ({
                     animation: isWiggling
                       ? 'kingWiggle 350ms ease-in-out 1'
                       : isTipping
-                      ? 'kingTipOver 400ms cubic-bezier(.34, 1.56, .64, 1) forwards'
+                      ? 'kingFallOver 450ms cubic-bezier(.34, 1.3, .64, 1) forwards'
+                      : isMatedKing && mateInfo?.animate && !isOff
+                      ? 'kingFallOver 520ms cubic-bezier(.34, 1.3, .64, 1) 450ms forwards'
                       : undefined,
-                    transformOrigin: isTipping ? 'bottom right' : undefined,
+                    transform: isMatedKing && (!mateInfo?.animate || isOff) ? 'translateY(10%) rotate(90deg)' : undefined,
+                    transformOrigin: isTipping || isMatedKing ? '50% 50%' : undefined,
                   }}
                 />
               </div>
@@ -770,8 +953,15 @@ export const Board: React.FC<BoardProps> = ({
         </div>
 
         {/* Vector Overlays: Arrows & Badges */}
-        <ArrowLayer arrows={arrows} orientation={orientation} />
+        <ArrowLayer
+          arrows={allArrows}
+          orientation={orientation}
+          preview={drawing && drawing.from !== drawing.to ? { from: drawing.from, to: drawing.to, color: ARROW_COLOR_FOR[drawing.mod] } : null}
+        />
         <BadgeLayer badges={badges} orientation={orientation} />
+        {mateInfo && (
+          <MateBadges loser={mateInfo.loser} winner={mateInfo.winner} orientation={orientation} animate={mateInfo.animate && !isOff} />
+        )}
 
         {/* Promotion Choice Dialog: Vertical strip positioned directly over the promotion square */}
         {pendingPromotion && (
