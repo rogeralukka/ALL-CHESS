@@ -6,30 +6,30 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Raw game definitions with PGN and classifications
+// 12 raw game definitions
 const RAW_GAMES = [
   {
     id: 'game-01',
     white: { username: 'You', rating: 905, avatarUrl: '/assets/coach/coach_neutral.webp' },
     black: { username: 'PawnStorm22', rating: 920 },
-    result: '1-0',
+    result: '0-1', // Final position is 27... Rxf1#
     date: '2026-10-22T19:30:00Z',
     timeControl: '10 min',
     speed: 'rapid',
     source: 'online',
     opening: { eco: 'C50', name: "Italian Game: Giuoco Pianissimo" },
-    pgn: '1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. d3 Bc5 5. O-O d6 6. Bxf7+ Kxf7 7. Ng5+ Kg8 8. Qf3 Qe7 9. Nc3 Be6 10. Nxe6 Qxe6 11. Bg5 Rf8 12. Bxf6 Rxf6 13. Qg3 Nd4 14. Kh1 Nxc2 15. Rac1 Nd4 16. Nd5 Rf7 17. f4 Ne2 18. Qg5 Nxc1 19. f5 Qd7 20. f6 Nxd3 21. Ne7+ Qxe7 22. fxe7 Rxf1#',
+    pgn: '1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. d3 Bc5 5. O-O d6 6. Bxf7+ Kxf7 7. Ng5+ Kg8 8. Qf3 Qe7 9. Nc3 Be6 10. Nxe6 Qxe6 11. Bg5 Rf8 12. Bxf6 Rxf6 13. Qg3 Nd4 14. Kh1 Nxc2 15. Rac1 Nd4 16. Nd5 Rf7 17. f4 Ne2 18. Qg5 Nxc1 19. f5 Qd7 20. f6 h6 21. Qg3 g5 22. Rxc1 c6 23. Ne7+ Kh7 24. Qf3 Qe6 25. Rf1 Re8 26. Qh5 Rexe7 27. fxe7 Rxf1#',
     accuracy: { white: 78.4, black: 86.2 }, // MOCK
     estimatedRating: { white: 980, black: 1120 }, // MOCK
     phaseGrades: { opening: 'B', middlegame: 'C', tactics: 'D', endgame: 'N/A' }, // MOCK
     specialLabels: {
-      0: 'book', 1: 'book', 2: 'book', 3: 'book', 4: 'book', 5: 'book', 6: 'book', 7: 'book',
-      8: 'best', 9: 'best', 10: 'blunder', 11: 'best', 12: 'inaccuracy', 13: 'good',
-      14: 'mistake', 15: 'excellent', 16: 'good', 17: 'great', 18: 'best', 19: 'best',
-      20: 'inaccuracy', 21: 'best', 22: 'good', 23: 'best', 24: 'mistake', 25: 'great',
-      26: 'good', 27: 'brilliant', 28: 'best', 29: 'miss', 30: 'good', 31: 'excellent',
-      32: 'blunder', 33: 'best', 34: 'inaccuracy', 35: 'best', 36: 'blunder', 37: 'best',
-      38: 'mistake', 39: 'best', 40: 'blunder', 41: 'best', 42: 'blunder', 43: 'best'
+      0: 'book', 1: 'book', 2: 'book', 3: 'book', 4: 'book', 5: 'book', 6: 'book', 7: 'book', 8: 'book', 9: 'book',
+      10: 'blunder', 11: 'best', 12: 'inaccuracy', 13: 'best', 14: 'mistake', 15: 'best', 16: 'good', 17: 'best',
+      18: 'inaccuracy', 19: 'best', 20: 'good', 21: 'excellent', 22: 'mistake', 23: 'best', 24: 'good', 25: 'great',
+      26: 'best', 27: 'best', 28: 'good', 29: 'best', 30: 'inaccuracy', 31: 'best', 32: 'mistake', 33: 'brilliant',
+      34: 'good', 35: 'best', 36: 'good', 37: 'best', 38: 'mistake', 39: 'excellent', 40: 'inaccuracy', 41: 'best',
+      42: 'good', 43: 'best', 44: 'mistake', 45: 'best', 46: 'good', 47: 'best', 48: 'good', 49: 'best',
+      50: 'mistake', 51: 'best', 52: 'blunder', 53: 'best'
     }
   },
   {
@@ -48,7 +48,7 @@ const RAW_GAMES = [
     phaseGrades: { opening: 'A', middlegame: 'A', tactics: 'A', endgame: 'B' }, // MOCK
     specialLabels: {
       0: 'book', 1: 'book', 2: 'book', 3: 'book', 4: 'best', 5: 'best',
-      41: 'brilliant', 42: 'blunder', 43: 'best', 60: 'blunder', 61: 'best'
+      41: 'brilliant', 42: 'blunder', 43: 'best', 60: 'blunder', 61: 'best', 62: 'blunder', 63: 'best'
     }
   },
   {
@@ -217,7 +217,7 @@ const RAW_GAMES = [
     id: 'game-12',
     white: { username: 'BulletBlitzer', rating: 895 },
     black: { username: 'You', rating: 905 },
-    result: '0-1',
+    result: '1/2-1/2', // Final position is threefold repetition draw (36. Rf2 Rd1+)
     date: '2026-10-11T22:50:00Z',
     timeControl: '1 min',
     speed: 'bullet',
@@ -233,62 +233,386 @@ const RAW_GAMES = [
   }
 ];
 
+// Specific hand-authored details for showcase game-01 (Italian Game, 27 full moves, 54 plies)
+const GAME_01_HAND_AUTHORED = [
+  { san: 'e4', cls: 'book', eval: 0.2, why: 'Controls central squares and frees diagonals for bishop and queen.', comment: 'Solid start. e4 stakes an immediate claim on the center.' },
+  { san: 'e5', cls: 'book', eval: 0.2, why: 'Equalizes in the center and challenges White for central space.', comment: 'Black responds symmetrically to contest the center.' },
+  { san: 'Nf3', cls: 'book', eval: 0.2, why: 'Develops a minor piece while attacking the undefended e5 pawn.', comment: 'Knight development with an active threat on e5.' },
+  { san: 'Nc6', cls: 'book', eval: 0.2, why: 'Naturally defends e5 and develops toward the center.', comment: 'Natural defense and piece development.' },
+  { san: 'Bc4', cls: 'book', eval: 0.3, why: 'The Italian Game. Points pressure toward the f7 weakness.', comment: 'Bc4 aims directly at Black’s vulnerable f7 square.' },
+  { san: 'Nf6', cls: 'book', eval: 0.3, why: 'Two Knights Defense, applying counter-pressure against e4.', comment: 'Two Knights Defense, immediately counterattacking e4.' },
+  { san: 'd3', cls: 'book', eval: 0.3, why: 'Giuoco Pianissimo. Fortifies e4 and supports the bishop.', comment: 'Quiet and solid, securing e4.' },
+  { san: 'Bc5', cls: 'book', eval: 0.3, why: 'Develops Black’s king bishop to an active post.', comment: 'Active development along the a7-g1 diagonal.' },
+  { san: 'O-O', cls: 'book', eval: 0.3, why: 'Tucks the king away to safety and activates the f1 rook.', comment: 'King safety first before launching operations.' },
+  { san: 'd6', cls: 'book', eval: 0.3, why: 'Anchors c5 bishop and frees the light-squared bishop.', comment: 'Solid pawn structure maintaining central balance.' },
+  // Move 6: White blunders 6. Bxf7+?! (+0.3 -> -2.4)
+  {
+    san: 'Bxf7+',
+    cls: 'blunder',
+    eval: -2.4,
+    bestMove: 'c3',
+    lines: [
+      { move: 'c3', eval: 0.3, depth: 18, why: 'Prepares the d4 pawn break to seize the center.', pv: ['c3', 'O-O', 'h3'] },
+      { move: 'Nc3', eval: 0.2, depth: 18, why: 'Natural knight development defending e4.', pv: ['Nc3', 'O-O', 'h3'] },
+      { move: 'Bb3', eval: 0.2, depth: 18, why: 'Prophylactic retreat keeping the bishop active.', pv: ['Bb3', 'O-O', 'h3'] }
+    ],
+    variation: ['Kxf7', 'Ng5+', 'Kg8'],
+    why: 'Bxf7+ sacrifices a bishop for just one pawn with no follow-up attack, leaving White down material.',
+    comment: 'Bxf7+ is a blunder. You sacrificed a bishop for just one pawn, but Black simply takes with the king and remains completely safe.'
+  },
+  { san: 'Kxf7', cls: 'best', eval: -2.4, why: 'Black accepts the sacrificed bishop and is clearly ahead.', comment: 'Black accepts the gift with the king.' },
+  // 7. Ng5+ (inaccuracy: -2.4 -> -3.0)
+  {
+    san: 'Ng5+',
+    cls: 'inaccuracy',
+    eval: -3.0,
+    bestMove: 'c3',
+    lines: [
+      { move: 'c3', eval: -2.4, depth: 16, why: 'c3 stabilizes the center and prevents Black’s knight from penetrating.', pv: ['c3', 'Qe7', 'h3'] }
+    ],
+    why: 'Premature knight check that does not trouble Black.',
+    comment: 'Checking without sufficient support just loses time.'
+  },
+  { san: 'Kg8', cls: 'best', eval: -3.0, why: 'The king tucks away safely on g8.', comment: 'King finds shelter safely on g8.' },
+  // 8. Qf3 (mistake: -3.0 -> -4.5)
+  {
+    san: 'Qf3',
+    cls: 'mistake',
+    eval: -4.5,
+    bestMove: 'Nc3',
+    lines: [
+      { move: 'Nc3', eval: -3.0, depth: 16, why: 'Nc3 develops a piece rather than exposing the queen early.', pv: ['Nc3', 'Qe8', 'Be3'] }
+    ],
+    why: 'Brings queen out early into potential tactical counter-attacks.',
+    comment: 'Early queen sortie leaves White vulnerable to tactical counters.'
+  },
+  { san: 'Qe7', cls: 'best', eval: -4.5, why: 'Connects rooks and guards key central squares.', comment: 'Calm queen development connecting rooks.' },
+  { san: 'Nc3', cls: 'good', eval: -4.6, why: 'Develops knight toward central squares.', comment: 'Developing the queenside knight.' },
+  { san: 'Be6', cls: 'best', eval: -4.6, why: 'Offers bishop exchange to neutralize White’s remaining piece.', comment: 'Neutralizes White’s minor piece activity.' },
+  // 10. Nxe6 (inaccuracy: -4.6 -> -5.2)
+  {
+    san: 'Nxe6',
+    cls: 'inaccuracy',
+    eval: -5.2,
+    bestMove: 'Be3',
+    lines: [
+      { move: 'Be3', eval: -4.6, depth: 16, why: 'Be3 maintains tension rather than trading White’s active knight.', pv: ['Be3', 'Bxe3', 'fxe3'] }
+    ],
+    why: 'Exchanges the attacking knight, simplifying into a lost endgame.',
+    comment: 'Trades off White’s only active piece while down material.'
+  },
+  { san: 'Qxe6', cls: 'best', eval: -5.2, why: 'Black recaptures with the queen, dominating the center.', comment: 'Central queen recapture with total control.' },
+  { san: 'Bg5', cls: 'good', eval: -5.3, why: 'Pins the f6 knight against the queen.', comment: 'Pinning the knight to seek counterplay.' },
+  { san: 'Rf8', cls: 'excellent', eval: -5.3, why: 'Reinforces the f-file and readies a counter-strike.', comment: 'Taking control of the semi-open f-file.' },
+  // 12. Bxf6 (mistake: -5.3 -> -6.8)
+  {
+    san: 'Bxf6',
+    cls: 'mistake',
+    eval: -6.8,
+    bestMove: 'Qg3',
+    lines: [
+      { move: 'Qg3', eval: -5.3, depth: 16, why: 'Qg3 sidesteps the pin while keeping the dark-squared bishop.', pv: ['Qg3', 'Nh5', 'Qh4'] }
+    ],
+    why: 'Gives up White’s dark-squared bishop without compensation.',
+    comment: 'Surrendering the bishop pair deepens Black’s advantage.'
+  },
+  { san: 'Rxf6', cls: 'best', eval: -6.8, why: 'Recaptures and gains a tempo hitting White’s queen.', comment: 'Active recapture threatening the queen.' },
+  { san: 'Qg3', cls: 'good', eval: -6.9, why: 'Steps queen out of attack to g3.', comment: 'Queen steps aside to safety.' },
+  { san: 'Nd4', cls: 'great', eval: -6.9, why: 'Threatens the devastating fork on c2.', comment: 'Powerful knight leap threatening Nc2 fork.' },
+  { san: 'Kh1', cls: 'best', eval: -6.9, why: 'Moves king off the g1-a7 diagonal and evades check.', comment: 'Stepping off the pin diagonal.' },
+  { san: 'Nxc2', cls: 'best', eval: -7.0, why: 'Black wins another pawn on c2.', comment: 'Black snatches another pawn.' },
+  { san: 'Rac1', cls: 'good', eval: -7.1, why: 'Attacks the advanced knight on c2.', comment: 'Rook attacks the knight.' },
+  { san: 'Nd4', cls: 'best', eval: -7.1, why: 'Knight retreats to a dominating central outpost.', comment: 'Dominating knight outpost on d4.' },
+  // 16. Nd5 (inaccuracy: -7.1 -> -7.7)
+  {
+    san: 'Nd5',
+    cls: 'inaccuracy',
+    eval: -7.7,
+    bestMove: 'Rce1',
+    lines: [
+      { move: 'Rce1', eval: -7.1, depth: 16, why: 'Rce1 controls the e-file and fortifies the back rank.', pv: ['Rce1', 'Rf7', 'f4'] }
+    ],
+    why: 'Aggressive leap that leaves White’s back rank weak.',
+    comment: 'Knight leaps forward but leaves the back rank open.'
+  },
+  { san: 'Rf7', cls: 'best', eval: -7.7, why: 'Defends c7 and maintains rook along the f-file.', comment: 'Solid defense of c7.' },
+  // 17. f4 (mistake: -7.7 -> -9.3)
+  {
+    san: 'f4',
+    cls: 'mistake',
+    eval: -9.3,
+    bestMove: 'Rce1',
+    lines: [
+      { move: 'Rce1', eval: -7.7, depth: 16, why: 'Rce1 centralizes the rook on the e-file and guards against knight infiltration.', pv: ['Rce1', 'c6', 'Nc3'] }
+    ],
+    why: 'Opens lines while White’s king is vulnerable.',
+    comment: 'Overambitious pawn thrust exposing White’s king.'
+  },
+  { san: 'Ne2', cls: 'brilliant', eval: -9.5, why: 'Forks queen and rook while attacking White’s position.', comment: 'Brilliant knight maneuver picking up the rook.' },
+  { san: 'Qg5', cls: 'good', eval: -9.6, why: 'Attempts a counter-threat on c1.', comment: 'Desperation queen counter-attack.' },
+  { san: 'Nxc1', cls: 'best', eval: -9.8, why: 'Black wins the exchange cleanly.', comment: 'Cash in the rook. Black is up overwhelming material.' },
+  { san: 'f5', cls: 'good', eval: -9.9, why: 'Tries to keep pressure on Black’s queen.', comment: 'White pushes pawns forward.' },
+  { san: 'Qd7', cls: 'best', eval: -10.0, why: 'Queen retreats while keeping control over f7.', comment: 'Prudent queen retreat.' },
+  // 20. f6 (mistake: -10.0 -> -11.6)
+  {
+    san: 'f6',
+    cls: 'mistake',
+    eval: -11.6,
+    bestMove: 'Rxc1',
+    lines: [
+      { move: 'Rxc1', eval: -10.0, depth: 16, why: 'Recapturing the knight on c1 was essential.', pv: ['Rxc1', 'c6', 'Nc3'] }
+    ],
+    why: 'Advances a pawn without piece coordination.',
+    comment: 'Desperation pawn push.'
+  },
+  { san: 'h6', cls: 'excellent', eval: -11.6, why: 'Challenges the white queen and creates luft.', comment: 'Kicking the queen away with tempo.' },
+  // 21. Qg3 (inaccuracy: -11.6 -> -12.2)
+  {
+    san: 'Qg3',
+    cls: 'inaccuracy',
+    eval: -12.2,
+    bestMove: 'Qg4',
+    lines: [
+      { move: 'Qg4', eval: -11.6, depth: 16, why: 'Qg4 maintains an active threat on the kingside.', pv: ['Qg4', 'g5', 'Rxc1'] }
+    ],
+    why: 'Queen retreats to g3.',
+    comment: 'Queen forced backward.'
+  },
+  { san: 'g5', cls: 'best', eval: -12.2, why: 'Blunts White’s pawn thrust and cements kingside.', comment: 'Cementing kingside structure.' },
+  { san: 'Rxc1', cls: 'good', eval: -12.3, why: 'Finally recaptures the knight on c1.', comment: 'White recaptures on c1.' },
+  { san: 'c6', cls: 'best', eval: -12.3, why: 'Kicks the white knight from d5.', comment: 'Evicting White’s knight.' },
+  // 23. Ne7+ (mistake: -12.3 -> -13.9)
+  {
+    san: 'Ne7+',
+    cls: 'mistake',
+    eval: -13.9,
+    bestMove: 'Nc3',
+    lines: [
+      { move: 'Nc3', eval: -12.3, depth: 16, why: 'Nc3 keeps the knight on the board.', pv: ['Nc3', 'Kh7', 'Qf3'] }
+    ],
+    why: 'Desperate knight check that leads nowhere.',
+    comment: 'Spite check before knight falls.'
+  },
+  { san: 'Kh7', cls: 'best', eval: -13.9, why: 'King steps aside safely to h7.', comment: 'King steps aside calmly.' },
+  { san: 'Qf3', cls: 'good', eval: -14.0, why: 'White tries to support f6.', comment: 'Defending the f6 outpost.' },
+  { san: 'Qe6', cls: 'best', eval: -14.0, why: 'Centralizes queen and piles pressure on e7.', comment: 'Targeting White’s pinned pieces.' },
+  { san: 'Rf1', cls: 'good', eval: -14.1, why: 'Guards the f-file.', comment: 'Rook slides to f1.' },
+  { san: 'Re8', cls: 'best', eval: -14.1, why: 'Brings final rook to attack e7.', comment: 'Bringing the last piece into the attack.' },
+  // 26. Qh5 (mistake: -14.1 -> -15.7)
+  {
+    san: 'Qh5',
+    cls: 'mistake',
+    eval: -15.7,
+    bestMove: 'h3',
+    lines: [
+      { move: 'h3', eval: -14.1, depth: 16, why: 'h3 provides luft against back-rank mate.', pv: ['h3', 'Rexe7', 'fxe7'] }
+    ],
+    why: 'Desperation attack against g6.',
+    comment: 'Desperation attack against g6.'
+  },
+  { san: 'Rexe7', cls: 'best', eval: -15.7, why: 'Black removes the knight.', comment: 'Rook cleans up e7.' },
+  // 27. fxe7 (blunder: -15.7 -> -99.0)
+  {
+    san: 'fxe7',
+    cls: 'blunder',
+    eval: -99.0,
+    mate: -1,
+    bestMove: 'h3',
+    lines: [
+      { move: 'h3', eval: -15.7, depth: 16, why: 'Creates luft for the king to avoid back-rank mate.', pv: ['h3', 'Rxf6', 'Rxf6'] }
+    ],
+    why: 'fxe7 blunders an immediate back-rank checkmate by abandoning control of f1.',
+    comment: 'fxe7 is a blunder. Abandoning defense of the back rank allows an immediate checkmate.'
+  },
+  {
+    san: 'Rxf1#',
+    cls: 'best',
+    eval: -99.0,
+    mate: 0,
+    why: 'Checkmate on the back rank.',
+    comment: 'Checkmate! Black finishes the game with a clean back-rank strike.'
+  }
+];
+
 function generateGames() {
   const processedGames = [];
 
   for (const raw of RAW_GAMES) {
     const chess = new Chess();
-    // Load and validate PGN
     chess.loadPgn(raw.pgn);
     const history = chess.history({ verbose: true });
-    
-    // Reset to beginning to step through and capture FEN at every step
+
     chess.reset();
     const moves = [];
 
-    for (let i = 0; i < history.length; i++) {
-      const step = history[i];
-      chess.move(step.san);
+    if (raw.id === 'game-01') {
+      // Use completely hand-authored data for showcase game-01
+      for (let i = 0; i < history.length; i++) {
+        const step = history[i];
+        const authored = GAME_01_HAND_AUTHORED[i];
+        chess.move(step.san);
 
-      // Determine classification
-      let cls = raw.specialLabels[i];
-      if (!cls) {
-        if (i < 6) cls = 'book';
-        else if (i % 7 === 0) cls = 'best';
-        else if (i % 5 === 0) cls = 'excellent';
-        else if (i % 3 === 0) cls = 'good';
-        else cls = 'best';
+        const lines = authored.lines || [
+          {
+            move: authored.bestMove || step.san,
+            eval: authored.eval,
+            mate: authored.mate ?? null,
+            depth: 18,
+            why: authored.why,
+            pv: [authored.bestMove || step.san]
+          }
+        ];
+
+        moves.push({
+          san: step.san,
+          from: step.from,
+          to: step.to,
+          promotion: step.promotion,
+          color: step.color,
+          fen: chess.fen(),
+          moveNumber: Math.floor(i / 2) + 1,
+          classification: authored.cls,
+          coachComment: authored.comment,
+          variation: authored.variation,
+          eval: {
+            eval: authored.eval, // MOCK
+            mate: authored.mate ?? null,
+            bestMove: authored.bestMove || step.san,
+            why: authored.why,
+            lines // MOCK
+          },
+          timeSpent: 2 + (i % 8)
+        });
       }
+    } else {
+      // Dynamic generation for games 02 to 12
+      let runningEval = 0.2; // White perspective
 
-      // Generate plausible eval centipawns
-      let evalScore = 0.0;
-      if (raw.result === '1-0') {
-        evalScore = (i / history.length) * 3.5;
-      } else if (raw.result === '0-1') {
-        evalScore = -(i / history.length) * 3.5;
+      for (let i = 0; i < history.length; i++) {
+        const step = history[i];
+        const isWhite = step.color === 'w';
+
+        // Classification
+        let cls = raw.specialLabels[i];
+        if (!cls) {
+          if (i < 6) cls = 'book';
+          else if (i % 7 === 0) cls = 'best';
+          else if (i % 5 === 0) cls = 'excellent';
+          else if (i % 3 === 0) cls = 'good';
+          else cls = 'best';
+        }
+
+        // Eval delta per classification requirements:
+        // Blunder >= 3.0, Mistake >= 1.5, Inaccuracy >= 0.5, Miss >= 2.0
+        let moverLoss = 0.05;
+        if (cls === 'blunder') moverLoss = 3.2;
+        else if (cls === 'mistake') moverLoss = 1.6;
+        else if (cls === 'inaccuracy') moverLoss = 0.6;
+        else if (cls === 'miss') moverLoss = 2.1;
+        else if (cls === 'brilliant') moverLoss = -0.3; // Slight bonus
+        else if (cls === 'great') moverLoss = 0.0;
+        else if (cls === 'best' || cls === 'book') moverLoss = 0.02;
+        else if (cls === 'excellent') moverLoss = 0.08;
+        else if (cls === 'good') moverLoss = 0.15;
+
+        // Apply loss from mover's perspective
+        if (isWhite) {
+          runningEval -= moverLoss;
+        } else {
+          runningEval += moverLoss;
+        }
+
+        // Clamp eval
+        runningEval = Math.max(-12.0, Math.min(12.0, runningEval));
+        const roundedEval = Math.round(runningEval * 10) / 10;
+
+        // Get legal moves from position BEFORE the move
+        const legalMoves = chess.moves({ verbose: true });
+        let bestMove = step.san;
+        let altLines = [];
+
+        const isSuboptimal = ['blunder', 'mistake', 'inaccuracy', 'miss'].includes(cls);
+
+        if (isSuboptimal && legalMoves.length > 1) {
+          // Pick a legal move different from played move
+          const alternative = legalMoves.find((m) => m.san !== step.san) || legalMoves[0];
+          bestMove = alternative.san;
+
+          // Compute legal PV for alternative move from current position
+          const tempChess = new Chess(chess.fen());
+          tempChess.move(alternative.san);
+          const follow1 = tempChess.moves()[0];
+          const pv = [alternative.san];
+          if (follow1) {
+            pv.push(follow1);
+            tempChess.move(follow1);
+            const follow2 = tempChess.moves()[0];
+            if (follow2) pv.push(follow2);
+          }
+
+          const altEval = Math.round((isWhite ? runningEval + moverLoss : runningEval - moverLoss) * 10) / 10;
+          altLines.push({
+            move: bestMove,
+            eval: altEval, // MOCK
+            depth: 16,
+            why: `${bestMove} was the engine recommendation maintaining the initiative.`,
+            pv
+          });
+        } else {
+          // Move was best/good/book
+          bestMove = step.san;
+          const tempChess = new Chess(chess.fen());
+          tempChess.move(step.san);
+          const follow1 = tempChess.moves()[0];
+          const pv = [step.san];
+          if (follow1) pv.push(follow1);
+
+          altLines.push({
+            move: step.san,
+            eval: roundedEval, // MOCK
+            depth: 16,
+            why: `${step.san} is the top line maintaining optimal control.`,
+            pv
+          });
+        }
+
+        // Varied why explanation mentioning the actual move
+        let whyText = '';
+        if (cls === 'blunder') whyText = `${step.san} blunders significant tactical advantage or material.`;
+        else if (cls === 'mistake') whyText = `${step.san} is a mistake that concedes the initiative to the opponent.`;
+        else if (cls === 'inaccuracy') whyText = `${step.san} is inaccurate; ${bestMove} offered firmer positional pressure.`;
+        else if (cls === 'miss') whyText = `${step.san} misses a critical tactical opportunity.`;
+        else if (cls === 'brilliant') whyText = `${step.san} is brilliant, finding an inspired tactical shot.`;
+        else if (cls === 'great') whyText = `${step.san} finds a sharp and critical continuation.`;
+        else if (cls === 'best') whyText = `${step.san} is the best move, maintaining active piece coordination.`;
+        else if (cls === 'excellent') whyText = `${step.san} is an excellent move, steadily consolidating the position.`;
+        else if (cls === 'good') whyText = `${step.san} is a sound practical choice.`;
+        else whyText = `${step.san} adheres to established opening book theory.`;
+
+        // Now play the actual move
+        chess.move(step.san);
+
+        moves.push({
+          san: step.san,
+          from: step.from,
+          to: step.to,
+          promotion: step.promotion,
+          color: step.color,
+          fen: chess.fen(),
+          moveNumber: Math.floor(i / 2) + 1,
+          classification: cls,
+          coachComment: whyText,
+          eval: {
+            eval: roundedEval, // MOCK
+            bestMove,
+            why: whyText,
+            lines: altLines // MOCK
+          },
+          timeSpent: 2 + (i % 8)
+        });
       }
-
-      moves.push({
-        san: step.san,
-        from: step.from,
-        to: step.to,
-        promotion: step.promotion,
-        color: step.color,
-        fen: chess.fen(),
-        moveNumber: Math.floor(i / 2) + 1,
-        classification: cls,
-        eval: {
-          eval: Math.round(evalScore * 10) / 10,
-          why: `Control of center and piece coordination on move ${Math.floor(i / 2) + 1}.`,
-          lines: [
-            { move: step.san, eval: Math.round(evalScore * 10) / 10, depth: 16, why: 'Top engine recommendation.', pv: [step.san] }
-          ]
-        },
-        timeSpent: 2 + (i % 8)
-      });
     }
 
-    // Omit specialLabels from final Game object
     const { specialLabels: _, ...gameData } = raw;
     processedGames.push({
       ...gameData,
@@ -309,7 +633,7 @@ export const MOCK_GAMES: Game[] = ${JSON.stringify(processedGames, null, 2)};
   const outputPath = path.resolve(__dirname, '../src/data/mock/mockGames.ts');
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, fileContent, 'utf-8');
-  console.log('Generated mockGames.ts with', processedGames.length, 'games at', outputPath);
+  console.log('Successfully generated mockGames.ts with', processedGames.length, 'games at', outputPath);
 }
 
 generateGames();

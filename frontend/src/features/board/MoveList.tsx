@@ -45,13 +45,22 @@ export const MoveList: React.FC<MoveListProps> = ({
     });
   }
 
-  // Auto-scroll to keep current move visible
+  // Auto-scroll to keep current move visible strictly within container without scrolling window
   useEffect(() => {
     if (activeMoveRef.current && containerRef.current) {
-      activeMoveRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      });
+      const container = containerRef.current;
+      const target = activeMoveRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+
+      const relativeTop = targetRect.top - containerRect.top;
+      const relativeBottom = targetRect.bottom - containerRect.top;
+
+      if (relativeTop < 0) {
+        container.scrollTop += relativeTop - 8;
+      } else if (relativeBottom > container.clientHeight) {
+        container.scrollTop += (relativeBottom - container.clientHeight) + 8;
+      }
     }
   }, [currentMoveIndex]);
 

@@ -87,6 +87,24 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
     setCompletedMap((prev) => ({ ...prev, [msgId]: true }));
   };
 
+  // Format header text like Chess.com reference (e.g. "Bxf7+ is a blunder" or "c3 is best")
+  const getHeaderPhrase = (cls?: MoveClassification) => {
+    if (!cls) return '';
+    switch (cls) {
+      case 'blunder': return 'is a blunder';
+      case 'mistake': return 'is a mistake';
+      case 'inaccuracy': return 'is an inaccuracy';
+      case 'miss': return 'is a miss';
+      case 'best': return 'is best';
+      case 'brilliant': return 'is brilliant';
+      case 'great': return 'is a great move';
+      case 'excellent': return 'is an excellent move';
+      case 'good': return 'is a good move';
+      case 'book': return 'is a book move';
+      default: return '';
+    }
+  };
+
   // Stack up to 3 messages
   const visibleMessages = messages.slice(-3);
 
@@ -121,16 +139,17 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
                   : 'bg-[var(--coach-bubble-bg)]/80 text-[var(--coach-bubble-text)]/75 text-sm scale-[0.98]'
               }`}
             >
-              {/* Header row: classification badge + move notation + right-aligned eval chip */}
+              {/* Header row: classification badge + move notation with label + right-aligned eval chip */}
               {(msg.classification || msg.moveSan || msg.evalText) && (
                 <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-black/5 dark:border-white/10">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     {msg.classification && (
-                      <ClassificationBadge classification={msg.classification} size="sm" showLabel />
+                      <ClassificationBadge classification={msg.classification} size="sm" showLabel={false} />
                     )}
                     {msg.moveSan && (
-                      <span className="font-mono font-bold text-sm bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">
-                        {msg.moveSan}
+                      <span className="font-bold text-sm truncate">
+                        <span className="font-mono">{msg.moveSan}</span>{' '}
+                        <span className="font-sans font-semibold opacity-90">{getHeaderPhrase(msg.classification)}</span>
                       </span>
                     )}
                   </div>

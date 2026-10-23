@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useId, useMemo } from 'react';
 import { Chess, Square, PieceSymbol, Color } from 'chess.js';
 import { BoardTheme, PieceSet, Arrow, BoardBadge, MoveClassification } from '@/data/types';
 import { ArrowLayer } from './ArrowLayer';
@@ -29,6 +29,28 @@ export interface BoardProps {
   className?: string;
 }
 
+interface PieceOnBoard {
+  id: string;
+  square: string;
+  type: PieceSymbol;
+  color: Color;
+  col: number;
+  row: number;
+}
+
+interface DraggedPieceState {
+  sq: string;
+  piece: { type: PieceSymbol; color: Color };
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  isDragging: boolean;
+}
+
+const BOARD_FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const BOARD_RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
 export const Board: React.FC<BoardProps> = ({
   fen,
   orientation = 'white',
@@ -48,11 +70,13 @@ export const Board: React.FC<BoardProps> = ({
 }) => {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [computedLegalTargets, setComputedLegalTargets] = useState<string[]>([]);
-  const [draggedSquare, setDraggedSquare] = useState<string | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string; color: 'w' | 'b' } | null>(null);
+  const [draggedPiece, setDraggedPiece] = useState<DraggedPieceState | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const idPrefix = useId();
+  const counterRef = useRef<number>(1);
 
-  // Parse FEN into board matrix using chess.js
+  // Parse FEN into chess instance for legal move computations
   const chessInstance = useRef(new Chess());
   useEffect(() => {
     try {
@@ -62,12 +86,130 @@ export const Board: React.FC<BoardProps> = ({
     }
   }, [fen]);
 
-  const speedMs = {
-    off: 0,
-    fast: 100,
-    medium: 200,
-    slow: 350,
-  }[animationSpeed];
+  // Reduced motion detection
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      setPrefersReducedMotion(mediaQuery.matches);
+      const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+  }, []);
+
+  const speedMs = prefersReducedMotion
+    ? 0
+    : {
+        off: 0,
+        fast: 100,
+        medium: 200,
+        slow: 350,
+      }[animationSpeed];
+
+  const displayFiles = useMemo(
+    () => (orientation === 'white' ? BOARD_FILES : [...BOARD_FILES].reverse()),
+    [orientation]
+  );
+  const displayRanks = useMemo(
+    () => (orientation === 'white' ? [...BOARD_RANKS].reverse() : BOARD_RANKS),
+    [orientation]
+  );
+
+  // --- STABLE PIECE POSITION TRACKING FOR ANIMATIONS ---
+  const [boardPieces, setBoardPieces] = useState<PieceOnBoard[]>([]);
+
+  useEffect(() => {
+    let chess: Chess;
+    try {
+      chess = new Chess(fen);
+    } catch {
+      chess = new Chess();
+    }
+    const board = chess.board();
+
+    // Collect all raw pieces in new position
+    const newItems: Array<{ square: string; type: PieceSymbol; color: Color; col: number; row: number; matched: boolean }> = [];
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const p = board[r][f];
+        if (p) {
+          const sq = BOARD_FILES[f] + (8 - r);
+          const col = displayFiles.indexOf(BOARD_FILES[f]);
+          const row = displayRanks.indexOf(String(8 - r));
+          newItems.push({ square: sq, type: p.type, color: p.color, col, row, matched: false });
+        }
+      }
+    }
+
+    setBoardPieces((prev) => {
+      const result: PieceOnBoard[] = [];
+      const usedPrevIds = new Set<string>();
+
+      // 1. If lastMove, match the piece that moved
+      if (lastMove) {
+        const movedPrev = prev.find((p) => p.square === lastMove.from && !usedPrevIds.has(p.id));
+        const targetItem = newItems.find((p) => p.square === lastMove.to && !p.matched);
+        if (movedPrev && targetItem) {
+          targetItem.matched = true;
+          usedPrevIds.add(movedPrev.id);
+          result.push({ ...targetItem, id: movedPrev.id });
+        }
+
+        // Check castling rook
+        if (movedPrev && movedPrev.type === 'k') {
+          let rookFrom: string | null = null;
+          let rookTo: string | null = null;
+          if (lastMove.from === 'e1' && lastMove.to === 'g1') { rookFrom = 'h1'; rookTo = 'f1'; }
+          else if (lastMove.from === 'e1' && lastMove.to === 'c1') { rookFrom = 'a1'; rookTo = 'd1'; }
+          else if (lastMove.from === 'e8' && lastMove.to === 'g8') { rookFrom = 'h8'; rookTo = 'f8'; }
+          else if (lastMove.from === 'e8' && lastMove.to === 'c8') { rookFrom = 'a8'; rookTo = 'd8'; }
+
+          if (rookFrom && rookTo) {
+            const rookPrev = prev.find((p) => p.square === rookFrom && !usedPrevIds.has(p.id));
+            const rookTarget = newItems.find((p) => p.square === rookTo && !p.matched);
+            if (rookPrev && rookTarget) {
+              rookTarget.matched = true;
+              usedPrevIds.add(rookPrev.id);
+              result.push({ ...rookTarget, id: rookPrev.id });
+            }
+          }
+        }
+      }
+
+      // 2. Match unmoved pieces on same square
+      for (const item of newItems) {
+        if (item.matched) continue;
+        const sameSq = prev.find(
+          (p) => p.square === item.square && p.type === item.type && p.color === item.color && !usedPrevIds.has(p.id)
+        );
+        if (sameSq) {
+          item.matched = true;
+          usedPrevIds.add(sameSq.id);
+          result.push({ ...item, id: sameSq.id });
+        }
+      }
+
+      // 3. Match any piece of same type and color or assign new ID
+      for (const item of newItems) {
+        if (item.matched) continue;
+        const sameType = prev.find(
+          (p) => p.type === item.type && p.color === item.color && !usedPrevIds.has(p.id)
+        );
+        if (sameType) {
+          item.matched = true;
+          usedPrevIds.add(sameType.id);
+          result.push({ ...item, id: sameType.id });
+        } else {
+          const newId = `${idPrefix}-${item.color}-${item.type}-${item.square}-${counterRef.current++}`;
+          item.matched = true;
+          result.push({ ...item, id: newId });
+        }
+      }
+
+      return result;
+    });
+  }, [fen, orientation, lastMove, idPrefix, displayFiles, displayRanks]);
 
   // Helper to get legal moves for a square
   const getMovesForSquare = useCallback((sq: string): string[] => {
@@ -89,40 +231,44 @@ export const Board: React.FC<BoardProps> = ({
     setComputedLegalTargets(Array.from(new Set([...moves, ...legalTargets])));
   }, [selectedSquare, interactive, legalTargets, getMovesForSquare]);
 
-  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
-  const displayFiles = orientation === 'white' ? files : [...files].reverse();
-  const displayRanks = orientation === 'white' ? [...ranks].reverse() : ranks;
+  const executeMoveAttempt = (from: string, to: string) => {
+    if (!interactive || from === to) return false;
+
+    const piece = chessInstance.current.get(from as Square);
+    if (!piece) return false;
+
+    const isPawnPromotion =
+      piece.type === 'p' &&
+      ((piece.color === 'w' && to.endsWith('8')) || (piece.color === 'b' && to.endsWith('1')));
+
+    if (computedLegalTargets.includes(to)) {
+      if (isPawnPromotion && !autoQueen) {
+        setPendingPromotion({ from, to, color: piece.color });
+        return true;
+      }
+
+      const success = onMove?.(from, to, isPawnPromotion ? 'q' : undefined);
+      setSelectedSquare(null);
+      return success !== false;
+    }
+    return false;
+  };
 
   const handleSquareClick = (sq: string) => {
     if (!interactive) return;
 
-    // If already selecting and clicking a target
     if (selectedSquare) {
       if (selectedSquare === sq) {
         setSelectedSquare(null);
         return;
       }
 
-      // Check if move is legal
-      const piece = chessInstance.current.get(selectedSquare as Square);
-      const isPawnPromotion =
-        piece?.type === 'p' &&
-        ((piece.color === 'w' && sq.endsWith('8')) || (piece.color === 'b' && sq.endsWith('1')));
-
       if (computedLegalTargets.includes(sq)) {
-        if (isPawnPromotion && !autoQueen) {
-          setPendingPromotion({ from: selectedSquare, to: sq, color: piece.color });
-          return;
-        }
-
-        const success = onMove?.(selectedSquare, sq, isPawnPromotion ? 'q' : undefined);
-        setSelectedSquare(null);
-        if (success !== false) return;
+        executeMoveAttempt(selectedSquare, sq);
+        return;
       }
     }
 
-    // Select piece if matching turn or interactive
     const pieceOnSquare = chessInstance.current.get(sq as Square);
     if (pieceOnSquare) {
       setSelectedSquare(sq);
@@ -131,46 +277,81 @@ export const Board: React.FC<BoardProps> = ({
     }
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, sq: string) => {
+  // --- POINTER EVENTS FOR DRAG AND DROP (TOUCH, MOUSE, PEN) ---
+  const handlePiecePointerDown = (e: React.PointerEvent, sq: string) => {
     if (!interactive) return;
+
     const piece = chessInstance.current.get(sq as Square);
     if (!piece) return;
 
-    setDraggedSquare(sq);
     setSelectedSquare(sq);
-    e.dataTransfer.setData('text/plain', sq);
-    e.dataTransfer.effectAllowed = 'move';
+
+    const targetElement = e.currentTarget as HTMLElement;
+    targetElement.setPointerCapture(e.pointerId);
+
+    setDraggedPiece({
+      sq,
+      piece,
+      startX: e.clientX,
+      startY: e.clientY,
+      currentX: e.clientX,
+      currentY: e.clientY,
+      isDragging: false,
+    });
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+  const handlePiecePointerMove = (e: React.PointerEvent) => {
+    if (!draggedPiece) return;
+
+    const dx = e.clientX - draggedPiece.startX;
+    const dy = e.clientY - draggedPiece.startY;
+    const distance = Math.hypot(dx, dy);
+
+    // Only initiate full drag if moved more than 4px (preserves clean clicks)
+    const isDragging = distance > 4 || draggedPiece.isDragging;
+
+    setDraggedPiece({
+      ...draggedPiece,
+      currentX: e.clientX,
+      currentY: e.clientY,
+      isDragging,
+    });
   };
 
-  const handleDrop = (e: React.DragEvent, targetSq: string) => {
-    e.preventDefault();
-    const sourceSq = draggedSquare || e.dataTransfer.getData('text/plain');
-    setDraggedSquare(null);
+  const handlePiecePointerUp = (e: React.PointerEvent) => {
+    if (!draggedPiece) return;
 
-    if (!sourceSq || sourceSq === targetSq || !interactive) return;
-
-    const piece = chessInstance.current.get(sourceSq as Square);
-    const isPawnPromotion =
-      piece?.type === 'p' &&
-      ((piece.color === 'w' && targetSq.endsWith('8')) || (piece.color === 'b' && targetSq.endsWith('1')));
-
-    if (computedLegalTargets.includes(targetSq)) {
-      if (isPawnPromotion && !autoQueen) {
-        setPendingPromotion({ from: sourceSq, to: targetSq, color: piece.color });
-        return;
-      }
-      onMove?.(sourceSq, targetSq, isPawnPromotion ? 'q' : undefined);
-      setSelectedSquare(null);
+    const targetElement = e.currentTarget as HTMLElement;
+    try {
+      targetElement.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
     }
+
+    if (draggedPiece.isDragging && boardRef.current) {
+      const rect = boardRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+        const col = Math.floor((x / rect.width) * 8);
+        const row = Math.floor((y / rect.height) * 8);
+        const targetSq = `${displayFiles[col]}${displayRanks[row]}`;
+
+        if (targetSq !== draggedPiece.sq) {
+          executeMoveAttempt(draggedPiece.sq, targetSq);
+        }
+      }
+    }
+
+    setDraggedPiece(null);
   };
 
-  // Square tint styles for classification
+  const handlePiecePointerCancel = () => {
+    setDraggedPiece(null);
+  };
+
+  // Square tint styles for classification and selection
   const getSquareTint = (sq: string) => {
     if (selectedSquare === sq) {
       return 'bg-amber-400/50 shadow-inner ring-2 ring-amber-400';
@@ -193,7 +374,6 @@ export const Board: React.FC<BoardProps> = ({
         if (lastMove.classification === 'book') {
           return 'bg-amber-600/35';
         }
-        // Standard last move yellow highlight at 45% opacity
         return 'bg-yellow-400/45';
       }
     }
@@ -205,7 +385,7 @@ export const Board: React.FC<BoardProps> = ({
     return '';
   };
 
-  // Keyboard square navigation
+  // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent, sq: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -218,15 +398,15 @@ export const Board: React.FC<BoardProps> = ({
       {/* Board square container */}
       <div
         ref={boardRef}
-        className="relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm overflow-hidden shadow-2xl border border-black/20"
+        className="relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm overflow-hidden shadow-2xl border border-black/20 touch-none"
         style={{
           boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.5)',
         }}
       >
-        {/* 8x8 Board Grid */}
+        {/* 8x8 Board Grid (Squares, Tints, Coordinates, Legal Targets) */}
         <div className="w-full h-full grid grid-cols-8 grid-rows-8">
-          {displayRanks.map((rank, rankIndex) =>
-            displayFiles.map((file, fileIndex) => {
+          {displayRanks.map((rank: string, rankIndex: number) =>
+            displayFiles.map((file: string, fileIndex: number) => {
               const sq = `${file}${rank}`;
               const isLight = (file.charCodeAt(0) - 97 + parseInt(rank, 10)) % 2 !== 0;
               const bgColor = isLight ? boardTheme.light : boardTheme.dark;
@@ -241,8 +421,6 @@ export const Board: React.FC<BoardProps> = ({
                 piece = null;
               }
 
-              const pieceImg = piece ? `${pieceSet.basePath}/${piece.color}${piece.type.toUpperCase()}.svg` : null;
-
               return (
                 <div
                   key={sq}
@@ -250,9 +428,7 @@ export const Board: React.FC<BoardProps> = ({
                   tabIndex={interactive ? 0 : -1}
                   onClick={() => handleSquareClick(sq)}
                   onKeyDown={(e) => handleKeyDown(e, sq)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, sq)}
-                  className={`relative w-full h-full flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500`}
+                  className="relative w-full h-full flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                   style={{ backgroundColor: bgColor }}
                   aria-label={`Square ${sq}${piece ? `, ${piece.color === 'w' ? 'White' : 'Black'} ${piece.type}` : ''}`}
                 >
@@ -262,7 +438,6 @@ export const Board: React.FC<BoardProps> = ({
                   {/* Inside Coordinates */}
                   {coordinates === 'inside' && (
                     <>
-                      {/* Rank coordinate on first column */}
                       {fileIndex === 0 && (
                         <span
                           className="absolute top-1 left-1.5 text-[11px] md:text-xs font-bold leading-none pointer-events-none select-none opacity-80"
@@ -271,7 +446,6 @@ export const Board: React.FC<BoardProps> = ({
                           {rank}
                         </span>
                       )}
-                      {/* File coordinate on bottom row */}
                       {rankIndex === 7 && (
                         <span
                           className="absolute bottom-1 right-1.5 text-[11px] md:text-xs font-bold leading-none pointer-events-none select-none opacity-80"
@@ -283,24 +457,10 @@ export const Board: React.FC<BoardProps> = ({
                     </>
                   )}
 
-                  {/* Piece */}
-                  {pieceImg && (
-                    <img
-                      src={pieceImg}
-                      alt={`${piece?.color}${piece?.type}`}
-                      draggable={interactive}
-                      onDragStart={(e) => handleDragStart(e, sq)}
-                      className="w-full h-full object-contain pointer-events-auto cursor-grab active:cursor-grabbing p-0.5 transform-gpu drop-shadow"
-                      style={{
-                        transition: speedMs > 0 ? `transform ${speedMs}ms cubic-bezier(0, 0, 0.2, 1)` : 'none',
-                      }}
-                    />
-                  )}
-
                   {/* Legal move target dot */}
                   {isTarget && (
                     <div
-                      className={`absolute pointer-events-none rounded-full ${
+                      className={`absolute pointer-events-none rounded-full z-10 ${
                         piece ? 'inset-1 ring-4 ring-emerald-500/60 bg-transparent' : 'w-3.5 h-3.5 bg-emerald-500/60'
                       }`}
                     />
@@ -311,10 +471,67 @@ export const Board: React.FC<BoardProps> = ({
           )}
         </div>
 
+        {/* --- DEDICATED ABSOLUTE PIECE LAYER (Sliding Transform Animations) --- */}
+        <div className="absolute inset-0 w-full h-full pointer-events-none z-15">
+          {boardPieces.map((p) => {
+            const isBeingDragged = draggedPiece?.sq === p.square && draggedPiece.isDragging;
+            const pieceImg = `${pieceSet.basePath}/${p.color}${p.type.toUpperCase()}.svg`;
+
+            return (
+              <div
+                key={p.id}
+                data-piece-id={p.id}
+                data-square={p.square}
+                onPointerDown={(e) => handlePiecePointerDown(e, p.square)}
+                onPointerMove={handlePiecePointerMove}
+                onPointerUp={handlePiecePointerUp}
+                onPointerCancel={handlePiecePointerCancel}
+                className="absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-auto cursor-grab active:cursor-grabbing p-0.5 will-change-transform"
+                style={{
+                  transform: `translate3d(${p.col * 100}%, ${p.row * 100}%, 0)`,
+                  transition:
+                    speedMs > 0 && !isBeingDragged
+                      ? `transform ${speedMs}ms cubic-bezier(0.2, 0, 0, 1)`
+                      : 'none',
+                  opacity: isBeingDragged ? 0.25 : 1,
+                  zIndex: isBeingDragged ? 40 : 15,
+                }}
+              >
+                <img
+                  src={pieceImg}
+                  alt={`${p.color}${p.type}`}
+                  draggable={false}
+                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow"
+                />
+              </div>
+            );
+          })}
+        </div>
+
         {/* Vector Overlays: Arrows & Badges */}
         <ArrowLayer arrows={arrows} orientation={orientation} />
         <BadgeLayer badges={badges} orientation={orientation} />
       </div>
+
+      {/* Floating Ghost Piece Following Pointer During Drag */}
+      {draggedPiece && draggedPiece.isDragging && (
+        <div
+          className="fixed pointer-events-none z-50 -translate-x-1/2 -translate-y-1/2 scale-110 drop-shadow-2xl"
+          style={{
+            left: draggedPiece.currentX,
+            top: draggedPiece.currentY,
+            width: boardRef.current ? boardRef.current.offsetWidth / 8 : 45,
+            height: boardRef.current ? boardRef.current.offsetHeight / 8 : 45,
+          }}
+        >
+          <img
+            src={`${pieceSet.basePath}/${draggedPiece.piece.color}${draggedPiece.piece.type.toUpperCase()}.svg`}
+            alt="dragged piece"
+            className="w-full h-full object-contain select-none"
+            draggable={false}
+          />
+        </div>
+      )}
 
       {/* Promotion Choice Dialog */}
       {pendingPromotion && (
