@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   appTheme: 'dusk',
   motionLevel: 'full',
   boardThemeId: 'sand-clay',
-  pieceSetId: 'cburnett',
+  pieceSetId: 'staunty',
   background: 'standard',
   animationSpeed: 'medium',
   moveMethod: 'both',
@@ -61,8 +61,18 @@ interface SettingsStore extends UserSettings {
   resetSettings: () => void;
 }
 
+// Bump when a default changes in a way existing users should pick up once.
+const SETTINGS_VERSION = 2;
+
 const getInitialSettings = (): UserSettings => {
-  return storage.get<UserSettings>('all_chess_settings', DEFAULT_SETTINGS);
+  const stored = storage.get<Partial<UserSettings> & { settingsVersion?: number }>('all_chess_settings', {});
+  const merged: UserSettings = { ...DEFAULT_SETTINGS, ...stored };
+  if ((stored.settingsVersion ?? 1) < 2) {
+    // v2: the old default piece set (thin outline) is replaced by the shaded default.
+    if (!stored.pieceSetId || stored.pieceSetId === 'cburnett') merged.pieceSetId = DEFAULT_SETTINGS.pieceSetId;
+    storage.set('all_chess_settings', { ...merged, settingsVersion: SETTINGS_VERSION });
+  }
+  return merged;
 };
 
 export const applyThemeToDom = (theme: AppTheme) => {
@@ -87,7 +97,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
   return {
     ...initial,
     updateSettings: (newSettings) => {
-      const updated = { ...get(), ...newSettings };
+      const updated = { ...get(), ...newSettings, settingsVersion: SETTINGS_VERSION };
       set(newSettings);
       storage.set('all_chess_settings', updated);
       if (newSettings.appTheme) {

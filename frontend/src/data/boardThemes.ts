@@ -12,6 +12,15 @@ export const BOARD_THEMES: BoardTheme[] = [
 ];
 
 export const PIECE_SETS: PieceSet[] = [
+  // Default: chunky, softly shaded set that reads well at every board size.
+  { id: 'staunty', name: 'Staunty', basePath: '/pieces/staunty', license: 'CC BY-NC-SA 4.0 sadsnake1' },
+  { id: 'cardinal', name: 'Cardinal', basePath: '/pieces/cardinal', license: 'CC BY-NC-SA 4.0 sadsnake1' },
+  { id: 'maestro', name: 'Maestro', basePath: '/pieces/maestro', license: 'CC BY-NC-SA 4.0 sadsnake1' },
+  { id: 'gioco', name: 'Gioco', basePath: '/pieces/gioco', license: 'CC BY-NC-SA 4.0 sadsnake1' },
+  { id: 'fresca', name: 'Fresca', basePath: '/pieces/fresca', license: 'CC BY-NC-SA 4.0 sadsnake1' },
+  { id: 'california', name: 'California', basePath: '/pieces/california', license: 'CC BY-NC-SA 4.0 Jerry S.' },
+  { id: 'caliente', name: 'Caliente', basePath: '/pieces/caliente', license: 'CC BY-NC-SA 4.0 avi' },
+  { id: 'chessnut', name: 'Chessnut', basePath: '/pieces/chessnut', license: 'Apache 2.0 Alexis Luengas' },
   {
     id: 'cburnett',
     name: 'Classic (cburnett)',
@@ -29,10 +38,10 @@ export interface BoardPreset {
 }
 
 export const BOARD_PRESETS: BoardPreset[] = [
-  { id: 'dusk-master', name: 'Dusk Classic', boardId: 'sand-clay', pieceId: 'cburnett', background: 'standard' },
-  { id: 'club-green', name: 'Tournament Green', boardId: 'classic-green', pieceId: 'cburnett', background: 'felt' },
-  { id: 'ocean-drift', name: 'Icy Calm', boardId: 'icy-sea', pieceId: 'cburnett', background: 'standard' },
-  { id: 'heritage-wood', name: 'Walnut Study', boardId: 'walnut', pieceId: 'cburnett', background: 'wood' },
-  { id: 'midnight-slate', name: 'Slate Modern', boardId: 'slate', pieceId: 'cburnett', background: 'standard' },
-  { id: 'dawn-newspaper', name: 'Morning Paper', boardId: 'paper', pieceId: 'cburnett', background: 'felt' },
+  { id: 'dusk-master', name: 'Dusk Classic', boardId: 'sand-clay', pieceId: 'staunty', background: 'standard' },
+  { id: 'club-green', name: 'Tournament Green', boardId: 'classic-green', pieceId: 'staunty', background: 'felt' },
+  { id: 'ocean-drift', name: 'Icy Calm', boardId: 'icy-sea', pieceId: 'staunty', background: 'standard' },
+  { id: 'heritage-wood', name: 'Walnut Study', boardId: 'walnut', pieceId: 'staunty', background: 'wood' },
+  { id: 'midnight-slate', name: 'Slate Modern', boardId: 'slate', pieceId: 'staunty', background: 'standard' },
+  { id: 'dawn-newspaper', name: 'Morning Paper', boardId: 'paper', pieceId: 'staunty', background: 'felt' },
 ];
