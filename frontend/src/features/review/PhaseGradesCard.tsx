@@ -37,9 +37,12 @@ export const PhaseGradesCard: React.FC<PhaseGradesCardProps> = ({
       {phases.map((p) => (
         <div
           key={p.label}
-          className="flex flex-col items-center justify-center p-2 rounded-md bg-theme-raised/50 border border-theme-border/50"
+          className="flex flex-col items-center justify-center p-2 rounded-md bg-theme-raised/50 border border-theme-border/50 min-w-0"
         >
-          <span className="text-[11px] font-semibold text-theme-muted mb-1 truncate w-full">
+          <span
+            className="text-xs font-semibold text-theme-muted mb-1 text-center w-full whitespace-nowrap overflow-visible"
+            title={p.label}
+          >
             {p.label}
           </span>
           <span

@@ -61,11 +61,11 @@ export const ScoutSearch: React.FC = () => {
               key={p.username}
               type="button"
               onClick={() => setSelectedOpponent(p)}
-              className="px-2.5 py-1 rounded-full bg-theme-raised hover:bg-theme-card border border-theme-border text-theme-text font-medium flex items-center gap-1.5 transition-colors"
+              className="min-h-[44px] md:min-h-[32px] px-3 py-1.5 rounded-full bg-theme-raised hover:bg-theme-card border border-theme-border text-theme-text font-medium flex items-center gap-1.5 transition-colors"
             >
-              <UserCheck size={12} className="text-amber-500" />
+              <UserCheck size={14} className="text-amber-500" />
               <span>{p.username}</span>
-              <span className="text-[10px] text-theme-muted font-mono">({p.rating})</span>
+              <span className="text-xs text-theme-muted font-mono">({p.rating})</span>
             </button>
           ))}
         </div>
@@ -90,7 +90,7 @@ export const ScoutSearch: React.FC = () => {
                 <h3 className="font-bold text-base text-theme-text flex items-center gap-1.5">
                   {p.username}
                   {p.title && (
-                    <span className="text-[10px] bg-red-500/20 text-red-500 px-1 py-0.5 rounded font-black">
+                    <span className="text-xs bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded font-black">
                       {p.title}
                     </span>
                   )}

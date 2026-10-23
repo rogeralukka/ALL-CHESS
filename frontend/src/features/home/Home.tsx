@@ -91,18 +91,18 @@ export const Home: React.FC = () => {
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
       {/* Top Header Row: Streak & Sync Status */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 min-w-0 w-full">
         {/* Streak Tracker */}
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 flex-shrink-0">
             <Flame size={24} className="fill-amber-500" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-display font-black text-xl text-theme-text">5 Day Streak</span>
-              <span className="text-[10px] bg-amber-500/20 text-amber-500 font-bold px-1.5 py-0.5 rounded uppercase">
+              <span className="text-xs bg-amber-500/20 text-amber-500 font-bold px-1.5 py-0.5 rounded uppercase">
                 Active
               </span>
             </div>
@@ -111,7 +111,7 @@ export const Home: React.FC = () => {
               {streakDays.map((chip, idx) => (
                 <div
                   key={idx}
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                     chip.state === 'done'
                       ? 'bg-amber-500 text-black shadow-sm'
                       : chip.state === 'today'
@@ -128,7 +128,7 @@ export const Home: React.FC = () => {
         </div>
 
         {/* Sync Status Badge (Single sync control: Status here, trigger in sidebar) */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-raised border border-theme-border/60 text-xs text-theme-muted shadow-sm">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-raised border border-theme-border/60 text-xs text-theme-muted shadow-sm flex-shrink-0">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <Clock size={13} className="text-theme-muted" />
           <span>Synced 12m ago</span>
@@ -137,14 +137,14 @@ export const Home: React.FC = () => {
 
       {/* Coach Daily Drill Hero Card */}
       {!coachDismissed && (
-        <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-theme-raised to-theme-card border border-amber-500/30 shadow-md">
+        <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-theme-raised to-theme-card border border-amber-500/30 shadow-md min-w-0 w-full">
           <div className="relative flex-shrink-0">
             <CoachAvatar expression="thumbsup" mode="bust" size={84} />
-            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full">
+            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-xs font-black px-1.5 py-0.5 rounded-full">
               DRILL
             </div>
           </div>
-          <div className="flex-1 space-y-2 text-center md:text-left">
+          <div className="flex-1 space-y-2 text-center md:text-left min-w-0 w-full">
             <div className="text-xs uppercase font-black tracking-wider text-amber-500">
               Daily Training Mission
             </div>
@@ -154,6 +154,7 @@ export const Home: React.FC = () => {
             <Button
               variant="primary"
               size="md"
+              className="!h-12"
               icon={<Sparkles size={16} />}
               onClick={() => navigate('/learn')}
             >
@@ -162,6 +163,7 @@ export const Home: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
+              className="min-h-[44px] md:min-h-[36px]"
               onClick={() => setCoachDismissed(true)}
             >
               Maybe Later
@@ -171,7 +173,7 @@ export const Home: React.FC = () => {
       )}
 
       {/* Your Ratings Section */}
-      <Card className="p-4 space-y-3">
+      <Card className="p-4 space-y-3 min-w-0 w-full">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TrendingUp size={18} className="text-amber-500" />
@@ -180,7 +182,7 @@ export const Home: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/settings')}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-amber-500 hover:text-amber-400 transition-colors"
+            className="min-h-[44px] md:min-h-[32px] inline-flex items-center gap-1 text-xs font-semibold text-amber-500 hover:text-amber-400 transition-colors"
           >
             <SlidersHorizontal size={13} />
             <span>Adjust</span>
@@ -191,10 +193,10 @@ export const Home: React.FC = () => {
           {ratings.map((r) => (
             <div
               key={r.mode}
-              className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 flex items-center justify-between"
+              className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 flex items-center justify-between min-h-[76px] h-full"
             >
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
+                <span className="text-xs uppercase font-bold tracking-wider text-theme-muted block">
                   {r.mode}
                 </span>
                 <span className="text-2xl font-black font-mono tabular-nums text-theme-text mt-0.5 block">
@@ -215,7 +217,7 @@ export const Home: React.FC = () => {
         {/* Card 1: Lessons */}
         <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
           <div className="space-y-3">
-            <div className="w-full aspect-square max-w-[140px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
+            <div className="w-full aspect-square max-w-[140px] min-w-[120px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
               <Board
                 fen="8/8/4k3/8/4K3/8/4P3/8 w - - 0 1"
                 boardTheme={currentBoardTheme}
@@ -226,25 +228,25 @@ export const Home: React.FC = () => {
               />
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
                   <BookOpen size={16} />
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-theme-muted block">
+                <div className="min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
                     Lessons
                   </span>
-                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]">
+                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]" title={currentStage?.title || 'Endgame Basics'}>
                     {currentStage?.title || 'Endgame Basics'}
                   </h3>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums">
+              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums flex-shrink-0">
                 Stage 2/8
               </span>
             </div>
             <div className="space-y-1">
-              <div className="flex justify-between text-[11px] font-semibold text-theme-muted">
+              <div className="flex justify-between text-xs font-semibold text-theme-muted">
                 <span>Roadmap Progress</span>
                 <span className="font-mono text-amber-500 tabular-nums">62%</span>
               </div>
@@ -253,8 +255,9 @@ export const Home: React.FC = () => {
           </div>
           <Button
             variant="secondary"
-            size="sm"
+            size="md"
             fullWidth
+            className="!h-11"
             icon={<ChevronRight size={15} />}
             onClick={() => navigate('/learn')}
           >
@@ -265,7 +268,7 @@ export const Home: React.FC = () => {
         {/* Card 2: Puzzles */}
         <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
           <div className="space-y-3">
-            <div className="w-full aspect-square max-w-[140px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
+            <div className="w-full aspect-square max-w-[140px] min-w-[120px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
               <Board
                 fen={dailyPuzzle?.fen || '6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1'}
                 boardTheme={currentBoardTheme}
@@ -276,25 +279,25 @@ export const Home: React.FC = () => {
               />
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center flex-shrink-0">
                   <PuzzleIcon size={16} />
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-theme-muted block">
+                <div className="min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
                     Puzzles
                   </span>
-                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]">
+                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]" title={dailyPuzzle?.goal || 'Daily Tactical Mate'}>
                     {dailyPuzzle?.goal || 'Daily Tactical Mate'}
                   </h3>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-purple-400 tabular-nums">
+              <span className="text-xs font-mono font-bold text-purple-400 tabular-nums flex-shrink-0">
                 {dailyPuzzle?.rating || 650}
               </span>
             </div>
             <div className="space-y-1">
-              <div className="flex justify-between text-[11px] font-semibold text-theme-muted">
+              <div className="flex justify-between text-xs font-semibold text-theme-muted">
                 <span>Daily Challenge</span>
                 <span className="font-mono text-theme-text tabular-nums">14s avg</span>
               </div>
@@ -303,8 +306,9 @@ export const Home: React.FC = () => {
           </div>
           <Button
             variant="secondary"
-            size="sm"
+            size="md"
             fullWidth
+            className="!h-11"
             icon={<ChevronRight size={15} />}
             onClick={() => navigate('/puzzles')}
           >
@@ -315,7 +319,7 @@ export const Home: React.FC = () => {
         {/* Card 3: Play Coach */}
         <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
           <div className="space-y-3">
-            <div className="w-full aspect-square max-w-[140px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
+            <div className="w-full aspect-square max-w-[140px] min-w-[120px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
               <Board
                 fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
                 boardTheme={currentBoardTheme}
@@ -326,12 +330,12 @@ export const Home: React.FC = () => {
               />
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
                   <Swords size={16} />
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-theme-muted block">
+                <div className="min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
                     Play Coach
                   </span>
                   <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]">
@@ -339,12 +343,12 @@ export const Home: React.FC = () => {
                   </h3>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums">
+              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums flex-shrink-0">
                 Level 2
               </span>
             </div>
             <div className="space-y-1">
-              <div className="flex justify-between text-[11px] font-semibold text-theme-muted">
+              <div className="flex justify-between text-xs font-semibold text-theme-muted">
                 <span>Sparring Record</span>
                 <span className="font-mono text-emerald-500 tabular-nums">59 Wins</span>
               </div>
@@ -353,8 +357,9 @@ export const Home: React.FC = () => {
           </div>
           <Button
             variant="secondary"
-            size="sm"
+            size="md"
             fullWidth
+            className="!h-11"
             icon={<ChevronRight size={15} />}
             onClick={() => navigate('/play')}
           >
@@ -364,7 +369,7 @@ export const Home: React.FC = () => {
       </div>
 
       {/* Review Your Games Section (3 Recent Games from Repository) */}
-      <Card className="p-4 space-y-3">
+      <Card className="p-4 space-y-3 min-w-0 w-full">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-amber-500" />
@@ -373,13 +378,13 @@ export const Home: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/review')}
-            className="text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors"
+            className="min-h-[44px] md:min-h-[32px] inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors"
           >
             View All ({recentGames.length > 0 ? '12' : '0'}) →
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 min-w-0 w-full">
           {recentGames.map((game, index) => {
             const isUserWhite = game.white.username === 'You';
             const userWon =
@@ -394,10 +399,10 @@ export const Home: React.FC = () => {
             return (
               <div
                 key={game.id}
-                className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0 w-full"
               >
                 {/* Left: Result Chip + Game Info */}
-                <div className="flex items-center gap-3.5 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Result Chip */}
                   <span
                     className={`font-mono tabular-nums text-xs font-bold px-2.5 py-1 rounded border flex-shrink-0 ${
@@ -412,26 +417,26 @@ export const Home: React.FC = () => {
                   </span>
 
                   {/* Metadata */}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-theme-text truncate">
                         vs {opponent.username}
                       </span>
                       {opponent.title && (
-                        <span className="text-[10px] font-black bg-amber-500/20 text-amber-500 px-1 py-0.2 rounded">
+                        <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-1 py-0.2 rounded">
                           {opponent.title}
                         </span>
                       )}
                       <span className="text-xs text-theme-muted font-mono tabular-nums">({opponent.rating})</span>
                     </div>
-                    <p className="text-xs text-theme-muted truncate mt-0.5">
-                      {game.opening.name} • {game.timeControl} • {fullMoves} moves
+                    <p className="text-xs text-theme-muted truncate mt-0.5" title={`${game.opening.name} • ${game.timeControl} • ${fullMoves} moves`}>
+                      <span className="line-clamp-1">{game.opening.name} • {game.timeControl} • {fullMoves} moves</span>
                     </p>
                   </div>
                 </div>
 
                 {/* Right: Accuracy or Analyzing State & Review Action */}
-                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end flex-shrink-0">
                   {isAnalyzing ? (
                     <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-semibold">
                       <RotateCw size={12} className="animate-spin" />
@@ -439,7 +444,7 @@ export const Home: React.FC = () => {
                     </div>
                   ) : userAccuracy !== undefined ? (
                     <div className="text-right">
-                      <div className="text-[10px] uppercase font-bold text-theme-muted">Accuracy</div>
+                      <div className="text-xs uppercase font-bold text-theme-muted">Accuracy</div>
                       <div className="font-mono tabular-nums font-bold text-emerald-500 text-sm">
                         {userAccuracy}%
                       </div>
@@ -447,8 +452,9 @@ export const Home: React.FC = () => {
                   ) : null}
 
                   <Button
-                    size="sm"
+                    size="md"
                     variant="primary"
+                    className="!h-11 min-h-[44px] md:min-h-[36px]"
                     icon={<ChevronRight size={15} />}
                     onClick={() => navigate(`/review/${game.id}`)}
                   >

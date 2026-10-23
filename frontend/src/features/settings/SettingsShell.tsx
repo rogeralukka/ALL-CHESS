@@ -24,6 +24,8 @@ import {
   CheckCircle,
   Shield,
   Layers,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 
 export const SettingsShell: React.FC = () => {
@@ -31,6 +33,7 @@ export const SettingsShell: React.FC = () => {
   const { systemPrefersReduced } = useMotion();
 
   const [activeTab, setActiveTab] = useState<'board' | 'gameplay' | 'coach' | 'appearance' | 'accounts' | 'byok'>('board');
+  const [mobileSubpage, setMobileSubpage] = useState<string | null>(null);
 
   // Staged Board Settings (Nothing applies until Save)
   const [stagedBoardId, setStagedBoardId] = useState(settings.boardThemeId);
@@ -107,12 +110,14 @@ export const SettingsShell: React.FC = () => {
     }, 1000);
   };
 
-  // 3x3 Preview Board pieces
+  // 3x3 Preview Board pieces (exactly 6 pieces with real coordinates)
   const previewPieces = [
-    ['wR', 'wN', 'wB'],
+    ['', 'wN', ''],
     ['bP', '', 'wP'],
-    ['bQ', 'bK', 'bR'],
+    ['bK', 'wR', 'wQ'],
   ];
+  const previewFiles = ['d', 'e', 'f'];
+  const previewRanks = ['6', '5', '4'];
 
   const tabItems = [
     { id: 'board', label: 'Board & Pieces', icon: <Palette size={16} /> },
@@ -123,8 +128,74 @@ export const SettingsShell: React.FC = () => {
     { id: 'byok', label: 'AI Keys (BYOK)', icon: <Key size={16} /> },
   ];
 
+  const renderPreviewCard = () => (
+    <Card className="p-5 space-y-3 sticky top-4 min-w-0 w-full">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold font-display text-theme-text text-sm">Live 3x3 Preview</h3>
+        <span className="text-xs font-mono text-amber-500 font-bold">{previewTheme.name}</span>
+      </div>
+
+      {/* 3x3 Chessboard with real coordinates & 6 pieces */}
+      <div
+        className={`p-3 rounded-2xl shadow-xl border border-black/20 ${
+          stagedBackground === 'felt'
+            ? 'bg-emerald-950/40'
+            : stagedBackground === 'wood'
+            ? 'bg-amber-950/40'
+            : 'bg-theme-raised'
+        }`}
+      >
+        <div className="aspect-square w-full rounded-xl overflow-hidden grid grid-cols-3 border border-black/20 shadow-md">
+          {previewPieces.map((row, rIdx) =>
+            row.map((pieceKey, cIdx) => {
+              const isDarkSquare = (rIdx + cIdx) % 2 === 1;
+              const squareColor = isDarkSquare ? previewTheme.dark : previewTheme.light;
+              return (
+                <div
+                  key={`${rIdx}-${cIdx}`}
+                  className="relative flex items-center justify-center transition-colors duration-200"
+                  style={{ backgroundColor: squareColor }}
+                >
+                  {pieceKey && (
+                    <img
+                      src={`${previewPiece.basePath}/${pieceKey}.svg`}
+                      alt={pieceKey}
+                      className="w-4/5 h-4/5 drop-shadow-sm select-none pointer-events-none"
+                    />
+                  )}
+                  {/* Inside File Coordinates on bottom rank */}
+                  {settings.coordinates === 'inside' && rIdx === 2 && (
+                    <span
+                      className="absolute bottom-1 right-1.5 text-[11px] font-bold select-none opacity-75 leading-none"
+                      style={{ color: isDarkSquare ? previewTheme.light : previewTheme.dark }}
+                    >
+                      {previewFiles[cIdx]}
+                    </span>
+                  )}
+                  {/* Inside Rank Coordinates on left column */}
+                  {settings.coordinates === 'inside' && cIdx === 0 && (
+                    <span
+                      className="absolute top-1 left-1.5 text-[11px] font-bold select-none opacity-75 leading-none"
+                      style={{ color: isDarkSquare ? previewTheme.light : previewTheme.dark }}
+                    >
+                      {previewRanks[rIdx]}
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div className="text-center text-xs text-theme-muted">
+        {previewTheme.name} board with {previewPiece.name} on {stagedBackground} canvas.
+      </div>
+    </Card>
+  );
+
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
       <div>
         <h1 className="text-2xl font-black font-display text-theme-text">Settings &amp; Preferences</h1>
         <p className="text-sm text-theme-muted mt-1">
@@ -132,19 +203,72 @@ export const SettingsShell: React.FC = () => {
         </p>
       </div>
 
-      {/* Main Tabs Navigation */}
-      <Tabs
-        tabs={tabItems}
-        activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as typeof activeTab)}
-      />
+      {/* Mobile Top Navigation when inside sub-page */}
+      {mobileSubpage !== null && (
+        <div className="block md:hidden border-b border-theme-border pb-3">
+          <button
+            type="button"
+            onClick={() => setMobileSubpage(null)}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-500 hover:text-amber-400 min-h-[44px]"
+          >
+            <ChevronLeft size={18} />
+            <span>Back to Settings</span>
+          </button>
+          <h2 className="text-lg font-bold font-display text-theme-text mt-1">
+            {tabItems.find((t) => t.id === mobileSubpage)?.label}
+          </h2>
+        </div>
+      )}
 
-      {/* TAB 1: BOARD & PIECES WITH 3x3 PREVIEW */}
-      {activeTab === 'board' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Mobile Section Directory List (Chess.com App Style) */}
+      {mobileSubpage === null && (
+        <div className="block md:hidden space-y-2.5">
+          {tabItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(item.id as typeof activeTab);
+                setMobileSubpage(item.id);
+              }}
+              className="w-full p-4 rounded-xl bg-theme-raised border border-theme-border/70 flex items-center justify-between text-left hover:border-amber-500/50 transition-colors min-h-[52px]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
+                  {item.icon}
+                </div>
+                <div>
+                  <span className="font-bold text-sm text-theme-text block">{item.label}</span>
+                  <span className="text-xs text-theme-muted">Configure preferences</span>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-theme-muted" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Main Tabs Navigation (Desktop only) */}
+      <div className="hidden md:block">
+        <Tabs
+          tabs={tabItems}
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as typeof activeTab)}
+        />
+      </div>
+
+      <div className={mobileSubpage === null ? 'hidden md:block' : 'block'}>
+        {/* TAB 1: BOARD & PIECES WITH 3x3 PREVIEW */}
+        {activeTab === 'board' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0 w-full">
+          {/* On phone: 3x3 Preview sits ABOVE the tiles */}
+          <div className="block lg:hidden mb-2">
+            {renderPreviewCard()}
+          </div>
+
           {/* Controls Column (8 cols) */}
-          <div className="lg:col-span-7 space-y-5">
-            <Card className="p-5 space-y-4">
+          <div className="lg:col-span-7 space-y-5 min-w-0 w-full">
+            <Card className="p-5 space-y-4 min-w-0 w-full">
               {/* Sub-tabs: Boards / Pieces / Background / Presets */}
               <div className="flex border-b border-theme-border pb-2 gap-2 overflow-x-auto text-xs font-semibold">
                 <button
@@ -193,9 +317,9 @@ export const SettingsShell: React.FC = () => {
                 </button>
               </div>
 
-              {/* Sub-tab: Boards */}
+              {/* Sub-tab: Boards -> 2x2 mini boards at fixed 64px in a 4-column grid */}
               {stagedSubTab === 'boards' && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div className="grid grid-cols-4 gap-2.5 sm:gap-3 pt-1 justify-items-center">
                   {BOARD_THEMES.map((theme) => {
                     const isSelected = stagedBoardId === theme.id;
                     return (
@@ -203,22 +327,25 @@ export const SettingsShell: React.FC = () => {
                         key={theme.id}
                         type="button"
                         onClick={() => setStagedBoardId(theme.id)}
-                        className={`relative p-2.5 rounded-xl border text-left transition-all group ${
+                        className={`relative p-2 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 w-full ${
                           isSelected
-                            ? 'border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/30'
+                            ? 'border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/30 shadow-md'
                             : 'border-theme-border bg-theme-raised hover:bg-theme-card'
                         }`}
                       >
                         {isSelected && (
-                          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-amber-500 text-black flex items-center justify-center">
-                            <Check size={10} strokeWidth={3} />
+                          <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-500 text-black flex items-center justify-center z-10">
+                            <Check size={11} strokeWidth={3} />
                           </div>
                         )}
-                        <div className="w-full aspect-[2/1] rounded-lg overflow-hidden flex border border-black/20 shadow-inner mb-2">
-                          <div className="w-1/2 h-full" style={{ backgroundColor: theme.light }} />
-                          <div className="w-1/2 h-full" style={{ backgroundColor: theme.dark }} />
+                        {/* 2x2 mini board at fixed 64px */}
+                        <div className="w-16 h-16 min-w-[64px] min-h-[64px] rounded-lg overflow-hidden grid grid-cols-2 grid-rows-2 border border-black/30 shadow-inner">
+                          <div style={{ backgroundColor: theme.light }} />
+                          <div style={{ backgroundColor: theme.dark }} />
+                          <div style={{ backgroundColor: theme.dark }} />
+                          <div style={{ backgroundColor: theme.light }} />
                         </div>
-                        <div className="text-xs font-bold text-theme-text truncate">{theme.name}</div>
+                        <div className="text-xs font-bold text-theme-text truncate w-full">{theme.name}</div>
                       </button>
                     );
                   })}
@@ -351,6 +478,7 @@ export const SettingsShell: React.FC = () => {
                   <Button
                     size="sm"
                     variant="primary"
+                    className="min-w-[140px] whitespace-nowrap !h-10 px-4"
                     icon={<Save size={14} />}
                     onClick={handleSaveBoard}
                   >
@@ -368,62 +496,9 @@ export const SettingsShell: React.FC = () => {
             </Card>
           </div>
 
-          {/* Live 3x3 Preview Column (5 cols) */}
-          <div className="lg:col-span-5">
-            <Card className="p-5 space-y-3 sticky top-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold font-display text-theme-text text-sm">Live 3x3 Preview</h3>
-                <span className="text-xs font-mono text-amber-500 font-bold">{previewTheme.name}</span>
-              </div>
-
-              {/* 3x3 Chessboard */}
-              <div
-                className={`p-3 rounded-2xl shadow-xl border border-black/20 ${
-                  stagedBackground === 'felt'
-                    ? 'bg-emerald-950/40'
-                    : stagedBackground === 'wood'
-                    ? 'bg-amber-950/40'
-                    : 'bg-theme-raised'
-                }`}
-              >
-                <div className="aspect-square w-full rounded-xl overflow-hidden grid grid-cols-3 border border-black/20 shadow-md">
-                  {previewPieces.map((row, rIdx) =>
-                    row.map((pieceKey, cIdx) => {
-                      const isDarkSquare = (rIdx + cIdx) % 2 === 1;
-                      const squareColor = isDarkSquare ? previewTheme.dark : previewTheme.light;
-                      return (
-                        <div
-                          key={`${rIdx}-${cIdx}`}
-                          className="relative flex items-center justify-center transition-colors duration-200"
-                          style={{ backgroundColor: squareColor }}
-                        >
-                          {pieceKey && (
-                            <img
-                              src={`${previewPiece.basePath}/${pieceKey}.svg`}
-                              alt={pieceKey}
-                              className="w-4/5 h-4/5 drop-shadow-sm select-none pointer-events-none"
-                            />
-                          )}
-                          {/* Inside Coordinates if enabled */}
-                          {settings.coordinates === 'inside' && rIdx === 2 && (
-                            <span
-                              className="absolute bottom-0.5 right-1 text-[9px] font-bold select-none opacity-60"
-                              style={{ color: isDarkSquare ? previewTheme.light : previewTheme.dark }}
-                            >
-                              {String.fromCharCode(97 + cIdx)}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              <div className="text-center text-[11px] text-theme-muted">
-                {previewTheme.name} board with {previewPiece.name} on {stagedBackground} canvas.
-              </div>
-            </Card>
+          {/* Live 3x3 Preview Column (Desktop only, 5 cols) */}
+          <div className="hidden lg:block lg:col-span-5">
+            {renderPreviewCard()}
           </div>
         </div>
       )}
@@ -843,6 +918,7 @@ export const SettingsShell: React.FC = () => {
           </div>
         </Card>
       )}
+      </div>
     </div>
   );
 };

@@ -36,31 +36,32 @@ export const Profile: React.FC = () => {
   const ratingDelta = currentRating - chartData[0].rating;
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
       {/* Header Profile Card */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+      <Card className="p-4 min-w-0 w-full">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 min-w-0 w-full">
+          <div className="flex items-center gap-4 min-w-0">
             <CoachAvatar expression="thumbsup" mode="bust" size={72} />
-            <div>
-              <h1 className="text-2xl font-black font-display text-theme-text">You</h1>
-              <p className="text-sm text-theme-muted mt-0.5 flex items-center gap-1.5">
-                <Calendar size={14} /> Member since October 2026 • 105 games played
+            <div className="min-w-0">
+              <h1 className="text-2xl font-black font-display text-theme-text truncate">You</h1>
+              <p className="text-sm text-theme-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <Calendar size={14} className="flex-shrink-0" />
+                <span>Member since October 2026 • 105 games played</span>
               </p>
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
-              <div className="text-[10px] uppercase font-bold text-theme-muted">Rapid</div>
+          <div className="grid grid-cols-3 gap-2 w-full sm:w-auto flex-shrink-0">
+            <div className="px-3 sm:px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
+              <div className="text-xs uppercase font-bold text-theme-muted">Rapid</div>
               <div className="text-lg font-black font-mono tabular-nums text-amber-500">905</div>
             </div>
-            <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
-              <div className="text-[10px] uppercase font-bold text-theme-muted">Blitz</div>
+            <div className="px-3 sm:px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
+              <div className="text-xs uppercase font-bold text-theme-muted">Blitz</div>
               <div className="text-lg font-black font-mono tabular-nums text-theme-text">870</div>
             </div>
-            <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
-              <div className="text-[10px] uppercase font-bold text-theme-muted">Bullet</div>
+            <div className="px-3 sm:px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
+              <div className="text-xs uppercase font-bold text-theme-muted">Bullet</div>
               <div className="text-lg font-black font-mono tabular-nums text-theme-text">880</div>
             </div>
           </div>
@@ -68,8 +69,8 @@ export const Profile: React.FC = () => {
       </Card>
 
       {/* Rating History Graph */}
-      <Card className="p-4 space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-theme-border pb-3">
+      <Card className="p-4 space-y-3 min-w-0 w-full">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-theme-border pb-3 min-w-0 w-full">
           <div>
             <div className="flex items-center gap-2">
               <TrendingUp size={20} className="text-amber-500" />
@@ -81,7 +82,8 @@ export const Profile: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 items-center">
+          {/* Horizontally scrollable filter strip with fade edge */}
+          <div className="overflow-x-auto scrollbar-none flex items-center gap-2 pb-1 w-full md:w-auto max-w-full flex-nowrap">
             {/* Speed Selector */}
             <Segmented<'rapid' | 'blitz' | 'bullet'>
               value={speed}
@@ -132,6 +134,7 @@ export const Profile: React.FC = () => {
                 stroke="currentColor"
                 className="text-xs text-theme-muted"
                 tickLine={false}
+                minTickGap={24}
               />
               <YAxis
                 domain={['dataMin - 20', 'dataMax + 20']}

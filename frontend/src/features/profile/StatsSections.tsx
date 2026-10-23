@@ -64,19 +64,19 @@ export const StatsSections: React.FC = () => {
         {/* Labels under each segment */}
         <div className="flex justify-between items-center text-xs pt-1">
           <div className="text-left">
-            <span className="block text-[11px] uppercase font-bold text-theme-muted tracking-wider">Wins</span>
+            <span className="block text-xs uppercase font-bold text-theme-muted tracking-wider">Wins</span>
             <span className="font-mono font-bold text-emerald-500 tabular-nums">
               {wins} <span className="text-theme-muted font-normal">({winPct}%)</span>
             </span>
           </div>
           <div className="text-center">
-            <span className="block text-[11px] uppercase font-bold text-theme-muted tracking-wider">Draws</span>
+            <span className="block text-xs uppercase font-bold text-theme-muted tracking-wider">Draws</span>
             <span className="font-mono font-bold text-neutral-400 tabular-nums">
               {draws} <span className="text-theme-muted font-normal">({drawPct}%)</span>
             </span>
           </div>
           <div className="text-right">
-            <span className="block text-[11px] uppercase font-bold text-theme-muted tracking-wider">Losses</span>
+            <span className="block text-xs uppercase font-bold text-theme-muted tracking-wider">Losses</span>
             <span className="font-mono font-bold text-red-500 tabular-nums">
               {losses} <span className="text-theme-muted font-normal">({lossPct}%)</span>
             </span>

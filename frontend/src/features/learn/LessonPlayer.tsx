@@ -41,7 +41,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
             buttonText: "Let's Start!",
             fen: '8/8/8/4k3/8/8/4K3/R7 w - - 0 1',
             requiredMove: 'Ra4',
-            arrows: [{ from: 'a1', to: 'a4', color: 'green' as const }],
+            arrows: [{ from: 'a1', to: 'a4', color: 'orange' as const }],
             highlightSquares: ['a4'],
             isInteractive: true,
             explanation: 'The rook creates an impassable horizontal fence across the board.',
@@ -119,7 +119,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
       {/* Board Zone */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 bg-theme-page min-w-0">
-        <div className="w-full max-w-[min(88vh,640px)] flex flex-col gap-3">
+        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-3">
           <div className="flex items-center justify-between text-xs font-semibold text-theme-muted">
             <button
               type="button"
@@ -150,7 +150,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
       </div>
 
       {/* Mode Panel */}
-      <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl p-5 justify-between">
+      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl p-5 justify-between">
         <div className="space-y-5">
           <div className="flex items-start gap-3">
             <CoachAvatar
@@ -197,12 +197,13 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
           )}
         </div>
 
-        {/* Primary Bottom Button */}
+        {/* Primary Bottom Button - 48px tall */}
         <div className="pt-4">
           <Button
             variant="primary"
             size="lg"
             fullWidth
+            className="!h-12 w-full"
             disabled={!isAdvanceAllowed}
             icon={<ArrowRight size={18} />}
             onClick={handleNextStep}

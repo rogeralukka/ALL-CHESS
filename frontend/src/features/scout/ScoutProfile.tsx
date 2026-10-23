@@ -49,7 +49,7 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-black font-display text-theme-text">{profile.username}</h2>
                 {profile.title && (
-                  <span className="text-[10px] bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded font-black">
+                  <span className="text-xs bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded font-black">
                     {profile.title}
                   </span>
                 )}

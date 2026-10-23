@@ -58,12 +58,12 @@ export const MoveQualityTable: React.FC<MoveQualityTableProps> = ({ game, classN
     <div className={`w-full flex flex-col select-none ${className}`}>
       {/* Table Header: Classification label on left, Player Avatars as column headers */}
       <div className="flex items-center justify-between px-3 py-2 text-xs font-bold text-theme-muted border-b border-theme-border/60">
-        <span className="flex-1 text-left uppercase tracking-wider text-[11px]">
+        <span className="flex-1 text-left uppercase tracking-wider text-xs">
           Classification
         </span>
         <div className="w-14 flex items-center justify-center">
           <div
-            className="w-6 h-6 rounded-full bg-white text-neutral-900 border border-neutral-300 font-bold flex items-center justify-center text-[11px] shadow-sm"
+            className="w-6 h-6 rounded-full bg-white text-neutral-900 border border-neutral-300 font-bold flex items-center justify-center text-xs shadow-sm"
             title={`White: ${game.white.username} (${game.white.rating})`}
           >
             W
@@ -71,7 +71,7 @@ export const MoveQualityTable: React.FC<MoveQualityTableProps> = ({ game, classN
         </div>
         <div className="w-14 flex items-center justify-center">
           <div
-            className="w-6 h-6 rounded-full bg-neutral-900 text-white border border-neutral-700 font-bold flex items-center justify-center text-[11px] shadow-sm"
+            className="w-6 h-6 rounded-full bg-neutral-900 text-white border border-neutral-700 font-bold flex items-center justify-center text-xs shadow-sm"
             title={`Black: ${game.black.username} (${game.black.rating})`}
           >
             B

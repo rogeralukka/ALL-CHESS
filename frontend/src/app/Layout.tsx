@@ -64,7 +64,7 @@ export const Layout: React.FC = () => {
             <span className="font-display font-extrabold text-base tracking-tight leading-none text-theme-text">
               ALL-CHESS
             </span>
-            <span className="text-[10px] font-semibold text-amber-500 tracking-wider uppercase mt-0.5">
+            <span className="text-xs font-semibold text-amber-500 tracking-wider uppercase mt-0.5">
               Free &amp; Private
             </span>
           </div>
@@ -164,7 +164,7 @@ export const Layout: React.FC = () => {
               }`}
             >
               <span>{item.icon}</span>
-              <span className="text-[10px] leading-tight font-medium">{item.label}</span>
+              <span className="text-xs leading-tight font-medium">{item.label}</span>
             </NavLink>
           );
         })}

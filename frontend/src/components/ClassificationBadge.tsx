@@ -99,11 +99,11 @@ export const ClassificationBadge: React.FC<ClassificationBadgeProps> = ({
   if (!meta) return null;
 
   const sizeClasses = {
-    xs: 'w-3.5 h-3.5 text-[9px]',
-    sm: 'w-4 h-4 text-[10px]',
-    md: 'w-5 h-5 text-xs',
-    lg: 'w-7 h-7 text-sm',
-    square: 'w-7 h-7 text-xs shadow-md', // on the chess board corner
+    xs: 'w-4 h-4 text-xs font-bold',
+    sm: 'w-4.5 h-4.5 text-xs font-bold',
+    md: 'w-5 h-5 text-xs font-bold',
+    lg: 'w-7 h-7 text-sm font-bold',
+    square: 'w-7 h-7 text-xs font-bold shadow-md', // on the chess board corner
   };
 
   const renderIcon = () => {

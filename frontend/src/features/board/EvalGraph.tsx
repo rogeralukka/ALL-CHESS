@@ -6,7 +6,7 @@ import { formatEval } from '@/lib/formatters';
 interface EvalGraphProps {
   moves: Move[];
   currentMoveIndex: number; // -1 for start of game, 0..moves.length-1
-  onSeek: (moveIndex: number) => void;
+  onSeek?: (moveIndex: number) => void;
   height?: number;
   mini?: boolean;
   className?: string;
@@ -74,7 +74,7 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
           const clickX = e.clientX - rect.left;
           const ratio = Math.max(0, Math.min(1, clickX / rect.width));
           const targetIndex = Math.min(moves.length - 1, Math.floor(ratio * moves.length));
-          onSeek(targetIndex);
+          onSeek?.(targetIndex);
         }}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
@@ -163,7 +163,7 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
           <span className="text-theme-muted font-mono">{activeMove.moveNumber}.</span>
           <span className="font-mono font-bold text-theme-text">{activeMove.san}</span>
           <span
-            className="px-1.5 py-0.2 rounded font-bold text-[10px]"
+            className="px-1.5 py-0.5 rounded font-bold text-xs"
             style={{
               backgroundColor: CLASSIFICATION_META[activeCls]?.bgColor,
               color: CLASSIFICATION_META[activeCls]?.textColor,
@@ -171,7 +171,7 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
           >
             {CLASSIFICATION_META[activeCls]?.label}
           </span>
-          <span className="font-mono text-amber-500 font-bold text-[11px]">
+          <span className="font-mono text-amber-500 font-bold text-xs">
             {formatEval(activeMove.eval?.eval)}
           </span>
         </div>

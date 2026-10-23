@@ -174,7 +174,7 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
 
       {/* Typewriter Skip Hint */}
       {isLatest && !isComplete && !isOff && (
-        <div className="text-[10px] text-theme-muted/60 text-right mt-1 font-mono">
+        <div className="text-xs text-theme-muted/70 text-right mt-1 font-mono">
           Click to skip typing
         </div>
       )}

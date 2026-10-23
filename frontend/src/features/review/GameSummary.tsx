@@ -8,6 +8,7 @@ import { MoveQualityTable } from './MoveQualityTable';
 import { PhaseGradesCard } from './PhaseGradesCard';
 import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
+import { EvalGraph } from '@/features/board/EvalGraph';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { Sparkles, Trophy, ArrowLeft, RotateCcw } from 'lucide-react';
@@ -79,6 +80,7 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
 
   // Find biggest swing moment to showcase on summary board
   let biggestSwingMove = game.moves[0];
+  let biggestSwingIdx = 0;
   let maxSwing = 0;
   game.moves.forEach((m, idx) => {
     if (idx === game.moves.length - 1 && m.san.includes('#') && game.moves.length > 2) return;
@@ -88,6 +90,7 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
     if (diff > maxSwing) {
       maxSwing = diff;
       biggestSwingMove = m;
+      biggestSwingIdx = idx;
     }
   });
 
@@ -119,17 +122,17 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
       {/* --- LEFT ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile, desktop flex-1) --- */}
       <div className="sticky top-0 z-20 w-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page border-b lg:border-b-0 border-theme-border/60 flex-shrink-0 lg:flex-1 min-w-0">
-        <div className="w-full max-w-[min(88vh,680px)] flex flex-col gap-2">
+        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
           {/* Top Player Row */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-bold flex items-center justify-center text-[10px]">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
                 B
               </span>
-              <span className="font-bold text-theme-text">{game.black.username}</span>
+              <span className="font-bold text-theme-text truncate">{game.black.username}</span>
               <span className="font-mono">({game.black.rating})</span>
             </div>
-            <span className="font-mono font-semibold">{game.speed} • {game.timeControl}</span>
+            <span className="font-mono font-semibold flex-shrink-0">{game.speed} • {game.timeControl}</span>
           </div>
 
           {/* Board + Eval Bar Container */}
@@ -165,33 +168,33 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
 
           {/* Bottom Player Row */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-white border border-neutral-300 text-black font-bold flex items-center justify-center text-[10px]">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 h-5 rounded-full bg-white border border-neutral-300 text-black font-bold flex items-center justify-center text-xs flex-shrink-0">
                 W
               </span>
-              <span className="font-bold text-theme-text">{game.white.username}</span>
+              <span className="font-bold text-theme-text truncate">{game.white.username}</span>
               <span className="font-mono">({game.white.rating})</span>
             </div>
             <button
               type="button"
               onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
-              className="hover:text-theme-text transition-colors flex items-center gap-1 font-semibold"
+              className="min-h-[44px] md:min-h-[32px] hover:text-theme-text transition-colors inline-flex items-center gap-1 font-semibold flex-shrink-0"
               title="Flip Board (F)"
             >
-              <RotateCcw size={13} />
+              <RotateCcw size={14} />
               <span>Flip</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* --- RIGHT ZONE: SUMMARY PANEL (~420px, full height scrollable) --- */}
-      <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 min-h-0">
-        {/* Panel Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60 flex-shrink-0">
+      {/* --- RIGHT ZONE: SUMMARY PANEL (460px to 500px, matches Chess.com exact order) --- */}
+      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 min-h-0">
+        {/* Panel Header: 48px bar */}
+        <div className="h-12 min-h-[48px] px-4 border-b border-theme-border/60 flex items-center justify-between flex-shrink-0">
           <NavLink
             to="/review"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-theme-muted hover:text-theme-text transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-theme-muted hover:text-theme-text transition-colors min-h-[44px] md:min-h-[32px]"
           >
             <ArrowLeft size={16} />
             <span>All Games</span>
@@ -201,11 +204,13 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
           </span>
         </div>
 
-        {/* Panel Content (Scrollable) */}
+        {/* Panel Content (Scrollable, in exact Chess.com order) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-          {/* Coach Banner */}
+          {/* 1. Coach Line */}
           <div className="flex items-start gap-3 flex-shrink-0">
-            <CoachAvatar expression={coachExp} mode="bust" size={68} />
+            <div className="w-[84px] flex-shrink-0">
+              <CoachAvatar expression={coachExp} mode="bust" size={84} />
+            </div>
             <div className="flex-1 min-w-0">
               <CoachBubble
                 messages={summaryMessages}
@@ -214,87 +219,111 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
             </div>
           </div>
 
-          {/* Players Row & Accuracy Chips */}
+          {/* 2. Evaluation Graph */}
+          <Card className="p-3">
+            <div className="text-xs font-bold text-theme-muted mb-1.5 uppercase tracking-wider">
+              Evaluation Graph
+            </div>
+            <EvalGraph
+              moves={game.moves}
+              currentMoveIndex={biggestSwingIdx >= 0 ? biggestSwingIdx : 0}
+              height={90}
+            />
+          </Card>
+
+          {/* 3 & 4. Players row with avatars & Accuracy chips (white chip for White, dark chip for Black) */}
           <Card className="p-3.5 space-y-3">
             <div className="flex items-center justify-between">
               {/* White Player */}
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-white text-black font-bold flex items-center justify-center text-xs shadow border">
+                <div className="w-8 h-8 rounded-full bg-white text-neutral-900 border border-neutral-300 font-bold flex items-center justify-center text-xs shadow-sm flex-shrink-0">
                   W
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="font-bold text-xs text-theme-text truncate">{game.white.username}</span>
-                  <span className="text-[11px] text-theme-muted font-mono">{game.white.rating}</span>
+                  <span className="text-xs text-theme-muted font-mono">{game.white.rating}</span>
                 </div>
               </div>
 
               {/* Result Badge */}
-              <div className="flex flex-col items-center">
-                <span className="text-xs font-extrabold font-mono bg-theme-raised px-2 py-0.5 rounded border border-theme-border">
+              <div className="flex flex-col items-center flex-shrink-0 px-2">
+                <span className="text-xs font-extrabold font-mono bg-theme-raised px-2.5 py-0.5 rounded border border-theme-border">
                   {game.result}
                 </span>
-                <span className="text-[10px] text-theme-muted mt-0.5">{game.speed}</span>
+                <span className="text-xs text-theme-muted mt-0.5">{game.speed}</span>
               </div>
 
               {/* Black Player */}
               <div className="flex items-center gap-2 min-w-0 justify-end">
                 <div className="flex flex-col items-end min-w-0">
                   <span className="font-bold text-xs text-theme-text truncate">{game.black.username}</span>
-                  <span className="text-[11px] text-theme-muted font-mono">{game.black.rating}</span>
+                  <span className="text-xs text-theme-muted font-mono">{game.black.rating}</span>
                 </div>
-                <div className="w-7 h-7 rounded-full bg-neutral-900 text-white font-bold flex items-center justify-center text-xs shadow border border-neutral-700">
+                <div className="w-8 h-8 rounded-full bg-neutral-900 text-white border border-neutral-700 font-bold flex items-center justify-center text-xs shadow-sm flex-shrink-0">
                   B
                 </div>
               </div>
             </div>
 
-            {/* Accuracy and Estimated Game Rating */}
+            {/* Accuracy chips: white chip for White, dark chip for Black */}
             {game.accuracy && (
-              <div className="flex items-center justify-between pt-2 border-t border-theme-border/60 text-xs font-semibold">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-theme-muted">Accuracy:</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-bold font-mono">
+              <div className="flex items-center justify-between pt-2.5 border-t border-theme-border/60 text-xs font-semibold">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full bg-white text-neutral-900 border border-neutral-300 font-bold font-mono shadow-sm">
                     {game.accuracy.white}%
                   </span>
+                  <span className="text-theme-muted font-medium">White Accuracy</span>
                 </div>
 
-                {game.estimatedRating && (
-                  <div className="flex items-center gap-1 text-[11px] text-theme-muted">
-                    <Trophy size={13} className="text-amber-500" />
-                    <span className="font-mono">~{game.estimatedRating.white} / ~{game.estimatedRating.black}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-500 font-bold font-mono">
+                <div className="flex items-center gap-2">
+                  <span className="text-theme-muted font-medium">Black Accuracy</span>
+                  <span className="px-2.5 py-1 rounded-full bg-neutral-900 text-white border border-neutral-700 font-bold font-mono shadow-sm">
                     {game.accuracy.black}%
                   </span>
-                  <span className="text-theme-muted">Accuracy</span>
                 </div>
               </div>
             )}
           </Card>
 
-          {/* Phase Grades */}
+          {/* 5. Classification table (label left, counts centred under each avatar) */}
           <Card className="p-3">
-            <div className="text-xs font-bold text-theme-muted mb-2 uppercase tracking-wider text-[11px]">
+            <MoveQualityTable game={game} />
+          </Card>
+
+          {/* 6. Game Rating */}
+          {game.estimatedRating && (
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy size={16} className="text-amber-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-theme-muted">
+                    Estimated Game Performance
+                  </span>
+                </div>
+                <div className="font-mono font-bold text-sm text-theme-text">
+                  <span className="text-amber-500 font-mono">~{game.estimatedRating.white}</span>
+                  <span className="text-theme-muted mx-1">/</span>
+                  <span className="text-neutral-400 font-mono">~{game.estimatedRating.black}</span>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* 7. Phase grades */}
+          <Card className="p-3">
+            <div className="text-xs font-bold text-theme-muted mb-2 uppercase tracking-wider">
               Phase Performance
             </div>
             <PhaseGradesCard grades={game.phaseGrades} />
           </Card>
-
-          {/* Move Quality Table (Full Width) */}
-          <Card className="p-3">
-            <MoveQualityTable game={game} />
-          </Card>
         </div>
 
-        {/* Pinned Primary Button at Bottom */}
+        {/* 8. Pinned 48px Start Review button */}
         <div className="p-4 border-t border-theme-border/70 bg-theme-card flex-shrink-0">
           <Button
             variant="primary"
             size="lg"
-            fullWidth
+            className="!h-12 w-full"
             icon={<Sparkles size={18} />}
             onClick={onStartReview}
           >

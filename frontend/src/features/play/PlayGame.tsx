@@ -399,11 +399,11 @@ export const PlayGame: React.FC = () => {
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
       {/* Center Zone: Board & Eval Bar (Visible both in Lobby and in Game, matching Chess.com) */}
       <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0 relative">
-        <div className="w-full max-w-[min(88vh,680px)] flex flex-col gap-2">
+        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
           {/* Top Player (Coach) */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 font-bold flex items-center justify-center text-[10px] border border-amber-500/40">
+              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 font-bold flex items-center justify-center text-xs border border-amber-500/40">
                 🤖
               </span>
               <span className="font-bold text-theme-text">Coach All-Chess</span>
@@ -493,8 +493,8 @@ export const PlayGame: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Zone: Lobby or In-Game Panel (~420px fixed width on desktop) */}
-      <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 overflow-hidden">
+      {/* Right Zone: Lobby or In-Game Panel (460px to 500px, clamp 380-500) */}
+      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 overflow-hidden">
         {/* Panel Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60">
           <div className="flex items-center gap-2">
@@ -528,7 +528,9 @@ export const PlayGame: React.FC = () => {
             <>
               {/* Coach Portrait + Stacked Speech Bubbles */}
               <div className="flex items-start gap-3">
-                <CoachAvatar expression={coachExpression} mode="bust" size={68} />
+                <div className="w-[84px] flex-shrink-0">
+                  <CoachAvatar expression={coachExpression} mode="bust" size={84} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <CoachBubble
                     messages={stackedMessages}
@@ -540,11 +542,11 @@ export const PlayGame: React.FC = () => {
               {/* Live Action Controls: Resign, Hint, Takeback, PGN - 48px tall */}
               <div className="flex items-center gap-2 pt-1 w-full">
                 {/* Resign with Confirmation Popover */}
-                <div className="relative">
+                <div className="relative flex-1">
                   <Button
                     variant="danger"
                     size="md"
-                    className="!h-12 px-4"
+                    className="!h-12 w-full"
                     icon={<Flag size={18} />}
                     onClick={() => setShowResignPopover((v) => !v)}
                     disabled={Boolean(gameOver)}
@@ -582,7 +584,7 @@ export const PlayGame: React.FC = () => {
 
                 {activeConfig.showHints && (
                   <Button
-                    variant="highlight"
+                    variant="primary"
                     size="md"
                     className="!h-12 flex-1"
                     icon={<Lightbulb size={18} />}
@@ -597,7 +599,7 @@ export const PlayGame: React.FC = () => {
                   <Button
                     variant="secondary"
                     size="md"
-                    className="!h-12"
+                    className="!h-12 flex-1"
                     icon={<RotateCcw size={18} />}
                     onClick={handleTakeback}
                     disabled={moves.length < 2 || Boolean(gameOver)}
@@ -610,7 +612,7 @@ export const PlayGame: React.FC = () => {
                 <Button
                   variant="secondary"
                   size="md"
-                  className="!h-12 px-3"
+                  className="!h-12 px-3 flex-shrink-0"
                   icon={<Download size={18} />}
                   onClick={handleDownloadPgn}
                   title="Download PGN"
@@ -621,16 +623,18 @@ export const PlayGame: React.FC = () => {
 
               {/* Live Move List */}
               <Card className="p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-theme-text">Game Notation</span>
+                <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-theme-border/40">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-theme-text truncate">
+                      {currentOpening ? currentOpening.name : 'Game Notation'}
+                    </span>
                     {currentOpening && (
-                      <span className="text-[11px] font-semibold text-amber-500">
-                        {currentOpening.eco}: {currentOpening.name}
+                      <span className="text-xs font-semibold text-amber-500 font-mono">
+                        {currentOpening.eco}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-theme-muted font-mono">{moves.length} plies</span>
+                  <span className="text-xs text-theme-muted font-mono">{moves.length} plies</span>
                 </div>
                 <MoveList
                   moves={moves}

@@ -30,7 +30,9 @@ import {
   Volume2,
   VolumeX,
   ArrowLeft,
+  SlidersHorizontal,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ReviewBoardProps {
   game: Game;
@@ -115,6 +117,7 @@ function getMaterialState(fen: string) {
 }
 
 export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary }) => {
+  const navigate = useNavigate();
   const {
     boardThemeId,
     pieceSetId,
@@ -454,11 +457,11 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
       {/* --- CENTER ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile) --- */}
       <div className="sticky top-0 z-20 w-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page border-b lg:border-b-0 border-theme-border/60 flex-shrink-0 lg:flex-1 min-w-0">
-        <div className="w-full max-w-[min(88vh,680px)] flex flex-col gap-2">
+        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
           {/* Top Player Row (Black) + Material Tally */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+              <span className="w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
                 B
               </span>
               <span className="font-bold text-theme-text truncate">{game.black.username}</span>
@@ -467,12 +470,12 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
               {/* Material Difference & Captured Pieces for Black */}
               <div className="flex items-center gap-1 ml-1">
                 {materialState.blackDiff && (
-                  <span className="font-mono font-bold text-[11px] bg-theme-raised px-1 py-0.2 rounded text-amber-500 border border-theme-border/60">
+                  <span className="font-mono font-bold text-xs bg-theme-raised px-1 py-0.5 rounded text-amber-500 border border-theme-border/60">
                     {materialState.blackDiff}
                   </span>
                 )}
                 {materialState.blackCaptured.length > 0 && (
-                  <span className="text-[11px] opacity-80 tracking-tighter" title="Captured by Black">
+                  <span className="text-xs opacity-80 tracking-tighter" title="Captured by Black">
                     {materialState.blackCaptured.map((p, i) => (
                       <span key={`bc-${i}`} className="text-white drop-shadow-sm">
                         {PIECE_FIGURINES[p]}
@@ -513,7 +516,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           {/* Bottom Player Row (White) + Material Tally */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="w-5 h-5 rounded-full bg-white border border-neutral-300 text-black font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+              <span className="w-5 h-5 rounded-full bg-white border border-neutral-300 text-black font-bold flex items-center justify-center text-xs flex-shrink-0">
                 W
               </span>
               <span className="font-bold text-theme-text truncate">{game.white.username}</span>
@@ -522,12 +525,12 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
               {/* Material Difference & Captured Pieces for White */}
               <div className="flex items-center gap-1 ml-1">
                 {materialState.whiteDiff && (
-                  <span className="font-mono font-bold text-[11px] bg-theme-raised px-1 py-0.2 rounded text-amber-500 border border-theme-border/60">
+                  <span className="font-mono font-bold text-xs bg-theme-raised px-1 py-0.5 rounded text-amber-500 border border-theme-border/60">
                     {materialState.whiteDiff}
                   </span>
                 )}
                 {materialState.whiteCaptured.length > 0 && (
-                  <span className="text-[11px] opacity-80 tracking-tighter" title="Captured by White">
+                  <span className="text-xs opacity-80 tracking-tighter" title="Captured by White">
                     {materialState.whiteCaptured.map((p, i) => (
                       <span key={`wc-${i}`} className="text-neutral-900 dark:text-neutral-400">
                         {PIECE_FIGURINES[p]}
@@ -541,59 +544,67 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             <button
               type="button"
               onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
-              className="hover:text-theme-text transition-colors flex items-center gap-1 font-semibold flex-shrink-0"
+              className="min-h-[44px] md:min-h-[32px] hover:text-theme-text transition-colors inline-flex items-center gap-1 font-semibold flex-shrink-0"
               title="Flip Board (F)"
             >
-              <RotateCcw size={13} />
+              <RotateCcw size={14} />
               <span>Flip</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* --- RIGHT ZONE: MODE PANEL (FIXED SKELETON ~420px) --- */}
-      <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 min-h-0">
-        {/* Panel Header: Back arrow, "Game Review", sound toggle, move count */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onBackToSummary}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-theme-muted hover:text-theme-text transition-colors"
-              title="Return to Summary"
-            >
-              <ArrowLeft size={16} />
-              <span>Summary</span>
-            </button>
-            <span className="text-xs text-theme-muted font-bold">|</span>
-            <span className="text-xs font-bold font-display text-theme-text">
-              Game Review
-            </span>
+      {/* --- RIGHT ZONE: MODE PANEL (460px to 500px, clamp 380-500) --- */}
+      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 min-h-0">
+        {/* Panel Header: 48px bar, title centred with icon, back on left, sound & settings on right. Drop ply counter. */}
+        <div className="h-12 min-h-[48px] px-4 border-b border-theme-border/60 flex items-center justify-between flex-shrink-0">
+          <button
+            type="button"
+            onClick={onBackToSummary}
+            className="p-2 -ml-2 rounded-lg text-theme-muted hover:text-theme-text transition-colors inline-flex items-center gap-1 text-xs font-semibold"
+            title="Return to Summary"
+            aria-label="Return to Summary"
+          >
+            <ArrowLeft size={18} />
+            <span className="hidden sm:inline">Summary</span>
+          </button>
+
+          <div className="flex items-center gap-1.5 font-display font-bold text-sm text-theme-text">
+            <Sparkles size={16} className="text-amber-500" />
+            <span>Game Review</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             {/* Sound toggle button */}
             <button
               type="button"
               onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
-              className="text-theme-muted hover:text-theme-text transition-colors p-1 rounded"
+              className="text-theme-muted hover:text-theme-text transition-colors p-2 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
               title={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
               aria-label={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
             >
-              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
             </button>
-
-            <div className="text-xs text-theme-muted font-mono font-bold">
-              {currentMoveIndex + 1} / {game.moves.length}
-            </div>
+            {/* Quick settings link */}
+            <button
+              type="button"
+              onClick={() => navigate('/settings')}
+              className="text-theme-muted hover:text-theme-text transition-colors p-2 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
+              title="Settings"
+              aria-label="Settings"
+            >
+              <SlidersHorizontal size={17} />
+            </button>
           </div>
         </div>
 
         {/* Panel Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-          {/* Coach Portrait + Speech Bubble (Unclipped) */}
+          {/* Coach Portrait + Speech Bubble (Unclipped, bubble fills panel width minus 96px portrait + 12px gap) */}
           <div className="flex items-start gap-3 flex-shrink-0 pt-0.5">
-            <CoachAvatar expression={coachExpression} mode="bust" size={68} />
+            <div className="w-[96px] flex-shrink-0">
+              <CoachAvatar expression={coachExpression} mode="bust" size={96} />
+            </div>
             <div className="flex-1 min-w-0">
               <CoachBubble
                 messages={bubbleMessages}
@@ -780,10 +791,10 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                         {formatEval(line.eval)}
                       </span>
                     </div>
-                    <p className="text-[11px] text-theme-muted">{line.why}</p>
+                    <p className="text-xs text-theme-muted">{line.why}</p>
                   </div>
                 )) || (
-                  <div className="text-theme-muted text-[11px]">Calculating lines...</div>
+                  <div className="text-theme-muted text-xs">Calculating lines...</div>
                 )}
               </div>
             )}
@@ -796,7 +807,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
               <span className="text-xs font-bold text-theme-text truncate" title={game.opening.name}>
                 {game.opening.name}
               </span>
-              <span className="text-[10px] font-mono text-theme-muted px-1.5 py-0.5 rounded bg-theme-raised">
+              <span className="text-xs font-mono text-theme-muted px-1.5 py-0.5 rounded bg-theme-raised">
                 {game.opening.eco}
               </span>
             </div>
@@ -827,27 +838,57 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           />
         </div>
 
-        {/* Transport Controls Bar */}
-        <div className="p-2.5 border-t border-theme-border/70 flex items-center justify-center gap-2 bg-theme-card flex-shrink-0">
-          <Button size="sm" variant="ghost" onClick={handleFirst} title="First Move (Home)">
-            <SkipBack size={16} />
-          </Button>
-          <Button size="sm" variant="ghost" onClick={handlePrev} title="Previous Move (Left Arrow)">
-            <ChevronLeft size={18} />
+        {/* Transport Controls Bar: Full-width row, equal flex buttons, 48px tall, secondary style */}
+        <div className="p-2 border-t border-theme-border/70 flex items-center gap-1.5 bg-theme-card flex-shrink-0 w-full">
+          <Button
+            size="md"
+            variant="secondary"
+            className="!h-12 flex-1 !px-0 flex items-center justify-center min-w-0"
+            onClick={handleFirst}
+            title="First Move (Home)"
+            aria-label="First Move"
+          >
+            <SkipBack size={18} />
           </Button>
           <Button
-            size="sm"
+            size="md"
             variant="secondary"
-            onClick={() => setIsPlaying(!isPlaying)}
-            title="Play / Pause (Space)"
+            className="!h-12 flex-1 !px-0 flex items-center justify-center min-w-0"
+            onClick={handlePrev}
+            title="Previous Move (Left Arrow)"
+            aria-label="Previous Move"
           >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            <ChevronLeft size={20} />
           </Button>
-          <Button size="sm" variant="ghost" onClick={handleNext} title="Next Move (Right Arrow)">
-            <ChevronRight size={18} />
+          <Button
+            size="md"
+            variant="secondary"
+            className="!h-12 flex-1 !px-0 flex items-center justify-center min-w-0"
+            onClick={() => setIsPlaying(!isPlaying)}
+            title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? <Pause size={18} /> : <Play size={18} />}
           </Button>
-          <Button size="sm" variant="ghost" onClick={handleLast} title="Last Move (End)">
-            <SkipForward size={16} />
+          <Button
+            size="md"
+            variant="secondary"
+            className="!h-12 flex-1 !px-0 flex items-center justify-center min-w-0"
+            onClick={handleNext}
+            title="Next Move (Right Arrow)"
+            aria-label="Next Move"
+          >
+            <ChevronRight size={20} />
+          </Button>
+          <Button
+            size="md"
+            variant="secondary"
+            className="!h-12 flex-1 !px-0 flex items-center justify-center min-w-0"
+            onClick={handleLast}
+            title="Last Move (End)"
+            aria-label="Last Move"
+          >
+            <SkipForward size={18} />
           </Button>
         </div>
       </div>

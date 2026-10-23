@@ -116,9 +116,15 @@ export const MoveList: React.FC<MoveListProps> = ({
 
         return (
           <div key={`row-${group.moveNum}`} data-move-row="true" className="flex flex-col w-full">
-            <div className="h-[27px] flex items-center px-1.5 rounded hover:bg-theme-raised/40 transition-colors w-full">
-              {/* Move number */}
-              <span className="w-8 font-mono text-[11px] font-semibold text-theme-muted flex-shrink-0">
+            <div
+              className={`h-[30px] min-h-[30px] flex items-center px-1.5 rounded transition-colors w-full ${
+                group.moveNum % 2 === 1
+                  ? 'bg-white/[0.02] dark:bg-white/[0.02] bg-black/[0.025]'
+                  : 'bg-transparent'
+              } hover:bg-theme-raised/40`}
+            >
+              {/* Move number: 32px fixed column, muted 13px */}
+              <span className="w-8 min-w-[32px] font-mono text-[13px] font-bold text-theme-muted flex-shrink-0 text-left">
                 {group.moveNum}.
               </span>
 
@@ -128,18 +134,18 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isWhiteActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.whiteIdx!)}
-                  className={`flex-1 h-[25px] flex items-center gap-1.5 px-2 py-0.5 rounded text-left font-semibold text-xs transition-colors duration-100 ${
-                    isWhiteActive
-                      ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/50 font-bold'
-                      : 'text-theme-text hover:bg-theme-raised'
-                  }`}
+                  className="flex-1 h-[28px] flex items-center gap-1.5 px-1 py-0.5 rounded text-left transition-colors duration-100"
                 >
                   {group.white.classification && (
                     <ClassificationBadge classification={group.white.classification} size="xs" showLabel={false} />
                   )}
                   <span
-                    className="font-mono text-xs font-semibold"
-                    style={getSanColorStyle(group.white.classification)}
+                    className={`px-1.5 py-0.5 rounded-[2px] font-mono text-[13px] font-bold transition-all ${
+                      isWhiteActive
+                        ? 'bg-white/[0.14] dark:bg-white/[0.14] bg-black/[0.10] text-theme-text border-b-2 border-white/25 dark:border-white/25 border-black/20 shadow-sm'
+                        : 'text-theme-text hover:bg-theme-raised/60'
+                    }`}
+                    style={!isWhiteActive ? getSanColorStyle(group.white.classification) : undefined}
                   >
                     {renderFigurine(group.white.san, 'w')}
                   </span>
@@ -152,18 +158,18 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isBlackActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.blackIdx!)}
-                  className={`flex-1 h-[25px] flex items-center gap-1.5 px-2 py-0.5 rounded text-left font-semibold text-xs ml-1 transition-colors duration-100 ${
-                    isBlackActive
-                      ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/50 font-bold'
-                      : 'text-theme-text hover:bg-theme-raised'
-                  }`}
+                  className="flex-1 h-[28px] flex items-center gap-1.5 px-1 py-0.5 rounded text-left ml-1 transition-colors duration-100"
                 >
                   {group.black.classification && (
                     <ClassificationBadge classification={group.black.classification} size="xs" showLabel={false} />
                   )}
                   <span
-                    className="font-mono text-xs font-semibold"
-                    style={getSanColorStyle(group.black.classification)}
+                    className={`px-1.5 py-0.5 rounded-[2px] font-mono text-[13px] font-bold transition-all ${
+                      isBlackActive
+                        ? 'bg-white/[0.14] dark:bg-white/[0.14] bg-black/[0.10] text-theme-text border-b-2 border-white/25 dark:border-white/25 border-black/20 shadow-sm'
+                        : 'text-theme-text hover:bg-theme-raised/60'
+                    }`}
+                    style={!isBlackActive ? getSanColorStyle(group.black.classification) : undefined}
                   >
                     {renderFigurine(group.black.san, 'b')}
                   </span>

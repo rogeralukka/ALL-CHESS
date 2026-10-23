@@ -231,7 +231,7 @@ export const PuzzleScreen: React.FC = () => {
     <div className="flex flex-col lg:flex-row h-full w-full bg-theme-bg select-none">
       {/* Left/Main Zone: Board + Top Status Bar */}
       <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
-        <div className="w-full max-w-[min(88vh,720px)] flex flex-col items-center">
+        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col items-center">
           {/* Header Row: Single User Rating + Muted Puzzle Rating */}
           <div className="w-full flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
@@ -293,26 +293,28 @@ export const PuzzleScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={handlePrev}
-                className="hover:text-theme-text transition-colors p-2.5 rounded hover:bg-theme-raised min-w-[36px] min-h-[36px] flex items-center justify-center"
+                className="hover:text-theme-text transition-colors p-2 rounded hover:bg-theme-raised min-w-[44px] min-h-[44px] flex items-center justify-center"
                 title="Previous puzzle"
+                aria-label="Previous puzzle"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={20} />
               </button>
               <button
                 type="button"
                 onClick={handleNext}
-                className="hover:text-theme-text transition-colors p-2.5 rounded hover:bg-theme-raised min-w-[36px] min-h-[36px] flex items-center justify-center"
+                className="hover:text-theme-text transition-colors p-2 rounded hover:bg-theme-raised min-w-[44px] min-h-[44px] flex items-center justify-center"
                 title="Next puzzle"
+                aria-label="Next puzzle"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={20} />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Zone: Mode Panel (~420px) */}
-      <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20">
+      {/* Right Zone: Mode Panel (460px to 500px, clamp 380-500) */}
+      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20">
         {/* Panel Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60">
           <div className="flex items-center gap-2">
