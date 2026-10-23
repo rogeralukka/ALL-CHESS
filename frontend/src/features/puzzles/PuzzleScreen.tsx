@@ -16,7 +16,8 @@ import { formatTime } from '@/lib/formatters';
 import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
 import { BoardBadge, CoachExpression } from '@/data/types';
 import { sound } from '@/lib/sound';
-import { Flame, Lightbulb, RotateCcw, Sparkles, ChevronLeft, ChevronRight, CheckCircle2, XCircle } from 'lucide-react';
+import { useMotion } from '@/lib/useMotion';
+import { Flame, Lightbulb, RotateCcw, Sparkles, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Play, Lock, Crown } from 'lucide-react';
 
 function animateCountUp(start: number, end: number, duration: number, callback: (v: number) => void) {
   const startTime = performance.now();
@@ -48,6 +49,7 @@ export const PuzzleScreen: React.FC = () => {
 
   const [puzzleIndex, setPuzzleIndex] = useState<number>(0);
   const currentPuzzle = MOCK_PUZZLES[puzzleIndex] || MOCK_PUZZLES[0];
+  const { isFull } = useMotion();
 
   const [chess] = useState(() => new Chess(currentPuzzle.fen));
   const [fen, setFen] = useState<string>(currentPuzzle.fen);
@@ -371,40 +373,85 @@ export const PuzzleScreen: React.FC = () => {
                     <span className="text-amber-500 font-mono">Tile {avatarHopIndex + 1} of 5</span>
                   </div>
 
-                  {/* Visual Step Track with Hopping Avatar */}
-                  <div className="flex items-center justify-between py-6 px-2 relative">
-                    <div className="absolute left-6 right-6 h-1 bg-theme-border rounded-full -z-0" />
-                    <div
-                      className="absolute left-6 h-1 bg-amber-500 rounded-full transition-all duration-500 -z-0"
-                      style={{ width: `${Math.min(100, (avatarHopIndex / 4) * 85)}%` }}
-                    />
+                  {/* Illustrated Winding Path (Reusing Learn path styling) */}
+                  <div className="relative w-full h-44 rounded-xl overflow-hidden bg-theme-page/60 border border-theme-border/40 p-2">
+                    {/* SVG S-Curve Track */}
+                    <svg
+                      viewBox="0 0 340 160"
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                      preserveAspectRatio="none"
+                    >
+                      <path
+                        d="M 40 115 C 65 115, 75 45, 102 45 C 135 45, 140 115, 170 115 C 200 115, 205 45, 238 45 C 265 45, 275 104, 300 104"
+                        fill="none"
+                        stroke="currentColor"
+                        className="text-theme-border/80"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M 40 115 C 65 115, 75 45, 102 45 C 135 45, 140 115, 170 115 C 200 115, 205 45, 238 45 C 265 45, 275 104, 300 104"
+                        fill="none"
+                        stroke="rgba(245, 158, 11, 0.65)"
+                        strokeWidth="4"
+                        strokeDasharray="6 6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
 
-                    {[0, 1, 2, 3, 4].map((tileIdx) => {
-                      const isCompleted = tileIdx < avatarHopIndex;
-                      const isCurrent = tileIdx === avatarHopIndex;
+                    {/* 5 Winding Illustrated Tiles with Hopping Avatar */}
+                    {[
+                      { idx: 0, x: 12, y: 72 },
+                      { idx: 1, x: 30, y: 28 },
+                      { idx: 2, x: 50, y: 72 },
+                      { idx: 3, x: 70, y: 28 },
+                      { idx: 4, x: 88, y: 65 },
+                    ].map((tile) => {
+                      const isCompleted = tile.idx < avatarHopIndex;
+                      const isCurrent = tile.idx === avatarHopIndex;
+                      const isGoal = tile.idx === 4;
+
                       return (
-                        <div key={tileIdx} className="relative z-10 flex flex-col items-center">
+                        <div
+                          key={tile.idx}
+                          className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
+                          style={{ left: `${tile.x}%`, top: `${tile.y}%` }}
+                        >
+                          {/* Hopping Coach Avatar above Current Tile */}
                           {isCurrent && (
                             <motion.div
-                              initial={{ y: -10, scale: 0.8 }}
+                              initial={isFull ? { y: -20, scale: 0.7 } : false}
                               animate={{ y: 0, scale: 1 }}
-                              transition={{ type: 'spring', stiffness: 350, damping: 20 }}
-                              className="absolute -top-8"
+                              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                              className="absolute -top-10 z-20"
                             >
-                              <CoachAvatar expression="thumbsup" mode="bust" size={28} />
+                              <CoachAvatar expression="thumbsup" mode="bust" size={32} />
                             </motion.div>
                           )}
+
+                          {/* Node Button / Tile */}
                           <div
-                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs border-2 transition-all ${
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-lg transition-transform ${
                               isCompleted
-                                ? 'bg-amber-500 border-amber-500 text-black'
+                                ? 'bg-amber-500 border-2 border-amber-400 text-black'
                                 : isCurrent
-                                ? 'bg-amber-500/20 border-amber-500 text-amber-500 ring-4 ring-amber-500/20'
-                                : 'bg-theme-card border-theme-border text-theme-muted'
+                                ? 'bg-amber-500 text-black ring-4 ring-amber-500/30 scale-105'
+                                : 'bg-theme-card border-2 border-theme-border text-theme-muted'
                             }`}
                           >
-                            {isCompleted ? '✓' : tileIdx + 1}
+                            {isCompleted ? (
+                              <CheckCircle2 size={20} />
+                            ) : isCurrent ? (
+                              <Play size={18} className="fill-black ml-0.5" />
+                            ) : isGoal ? (
+                              <Crown size={18} className="text-amber-500/70" />
+                            ) : (
+                              <Lock size={16} />
+                            )}
                           </div>
+                          <span className="text-[10px] font-bold text-theme-muted mt-1 whitespace-nowrap">
+                            Tile {tile.idx + 1}
+                          </span>
                         </div>
                       );
                     })}

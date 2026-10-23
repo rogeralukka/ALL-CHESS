@@ -71,24 +71,25 @@ This document records all architectural choices, design trade-offs, and open-sou
 
 ---
 
-## 6. Recorded Audio System & CC0 Audio Licence Audit (Phase 1.6)
-- **Architecture & Format:** High-fidelity, real recorded audio samples (dual MP3 and OGG formats) replacing all synthetic oscillator beeps.
-  - Normalized strictly to **-16 LUFS** (`loudnorm=I=-16:TP=-1.5:LRA=7`) with 10–15ms end-fadeout.
-  - Duration: 40 to 150ms per effect for instant, punchy feedback without hanging tails.
+## 6. Procedural Acoustic Sound System (Phase 1.7b Audit)
+- **Architecture & Format:** High-fidelity, custom procedurally synthesised acoustic samples (dual MP3 and OGG formats) engineered specifically for low latency, zero external asset dependencies, and tactical tactile feel.
+  - Normalized strictly to **-16 LUFS** (`loudnorm=I=-16:TP=-1.5:LRA=7`) with 10–15ms end-fadeout via FFmpeg libmp3lame and libvorbis.
+  - Duration: 85 to 150ms per effect for instant, punchy feedback without hanging tails.
   - Preloaded via browser `fetch` + `AudioContext.decodeAudioData` into memory buffers.
   - Stereo panning by board file (-0.15 on the a-file to +0.15 on the h-file) for subtle spatial depth.
   - AudioContext unlocked on first user gesture with 40ms debounce to prevent burst distortion.
 - **Zero Proprietary Audio:** Zero sound samples from Chess.com, Lichess, or any proprietary soundboard are used.
-- **Exact Verified CC0 1.0 Universal Sound Ledger:**
-  | Sound | File | Duration | Author / Origin | Licence Terms |
+- **Synthesis Disclosure & Physical Modeling Ledger:**
+  Rather than relying on third-party recordings that risk licensing drift or synthetic tone mismatch, all audio samples are procedurally synthesised via `scripts/generate_acoustic_sounds.py` using physical acoustic modeling (transient impulse + multi-mode wood/chime resonator filter banks):
+  | Sound | File | Duration | Target Feel & Physical Model | Licence Terms |
   |---|---|---|---|---|
-  | `move` | `move.mp3`, `move.ogg` | 120ms | mh2o ([Freesound #351518](https://freesound.org/people/mh2o/sounds/351518/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `capture` | `capture.mp3`, `capture.ogg` | 140ms | dichardson ([Freesound #570964](https://freesound.org/people/dichardson/sounds/570964/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `check` | `check.mp3`, `check.ogg` | 130ms | alegemaate ([Freesound #364699](https://freesound.org/people/alegemaate/sounds/364699/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `castle` | `castle.mp3`, `castle.ogg` | 150ms | SieuAmThanh ([Freesound #530812](https://freesound.org/people/SieuAmThanh/sounds/530812/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `promote` | `promote.mp3`, `promote.ogg` | 140ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `illegal` | `illegal.mp3`, `illegal.ogg` | 110ms | SypherZent ([Freesound #420673](https://freesound.org/people/SypherZent/sounds/420673/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `game_start` | `game_start.mp3`, `game_start.ogg` | 150ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `game_end` | `game_end.mp3`, `game_end.ogg` | 150ms | stumpbutt ([Freesound #381688](https://freesound.org/people/stumpbutt/sounds/381688/)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `puzzle_correct`| `puzzle_correct.mp3`, `puzzle_correct.ogg` | 150ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-  | `puzzle_wrong` | `puzzle_wrong.mp3`, `puzzle_wrong.ogg` | 140ms | Kenney ([kenney.nl](https://kenney.nl/assets/interface-sounds)) | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+  | `move` | `move.mp3`, `move.ogg` | 85ms | **Short, bright click**: 3.8 kHz transient spike + 920 Hz & 1450 Hz wood resonator decay | CC0 1.0 Universal (Self-generated) |
+  | `capture` | `capture.mp3`, `capture.ogg` | 125ms | **Heavier double click**: t=0ms piece-piece 3.4 kHz impact + t=22ms piece-board 640 Hz heavy wood thud | CC0 1.0 Universal (Self-generated) |
+  | `check` | `check.mp3`, `check.ogg` | 130ms | **Distinct sharper tone**: 4.2 kHz crisp ping + 1480 Hz & 2220 Hz ringing acoustic chime | CC0 1.0 Universal (Self-generated) |
+  | `castle` | `castle.mp3`, `castle.ogg` | 150ms | Dual wood click: king contact at t=0ms, rook landing at t=50ms | CC0 1.0 Universal (Self-generated) |
+  | `promote` | `promote.mp3`, `promote.ogg` | 140ms | Crisp ascending two-tone sparkle (988 Hz -> 1318 Hz) | CC0 1.0 Universal (Self-generated) |
+  | `illegal` | `illegal.mp3`, `illegal.ogg` | 110ms | Damped low double wood thud (180 Hz -> 140 Hz) | CC0 1.0 Universal (Self-generated) |
+  | `game_start` | `game_start.mp3`, `game_start.ogg` | 150ms | Welcoming wood chime chord (523 Hz + 659 Hz + 784 Hz) | CC0 1.0 Universal (Self-generated) |
+  | `game_end` | `game_end.mp3`, `game_end.ogg` | 150ms | Resonant descending wood chord (784 Hz -> 523 Hz) | CC0 1.0 Universal (Self-generated) |
+  | `puzzle_correct`| `puzzle_correct.mp3`, `puzzle_correct.ogg` | 150ms | Crisp positive two-tone chime (587 Hz -> 880 Hz) | CC0 1.0 Universal (Self-generated) |
+  | `puzzle_wrong` | `puzzle_wrong.mp3`, `puzzle_wrong.ogg` | 140ms | Soft descending acoustic buzz/thud (220 Hz -> 175 Hz) | CC0 1.0 Universal (Self-generated) |

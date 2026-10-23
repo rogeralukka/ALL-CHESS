@@ -4,7 +4,9 @@ import { BoardTheme, PieceSet, Arrow, BoardBadge, MoveClassification } from '@/d
 import { ArrowLayer } from './ArrowLayer';
 import { BadgeLayer } from './BadgeLayer';
 import { PromotionDialog } from './PromotionDialog';
+import { motion } from 'framer-motion';
 import { useMotion } from '@/lib/useMotion';
+import { useSettingsStore } from '@/data/settingsStore';
 import { sound } from '@/lib/sound';
 
 export interface LastMoveInfo {
@@ -29,6 +31,7 @@ export interface BoardProps {
   animationSpeed?: 'off' | 'fast' | 'medium' | 'slow';
   coordinates?: 'inside' | 'outside' | 'none';
   autoQueen?: boolean;
+  tippingPieceSquare?: string | null;
   className?: string;
 }
 
@@ -101,6 +104,7 @@ export const Board: React.FC<BoardProps> = ({
   animationSpeed = 'medium',
   coordinates = 'inside',
   autoQueen = true,
+  tippingPieceSquare = null,
   className = '',
 }) => {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
@@ -114,6 +118,7 @@ export const Board: React.FC<BoardProps> = ({
   const counterRef = useRef<number>(1);
 
   const { pieceMs, isFull, isOff } = useMotion();
+  const appTheme = useSettingsStore((s) => s.appTheme);
 
   // Parse FEN into chess instance for legal move computations
   const chessInstance = useRef(new Chess());
@@ -149,11 +154,13 @@ export const Board: React.FC<BoardProps> = ({
   const [fadingPieces, setFadingPieces] = useState<
     Array<{ id: string; col: number; row: number; color: Color; type: PieceSymbol }>
   >([]);
-  const [checkFlashSquare, setCheckFlashSquare] = useState<string | null>(null);
+  const [inCheckSquare, setInCheckSquare] = useState<string | null>(null);
+  const [pulseCheckSquare, setPulseCheckSquare] = useState<string | null>(null);
+  const [wigglingKingSquare, setWigglingKingSquare] = useState<string | null>(null);
   const lastFrom = lastMove?.from;
   const lastTo = lastMove?.to;
 
-  // Flash attacked king for 400ms when in check (skip initial mount to avoid unprompted audio)
+  // Pulse & overlay attacked king when in check (skip initial mount to avoid unprompted audio)
   const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
@@ -165,18 +172,24 @@ export const Board: React.FC<BoardProps> = ({
         const turn = chessInstance.current.turn();
         const king = boardPieces.find((p) => p.type === 'k' && p.color === turn);
         if (king) {
-          setCheckFlashSquare(king.square);
+          setInCheckSquare(king.square);
           sound.check(king.square);
-          const t = setTimeout(() => setCheckFlashSquare(null), 400);
-          return () => clearTimeout(t);
+          if (isFull) {
+            setPulseCheckSquare(king.square);
+            setWigglingKingSquare(king.square);
+            setTimeout(() => setPulseCheckSquare(null), 300);
+            setTimeout(() => setWigglingKingSquare(null), 350);
+          }
         }
       } else {
-        setCheckFlashSquare(null);
+        setInCheckSquare(null);
+        setPulseCheckSquare(null);
+        setWigglingKingSquare(null);
       }
     } catch {
       // ignore
     }
-  }, [fen, boardPieces]);
+  }, [fen, boardPieces, isFull]);
 
   useEffect(() => {
     let chess: Chess;
@@ -229,7 +242,7 @@ export const Board: React.FC<BoardProps> = ({
               type: capturedPiece.type,
             },
           ]);
-          setTimeout(() => setFadingPieces([]), 100);
+          setTimeout(() => setFadingPieces([]), 400);
         }
 
         // Check castling rook
@@ -483,7 +496,7 @@ export const Board: React.FC<BoardProps> = ({
   // Square tint styles for classification and selection
   const getSquareTint = (sq: string) => {
     if (selectedSquare === sq) {
-      return 'bg-amber-400/50 shadow-inner ring-2 ring-amber-400';
+      return '';
     }
 
     // Red tint on the attacked king when in check
@@ -505,7 +518,7 @@ export const Board: React.FC<BoardProps> = ({
 
       if (isFrom || isTo) {
         if (lastMove.classification === 'blunder') {
-          return isFrom ? 'bg-red-400/35' : 'bg-amber-500/60 ring-1 ring-amber-500/80';
+          return 'bg-red-400/35 ring-1 ring-red-500/50';
         }
         if (lastMove.classification === 'best') {
           return 'bg-emerald-500/40';
@@ -516,7 +529,8 @@ export const Board: React.FC<BoardProps> = ({
         if (lastMove.classification === 'book') {
           return 'bg-amber-600/35';
         }
-        return 'bg-yellow-400/45';
+        const isDusk = appTheme === 'dusk';
+        return isDusk ? 'bg-[rgba(255,214,79,0.42)]' : 'bg-[rgba(255,214,79,0.38)]';
       }
     }
 
@@ -574,23 +588,48 @@ export const Board: React.FC<BoardProps> = ({
                   tabIndex={interactive ? 0 : -1}
                   onClick={() => handleSquareClick(sq)}
                   onKeyDown={(e) => handleKeyDown(e, sq)}
-                  className={`relative w-full h-full flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                    isHoveredTarget ? 'ring-2 ring-amber-400/80 ring-inset shadow-inner' : ''
-                  }`}
-                  style={{ backgroundColor: bgColor }}
+                  className="relative w-full h-full flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  style={{
+                    backgroundColor: bgColor,
+                    animation: pulseCheckSquare === sq && isFull ? 'kingCheckPulse 300ms cubic-bezier(.16, 1, .3, 1) 1' : undefined,
+                  }}
                   aria-label={`Square ${sq}${piece ? `, ${piece.color === 'w' ? 'White' : 'Black'} ${piece.type}` : ''}`}
                 >
                   {/* Tint overlay */}
                   {tintClass && <div className={`absolute inset-0 pointer-events-none ${tintClass}`} />}
 
-                  {/* 400ms Red radial check flash */}
-                  {checkFlashSquare === sq && (
+                  {/* Selected square: Tint fades in over 100ms with a 0.9 to 1 scale */}
+                  {selectedSquare === sq && (
                     <div
-                      className="absolute inset-0 pointer-events-none z-10 animate-fade-out"
+                      className="absolute inset-0 pointer-events-none bg-amber-400/50 shadow-inner ring-2 ring-amber-400 z-5"
+                      style={{
+                        animation: isFull
+                          ? 'selectGrowIn 100ms cubic-bezier(0, 0, 0.2, 1) forwards'
+                          : isOff
+                          ? 'none'
+                          : 'selectGrowIn 100ms ease-out forwards',
+                      }}
+                    />
+                  )}
+
+                  {/* Drag hover: 3px inner outline, white 65% */}
+                  {isHoveredTarget && (
+                    <div
+                      className="absolute inset-0 pointer-events-none z-10"
+                      style={{
+                        boxShadow: 'inset 0 0 0 3px rgba(255, 255, 255, 0.65)',
+                      }}
+                    />
+                  )}
+
+                  {/* Check: pulsing red radial overlay while in check */}
+                  {inCheckSquare === sq && (
+                    <div
+                      className="absolute inset-0 pointer-events-none z-10"
                       style={{
                         background:
-                          'radial-gradient(circle, rgba(239, 68, 68, 0.85) 0%, rgba(220, 38, 38, 0.45) 55%, transparent 85%)',
-                        animationDuration: '400ms',
+                          'radial-gradient(circle, rgba(239, 68, 68, 0.45) 0%, rgba(220, 38, 38, 0.25) 55%, transparent 85%)',
+                        animation: 'redRadialPulse 2s ease-in-out infinite',
                       }}
                     />
                   )}
@@ -633,26 +672,56 @@ export const Board: React.FC<BoardProps> = ({
 
         {/* --- DEDICATED ABSOLUTE PIECE LAYER (Sliding Transform Animations) --- */}
         <div className="absolute inset-0 w-full h-full pointer-events-none z-15">
-          {/* Captured pieces fading out over 100ms */}
+          {/* Captured pieces scale-up fade over 400ms + particles (Full motion only) */}
           {fadingPieces.map((p) => (
             <div
               key={p.id}
-              className="absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-none p-0.5 opacity-0 transition-opacity duration-100 ease-out z-10"
+              className="absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-none p-0.5 z-20"
               style={{
                 transform: `translate3d(${p.col * 100}%, ${p.row * 100}%, 0)`,
               }}
             >
-              <img
-                src={`${pieceSet.basePath}/${p.color}${p.type.toUpperCase()}.svg`}
-                alt="captured"
-                className="w-full h-full object-contain pointer-events-none select-none drop-shadow"
-              />
+              <motion.div
+                initial={{ opacity: 1, scale: 1 }}
+                animate={{ opacity: 0, scale: isFull ? 1.8 : 1 }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
+                className="w-full h-full relative"
+              >
+                <img
+                  src={`${pieceSet.basePath}/${p.color}${p.type.toUpperCase()}.svg`}
+                  alt="captured"
+                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow"
+                />
+                {isFull && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    {[0, 1, 2, 3, 4, 5].map((i) => {
+                      const angle = (i * Math.PI) / 3;
+                      const dist = 24;
+                      const dx = Math.cos(angle) * dist;
+                      const dy = Math.sin(angle) * dist;
+                      return (
+                        <div
+                          key={i}
+                          className="absolute w-1.5 h-1.5 rounded-full bg-amber-300 shadow-sm"
+                          style={{
+                            ['--p-dx' as string]: `${dx}px`,
+                            ['--p-dy' as string]: `${dy}px`,
+                            animation: 'captureParticle 400ms ease-out forwards',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
             </div>
           ))}
 
           {boardPieces.map((p) => {
             const isBeingDragged = draggedPiece?.sq === p.square && draggedPiece.isDragging;
             const pieceImg = `${pieceSet.basePath}/${p.color}${p.type.toUpperCase()}.svg`;
+            const isWiggling = wigglingKingSquare === p.square && isFull;
+            const isTipping = tippingPieceSquare === p.square && isFull;
 
             return (
               <div
@@ -681,6 +750,14 @@ export const Board: React.FC<BoardProps> = ({
                   alt={`${p.color}${p.type}`}
                   draggable={false}
                   className="w-full h-full object-contain pointer-events-none select-none drop-shadow transition-transform duration-100 group-hover:scale-[1.04]"
+                  style={{
+                    animation: isWiggling
+                      ? 'kingWiggle 350ms ease-in-out 1'
+                      : isTipping
+                      ? 'kingTipOver 400ms cubic-bezier(.34, 1.56, .64, 1) forwards'
+                      : undefined,
+                    transformOrigin: isTipping ? 'bottom right' : undefined,
+                  }}
                 />
               </div>
             );

@@ -9,6 +9,8 @@ import { CoachBubble, BubbleMessage } from '@/features/coach/CoachBubble';
 import { badgeBox } from '@/features/board/BadgeLayer';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import confetti from 'canvas-confetti';
+import { useMotion } from '@/lib/useMotion';
 import { GameOverModal } from './GameOverModal';
 import { PlayConfig, PlayLobby } from './PlayLobby';
 import { useSettingsStore } from '@/data/settingsStore';
@@ -114,6 +116,8 @@ export const PlayGame: React.FC = () => {
   } | null>(null);
   const [kingBadges, setKingBadges] = useState<Array<{ square: string; type: 'crown' | 'flag' | 'draw' }>>([]);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [tippingSquare, setTippingSquare] = useState<string | null>(null);
+  const { isFull } = useMotion();
 
   const [coachExpression, setCoachExpression] = useState<CoachExpression>('wave');
   const [stackedMessages, setStackedMessages] = useState<BubbleMessage[]>([
@@ -181,6 +185,7 @@ export const PlayGame: React.FC = () => {
     setHighlights([]);
     setCurrentOpening(null);
     setGameOver(null);
+    setTippingSquare(null);
     setKingBadges([]);
     setShowGameOverModal(false);
     setShowResignPopover(false);
@@ -219,6 +224,7 @@ export const PlayGame: React.FC = () => {
     const userIsWhite = orientation === 'white';
 
     if (winner === 'draw') {
+      setTippingSquare(null);
       setKingBadges([
         { square: whiteKing, type: 'draw' },
         { square: blackKing, type: 'draw' },
@@ -228,15 +234,25 @@ export const PlayGame: React.FC = () => {
     } else if (winner === 'user') {
       const winnerKing = userIsWhite ? whiteKing : blackKing;
       const loserKing = userIsWhite ? blackKing : whiteKing;
+      setTippingSquare(loserKing);
       setKingBadges([
         { square: winnerKing, type: 'crown' },
         { square: loserKing, type: 'flag' },
       ]);
       setCoachExpression('brilliant');
       pushCoachMessage("Outstanding victory! Decisive tactical execution.");
+      if (isFull) {
+        confetti({
+          particleCount: 45,
+          spread: 60,
+          origin: { y: 0.6 },
+          disableForReducedMotion: true,
+        });
+      }
     } else {
       const winnerKing = userIsWhite ? blackKing : whiteKing;
       const loserKing = userIsWhite ? whiteKing : blackKing;
+      setTippingSquare(loserKing);
       setKingBadges([
         { square: winnerKing, type: 'crown' },
         { square: loserKing, type: 'flag' },
@@ -249,7 +265,7 @@ export const PlayGame: React.FC = () => {
     setTimeout(() => {
       setShowGameOverModal(true);
     }, 300);
-  }, [chess, orientation, pushCoachMessage]);
+  }, [chess, orientation, pushCoachMessage, isFull]);
 
   const checkGameStatus = useCallback(() => {
     if (chess.isCheckmate()) {
@@ -666,6 +682,7 @@ export const PlayGame: React.FC = () => {
                 interactive={Boolean(activeConfig && !gameOver)}
                 onMove={handleUserMove}
                 onIllegalMove={handleIllegalMove}
+                tippingPieceSquare={tippingSquare}
               />
 
               {/* King Badges on Game Over (Crown on winner's king, flag on loser's, 1/2 on draw) */}
@@ -718,6 +735,7 @@ export const PlayGame: React.FC = () => {
                     setArrows([]);
                     setHighlights([]);
                     setGameOver(null);
+    setTippingSquare(null);
                     setKingBadges([]);
                     setShowGameOverModal(false);
                   }}
@@ -760,6 +778,7 @@ export const PlayGame: React.FC = () => {
                   setArrows([]);
                   setHighlights([]);
                   setGameOver(null);
+    setTippingSquare(null);
                   setKingBadges([]);
                   setShowGameOverModal(false);
                 }}
@@ -923,6 +942,7 @@ export const PlayGame: React.FC = () => {
                         setArrows([]);
                         setHighlights([]);
                         setGameOver(null);
+    setTippingSquare(null);
                         setKingBadges([]);
                         setShowGameOverModal(false);
                       }}
