@@ -55,9 +55,31 @@ async function optimizeCoach() {
     let n = 0;
     for (let y = top; y < top + figH * 0.2; y++) for (let x = 0; x < W; x += 2) if (alphaAt(x, y) > 40) { sumX += x; n++; }
     const headCx = Math.round(sumX / Math.max(1, n));
-    const side = Math.round(figH * 0.44);
     const cropTop = Math.max(0, top - Math.round(figH * 0.03));
-    const cropLeft = Math.max(0, Math.min(W - side, headCx - Math.round(side / 2)));
+    // Start at 44% of the figure height; if a gesture (thumbs-up, finger-gun, wave) sticks out
+    // sideways within the crop's rows, widen the square (up to 60%) so the hand stays in frame.
+    let side = Math.round(figH * 0.44);
+    let midX = headCx;
+    for (let pass = 0; pass < 3; pass++) {
+      let minX = W;
+      let maxX = 0;
+      for (let y = cropTop; y < Math.min(Hh, cropTop + side); y += 2) {
+        for (let x = 0; x < W; x += 2) {
+          if (alphaAt(x, y) > 40) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+          }
+        }
+      }
+      const pad = Math.round(figH * 0.02);
+      const needed = maxX - minX + pad * 2;
+      if (needed <= side) break;
+      side = Math.min(Math.round(figH * 0.6), needed);
+      midX = Math.round((minX + maxX) / 2);
+    }
+    // keep the head near the middle but shift toward the gesture when the crop had to widen
+    const centre = Math.round((headCx + midX) / 2 + (midX - headCx) * 0.5);
+    const cropLeft = Math.max(0, Math.min(W - side, centre - Math.round(side / 2)));
     const bustCrop = { top: cropTop, left: cropLeft, width: Math.min(side, W - cropLeft), height: Math.min(side, Hh - cropTop) };
 
     // 1. Bust WebP (320x320 head-and-shoulders crop; shown at 64-96px, sharp on 2x/3x screens)
