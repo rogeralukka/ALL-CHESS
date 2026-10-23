@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/Card';
+import { PageContainer, PageHeader } from '@/components/PageHeader';
 import { Toggle } from '@/components/Toggle';
 import { Button } from '@/components/Button';
 import { Segmented } from '@/components/Segmented';
@@ -166,7 +167,7 @@ export const SettingsShell: React.FC = () => {
                   {/* Inside File Coordinates on bottom rank */}
                   {settings.coordinates === 'inside' && rIdx === 2 && (
                     <span
-                      className="absolute bottom-1 right-1.5 text-[11px] font-bold select-none opacity-75 leading-none"
+                      className="absolute bottom-1 right-1.5 text-[12px] font-bold select-none opacity-75 leading-none"
                       style={{ color: isDarkSquare ? previewTheme.light : previewTheme.dark }}
                     >
                       {previewFiles[cIdx]}
@@ -175,7 +176,7 @@ export const SettingsShell: React.FC = () => {
                   {/* Inside Rank Coordinates on left column */}
                   {settings.coordinates === 'inside' && cIdx === 0 && (
                     <span
-                      className="absolute top-1 left-1.5 text-[11px] font-bold select-none opacity-75 leading-none"
+                      className="absolute top-1 left-1.5 text-[12px] font-bold select-none opacity-75 leading-none"
                       style={{ color: isDarkSquare ? previewTheme.light : previewTheme.dark }}
                     >
                       {previewRanks[rIdx]}
@@ -195,13 +196,12 @@ export const SettingsShell: React.FC = () => {
   );
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
-      <div>
-        <h1 className="text-2xl font-black font-display text-theme-text">Settings &amp; Preferences</h1>
-        <p className="text-sm text-theme-muted mt-1">
-          Customize themes, board cosmetics, coaching feedback depth, and local API keys.
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Settings"
+        icon="/assets/ui/icon_settings.webp"
+        subtitle="Boards, pieces, sounds, how much the coach talks, and your own AI keys."
+      />
 
       {/* Mobile Top Navigation when inside sub-page */}
       {mobileSubpage !== null && (
@@ -919,7 +919,7 @@ export const SettingsShell: React.FC = () => {
         </Card>
       )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 export default SettingsShell;

@@ -1,567 +1,316 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
-import { ProgressBar } from '@/components/ProgressBar';
+import { PageContainer, SectionTitle } from '@/components/PageHeader';
+import { PlayerAvatar, Reveal } from '@/components/Bits';
+import { GameHistoryTable } from '@/components/GameHistoryTable';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
+import { CoachAvatar } from '@/features/coach/CoachAvatar';
+import { LevelBadge } from '@/features/map/LevelBadge';
 import { Board } from '@/features/board/Board';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
-import {
-  gameRepository,
-  statsRepository,
-  friendRepository,
-  learnRepository,
-  puzzleRepository,
-  RatingSummary,
-} from '@/data/repositories';
+import { gameRepository, statsRepository, friendRepository, learnRepository, puzzleRepository, RatingSummary } from '@/data/repositories';
 import { Game, Friend, LessonStage, Puzzle } from '@/data/types';
 import { MOCK_GAMES } from '@/data/mock/mockGames';
 import { MOCK_FRIENDS } from '@/data/mock/mockFriends';
 import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
 import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
-import { useNavigate } from 'react-router-dom';
-import {
-  Flame,
-  Swords,
-  BookOpen,
-  Puzzle as PuzzleIcon,
-  TrendingUp,
-  ChevronRight,
-  Sparkles,
-  Users,
-  Clock,
-  ArrowUpRight,
-  SlidersHorizontal,
-  RotateCw,
-} from 'lucide-react';
+import { storage } from '@/lib/storage';
+import { useMotion } from '@/lib/useMotion';
+import { Flame, ChevronRight, Sparkles, Clock, ArrowUpRight, Zap, Timer, Users } from 'lucide-react';
 
 const DEFAULT_RATINGS: RatingSummary[] = [
   { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
   { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
   { mode: 'Bullet', rating: 880, deltaWeekly: 5 },
 ];
+const MODE_ICON: Record<string, React.ReactNode> = {
+  Rapid: <Clock size={20} className="text-emerald-400" />,
+  Blitz: <Timer size={20} className="text-yellow-300" />,
+  Bullet: <Zap size={20} className="text-amber-400" />,
+};
+
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 5 ? 'Late night session' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+};
+
+/** A launcher tile like the reference's home cards: board preview on top, icon + title, one action. */
+const LaunchCard: React.FC<{
+  fen: string;
+  icon: string;
+  title: string;
+  meta: React.ReactNode;
+  action: string;
+  onClick: () => void;
+  extra?: React.ReactNode;
+  i: number;
+  testId: string;
+}> = ({ fen, icon, title, meta, action, onClick, extra, i, testId }) => {
+  const { boardThemeId, pieceSetId } = useSettingsStore();
+  const theme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
+  const pieces = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
+  return (
+    <Reveal i={i}>
+      <Card interactive className="!p-0 overflow-hidden h-full flex flex-col" onClick={onClick} data-testid={testId}>
+        <div className="relative pointer-events-none">
+          <Board fen={fen} boardTheme={theme} pieceSet={pieces} interactive={false} coordinates="none" animationSpeed="off" maxWidthClass="max-w-none" className="[&_[data-board]]:!rounded-none [&_[data-board]]:!border-0 [&_[data-board]]:!shadow-none" />
+          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[var(--color-card)] to-transparent" />
+        </div>
+        <div className="p-4 pt-2 flex flex-col gap-3 flex-1">
+          <div className="flex items-center gap-2.5">
+            <img src={icon} alt="" className="w-9 h-9 object-contain" style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.35))' }} />
+            <div className="min-w-0 flex-1">
+              <div className="font-extrabold text-[16px] text-theme-text truncate">{title}</div>
+              <div className="text-[13px] text-theme-muted truncate">{meta}</div>
+            </div>
+            {extra}
+          </div>
+          <Button variant="secondary" size="lg" fullWidth className="mt-auto" onClick={(e) => { e.stopPropagation(); onClick(); }}>
+            {action}
+          </Button>
+        </div>
+      </Card>
+    </Reveal>
+  );
+};
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
+  const { isFull } = useMotion();
   const [coachDismissed, setCoachDismissed] = useState(false);
-  const [recentGames, setRecentGames] = useState<Game[]>(() => MOCK_GAMES.slice(0, 3));
+  const [recentGames, setRecentGames] = useState<Game[]>(() => MOCK_GAMES.slice(0, 5));
   const [ratings, setRatings] = useState<RatingSummary[]>(() => DEFAULT_RATINGS);
   const [friends, setFriends] = useState<Friend[]>(() => MOCK_FRIENDS);
-  const [currentStage, setCurrentStage] = useState<LessonStage | null>(
-    () => MOCK_LEARN_STAGES.find((s) => s.status === 'current') || MOCK_LEARN_STAGES[1] || MOCK_LEARN_STAGES[0]
-  );
+  const [currentStage, setCurrentStage] = useState<LessonStage | null>(() => MOCK_LEARN_STAGES.find((s) => s.status === 'current') || MOCK_LEARN_STAGES[0]);
   const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(() => MOCK_PUZZLES[0]);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      gameRepository.getGames(),
-      statsRepository.getUserRatings(),
-      friendRepository.getFriends(),
-      learnRepository.getStages(),
-      puzzleRepository.getDailyPuzzle(),
-    ]).then(([games, userRatings, friendList, stages, puzzle]) => {
-      if (!mounted) return;
-      setRecentGames(games.slice(0, 3));
-      setRatings(userRatings);
-      setFriends(friendList);
-      const active = stages.find((s) => s.status === 'current') || stages[1] || stages[0];
-      setCurrentStage(active || null);
-      setDailyPuzzle(puzzle);
-    });
-
+    Promise.all([gameRepository.getGames(), statsRepository.getUserRatings(), friendRepository.getFriends(), learnRepository.getStages(), puzzleRepository.getDailyPuzzle()]).then(
+      ([games, userRatings, friendList, stages, puzzle]) => {
+        if (!mounted) return;
+        setRecentGames(games.slice(0, 5));
+        setRatings(userRatings);
+        setFriends(friendList);
+        setCurrentStage(stages.find((s) => s.status === 'current') || stages[0] || null);
+        setDailyPuzzle(puzzle);
+      }
+    );
     return () => {
       mounted = false;
     };
   }, []);
 
-  const { boardThemeId, pieceSetId } = useSettingsStore();
-  const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
-  const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
+  const puzzleRating = storage.get('all_chess_puzzle_rating', 1200);
+  const puzzleStreak = storage.get('all_chess_puzzle_streak', 0);
+  const puzzleIndex = storage.get('all_chess_puzzle_index', 0);
+  const puzzleLevel = Math.floor(puzzleIndex / 5) + 1;
+  const stageNo = currentStage ? MOCK_LEARN_STAGES.filter((s) => s.category === currentStage.category).indexOf(currentStage) + 1 : 1;
 
-  const streakDays = [
-    { day: 'M', state: 'done' },
-    { day: 'T', state: 'done' },
-    { day: 'W', state: 'done' },
-    { day: 'T', state: 'done' },
-    { day: 'F', state: 'today' },
-    { day: 'S', state: 'pending' },
-    { day: 'S', state: 'pending' },
-  ];
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const today = (new Date().getDay() + 6) % 7;
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
-      {/* Top Header Row: Streak & Sync Status */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 min-w-0 w-full">
-        {/* Streak Tracker */}
+    <PageContainer wide>
+      {/* Greeting row */}
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 flex-shrink-0">
-            <Flame size={24} className="fill-amber-500" />
+          <div className="rounded-xl bg-black/20 border border-theme-border overflow-hidden">
+            <CoachAvatar expression="wave" size={48} />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-display font-black text-xl text-theme-text">5 Day Streak</span>
-              <span className="text-xs bg-amber-500/20 text-amber-500 font-bold px-1.5 py-0.5 rounded uppercase">
-                Active
-              </span>
-            </div>
-            {/* 7-Day Pill Strip: Filled for done days, outline for today */}
-            <div className="flex gap-1.5 mt-1">
-              {streakDays.map((chip, idx) => (
-                <div
-                  key={idx}
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    chip.state === 'done'
-                      ? 'bg-amber-500 text-black shadow-sm'
-                      : chip.state === 'today'
-                      ? 'border-2 border-amber-500 text-amber-500 bg-amber-500/10 ring-1 ring-amber-500/40 font-black'
-                      : 'bg-theme-raised text-theme-muted/50 border border-theme-border/50'
-                  }`}
-                  title={`${chip.day}: ${chip.state === 'done' ? 'Completed' : chip.state === 'today' ? 'Today (Active)' : 'Upcoming'}`}
-                >
-                  {chip.day}
-                </div>
-              ))}
-            </div>
+            <div className="text-[13px] font-semibold text-theme-muted">{greeting()},</div>
+            <div className="text-[22px] font-black font-display text-theme-text leading-tight">Master</div>
           </div>
         </div>
-
-        {/* Sync Status Badge (Single sync control: Status here, trigger in sidebar) */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-raised border border-theme-border/60 text-xs text-theme-muted shadow-sm flex-shrink-0">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <Clock size={13} className="text-theme-muted" />
-          <span>Synced 12m ago</span>
+        <div className="flex items-center gap-3" data-testid="streak">
+          <div className="hidden md:flex gap-1">
+            {days.map((d, i) => (
+              <span
+                key={i}
+                className={`w-7 h-7 rounded-full text-[12px] font-black flex items-center justify-center ${
+                  i < today ? 'bg-amber-500 text-black' : i === today ? 'ring-2 ring-amber-500 text-amber-400 bg-amber-500/10' : 'bg-black/[0.05] dark:bg-white/[0.05] text-theme-muted/60'
+                }`}
+              >
+                {d}
+              </span>
+            ))}
+          </div>
+          <motion.div
+            className="flex items-center gap-1.5"
+            animate={isFull ? { scale: [1, 1.06, 1] } : undefined}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Flame size={28} className="text-amber-400 fill-amber-400/30" />
+            <span className="text-[17px] md:text-[22px] font-black font-display text-theme-text whitespace-nowrap">5 Day Streak</span>
+          </motion.div>
         </div>
       </div>
 
-      {/* Coach Daily Drill Hero Card */}
+      {/* Coach hero */}
       {!coachDismissed && (
-        <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-theme-raised to-theme-card border border-amber-500/30 shadow-md min-w-0 w-full">
-          <div className="flex-1 space-y-2 min-w-0 w-full">
-            <div className="text-xs uppercase font-black tracking-wider text-amber-500">
-              Daily Training Mission
-            </div>
+        <section className="panel relative overflow-hidden">
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(560px 300px at 85% 70%, rgba(245,165,36,0.2), transparent 70%)' }} />
+          <img
+            src="/assets/ui/hero_home.webp"
+            alt=""
+            aria-hidden="true"
+            className="hidden lg:block absolute right-[-30px] bottom-[-40px] h-[135%] pointer-events-none"
+            style={{ filter: 'drop-shadow(0 18px 26px rgba(0,0,0,.5))' }}
+          />
+          <div className="relative p-5 md:p-7 lg:max-w-[58%] space-y-4">
+            <div className="text-[12px] font-black uppercase tracking-[0.14em] text-amber-400">Today's training</div>
             <CoachSpeech
               expression="thumbsup"
               size={80}
-              text="Welcome back! Today we're mastering king and pawn opposition. Five minutes of practice will lock in your endgame technique."
+              text={`Welcome back! Today's focus is ${currentStage?.title?.toLowerCase() || 'king and pawn endgames'}. Five focused minutes now will show up in your next game.`}
             />
+            <div className="flex flex-wrap gap-2 pl-[90px]">
+              <Button variant="primary" size="lg" icon={<Sparkles size={18} />} onClick={() => navigate('/learn')}>
+                Start today's lesson
+              </Button>
+              <Button variant="ghost" size="lg" onClick={() => setCoachDismissed(true)}>
+                Later
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-auto flex-shrink-0">
-            <Button
-              variant="primary"
-              size="md"
-              className="!h-12"
-              icon={<Sparkles size={16} />}
-              onClick={() => navigate('/learn')}
-            >
-              Start Daily Drill
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="min-h-[44px] md:min-h-[36px]"
-              onClick={() => setCoachDismissed(true)}
-            >
-              Maybe Later
-            </Button>
-          </div>
-        </div>
+        </section>
       )}
 
-      {/* Your Ratings Section */}
-      <Card className="p-4 space-y-3 min-w-0 w-full">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={18} className="text-amber-500" />
-            <h2 className="font-bold font-display text-theme-text text-base">Your Ratings</h2>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/settings')}
-            className="min-h-[44px] min-w-[44px] px-2 py-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-500 hover:text-amber-400 transition-colors"
-          >
-            <SlidersHorizontal size={13} />
-            <span>Adjust</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {ratings.map((r) => (
-            <div
-              key={r.mode}
-              className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 flex items-center justify-between min-h-[76px] h-full"
-            >
-              <div>
-                <span className="text-xs uppercase font-bold tracking-wider text-theme-muted block">
-                  {r.mode}
-                </span>
-                <span className="text-2xl font-black font-mono tabular-nums text-theme-text mt-0.5 block">
-                  {r.rating}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-xs font-bold font-mono tabular-nums px-2 py-1 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30">
-                <ArrowUpRight size={14} />
-                <span>+{r.deltaWeekly}</span>
-              </div>
+      {/* Launchers */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <LaunchCard
+          i={0}
+          testId="launch-puzzles"
+          fen={dailyPuzzle?.fen || '6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1'}
+          icon="/assets/ui/icon_puzzles.webp"
+          title="Puzzles"
+          meta={
+            <span className="flex items-center gap-1.5">
+              <strong className="text-theme-text tabular-nums">{puzzleRating}</strong>
+              <Flame size={13} className="text-amber-400" /> {puzzleStreak}
+            </span>
+          }
+          extra={<LevelBadge level={puzzleLevel} width={40} />}
+          action="Solve puzzles"
+          onClick={() => navigate('/puzzles')}
+        />
+        <LaunchCard
+          i={1}
+          testId="launch-learn"
+          fen="8/8/4k3/8/4K3/8/4P3/8 w - - 0 1"
+          icon="/assets/ui/icon_learn.webp"
+          title={currentStage?.title || 'Lessons'}
+          meta={`Stage ${stageNo} · ${currentStage?.category || 'endgame'}`}
+          action="Continue lesson"
+          onClick={() => navigate('/learn')}
+        />
+        <LaunchCard
+          i={2}
+          testId="launch-play"
+          fen="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          icon="/assets/ui/icon_play.webp"
+          title="Play the coach"
+          meta="Rated sparring with live hints"
+          extra={
+            <div className="rounded-lg overflow-hidden bg-black/20">
+              <CoachAvatar expression="brilliant" size={40} />
             </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* 3 Entry Cards: Lessons, Puzzles, Play Coach (Mini Board Preview, Icon + Title, Progress, One Button) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: Lessons */}
-        <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
-          <div className="space-y-3">
-            <div className="w-full aspect-square max-w-[140px] min-w-[120px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
-              <Board
-                fen="8/8/4k3/8/4K3/8/4P3/8 w - - 0 1"
-                boardTheme={currentBoardTheme}
-                pieceSet={currentPieceSet}
-                interactive={false}
-                coordinates="none"
-                animationSpeed="off"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
-                  <BookOpen size={16} />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
-                    Lessons
-                  </span>
-                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]" title={currentStage?.title || 'Endgame Basics'}>
-                    {currentStage?.title || 'Endgame Basics'}
-                  </h3>
-                </div>
-              </div>
-              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums flex-shrink-0">
-                Stage 2/8
-              </span>
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs font-semibold text-theme-muted">
-                <span>Roadmap Progress</span>
-                <span className="font-mono text-amber-500 tabular-nums">62%</span>
-              </div>
-              <ProgressBar value={62} max={100} color="bg-amber-500" />
-            </div>
-          </div>
-          <Button
-            variant="secondary"
-            size="md"
-            fullWidth
-            className="!h-11"
-            icon={<ChevronRight size={15} />}
-            onClick={() => navigate('/learn')}
-          >
-            Resume Lessons
-          </Button>
-        </Card>
-
-        {/* Card 2: Puzzles */}
-        <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
-          <div className="space-y-3">
-            <div className="w-full aspect-square max-w-[140px] min-w-[120px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
-              <Board
-                fen={dailyPuzzle?.fen || '6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1'}
-                boardTheme={currentBoardTheme}
-                pieceSet={currentPieceSet}
-                interactive={false}
-                coordinates="none"
-                animationSpeed="off"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center flex-shrink-0">
-                  <PuzzleIcon size={16} />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
-                    Puzzles
-                  </span>
-                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]" title={dailyPuzzle?.goal || 'Daily Tactical Mate'}>
-                    {dailyPuzzle?.goal || 'Daily Tactical Mate'}
-                  </h3>
-                </div>
-              </div>
-              <span className="text-xs font-mono font-bold text-purple-400 tabular-nums flex-shrink-0">
-                {dailyPuzzle?.rating || 650}
-              </span>
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs font-semibold text-theme-muted">
-                <span>Daily Challenge</span>
-                <span className="font-mono text-theme-text tabular-nums">14s avg</span>
-              </div>
-              <ProgressBar value={80} max={100} color="bg-purple-500" />
-            </div>
-          </div>
-          <Button
-            variant="secondary"
-            size="md"
-            fullWidth
-            className="!h-11"
-            icon={<ChevronRight size={15} />}
-            onClick={() => navigate('/puzzles')}
-          >
-            Solve Puzzle
-          </Button>
-        </Card>
-
-        {/* Card 3: Play Coach */}
-        <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
-          <div className="space-y-3">
-            <div className="w-full aspect-square max-w-[140px] min-w-[120px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
-              <Board
-                fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-                boardTheme={currentBoardTheme}
-                pieceSet={currentPieceSet}
-                interactive={false}
-                coordinates="none"
-                animationSpeed="off"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
-                  <Swords size={16} />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
-                    Play Coach
-                  </span>
-                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]">
-                    Rated Sparring
-                  </h3>
-                </div>
-              </div>
-              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums flex-shrink-0">
-                Level 2
-              </span>
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs font-semibold text-theme-muted">
-                <span>Sparring Record</span>
-                <span className="font-mono text-emerald-500 tabular-nums">59 Wins</span>
-              </div>
-              <ProgressBar value={56} max={100} color="bg-amber-500" />
-            </div>
-          </div>
-          <Button
-            variant="secondary"
-            size="md"
-            fullWidth
-            className="!h-11"
-            icon={<ChevronRight size={15} />}
-            onClick={() => navigate('/play')}
-          >
-            Play Coach
-          </Button>
-        </Card>
+          }
+          action="Play coach"
+          onClick={() => navigate('/play')}
+        />
+        <LaunchCard
+          i={3}
+          testId="launch-review"
+          fen="r1bqk1nr/pppp1Bpp/2n5/4p3/1b2P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 6"
+          icon="/assets/ui/icon_review.webp"
+          title="Review your last game"
+          meta={recentGames[0] ? `vs ${recentGames[0].white.username === 'You' ? recentGames[0].black.username : recentGames[0].white.username}` : 'Latest game'}
+          action="Start review"
+          onClick={() => navigate(recentGames[0] ? `/review/${recentGames[0].id}` : '/review')}
+        />
       </div>
 
-      {/* Review Your Games Section (3 Recent Games from Repository) */}
-      <Card className="p-4 space-y-3 min-w-0 w-full">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles size={18} className="text-amber-500" />
-            <h2 className="font-bold font-display text-theme-text text-base">Review your games</h2>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/review')}
-            className="min-h-[44px] min-w-[44px] px-2 py-2 inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors"
+      {/* Ratings + friends */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2">
+          <SectionTitle
+            right={
+              <button type="button" onClick={() => navigate('/profile')} className="text-[13px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-0.5">
+                Stats <ChevronRight size={15} />
+              </button>
+            }
           >
-            View All ({recentGames.length > 0 ? '12' : '0'}) →
-          </button>
-        </div>
-
-        <div className="space-y-3 min-w-0 w-full">
-          {recentGames.map((game, index) => {
-            const isUserWhite = game.white.username === 'You';
-            const userWon =
-              (isUserWhite && game.result === '1-0') || (!isUserWhite && game.result === '0-1');
-            const userLost =
-              (isUserWhite && game.result === '0-1') || (!isUserWhite && game.result === '1-0');
-            const opponent = isUserWhite ? game.black : game.white;
-            const fullMoves = Math.ceil(game.moves.length / 2);
-            const userAccuracy = isUserWhite ? game.accuracy?.white : game.accuracy?.black;
-            const isAnalyzing = index === 2; // 3rd game shows analyzing 62% badge
-
-            return (
-              <div
-                key={game.id}
-                className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0 w-full"
-              >
-                {/* Left: Result Chip + Game Info */}
-                <div className="flex items-center gap-3 min-w-0 w-full flex-1">
-                  {/* Result Chip */}
-                  <span
-                    className={`font-mono tabular-nums text-xs font-bold px-2.5 py-1 rounded border flex-shrink-0 ${
-                      userWon
-                        ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                        : userLost
-                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                        : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                    }`}
-                  >
-                    {game.result} {userWon ? 'Win' : userLost ? 'Loss' : 'Draw'}
-                  </span>
-
-                  {/* Metadata */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-theme-text truncate">
-                        vs {opponent.username}
-                      </span>
-                      {opponent.title && (
-                        <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-1 py-0.2 rounded">
-                          {opponent.title}
-                        </span>
-                      )}
-                      <span className="text-xs text-theme-muted font-mono tabular-nums">({opponent.rating})</span>
-                    </div>
-                    <p className="text-xs text-theme-muted mt-0.5" title={`${game.opening.name} • ${game.timeControl} • ${fullMoves} moves`}>
-                      <span className="line-clamp-2">{game.opening.name} • {game.timeControl} • {fullMoves} moves</span>
-                    </p>
+            Your ratings
+          </SectionTitle>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {ratings.map((r, i) => (
+              <Reveal key={r.mode} i={i}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/profile')}
+                  className="w-full text-left rounded-xl bg-black/[0.04] dark:bg-black/25 border border-theme-border hover:border-amber-500/40 px-4 py-3 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-[13px] font-bold text-theme-muted">
+                    {MODE_ICON[r.mode]} {r.mode}
                   </div>
-                </div>
-
-                {/* Right: Accuracy or Analyzing State & Review Action */}
-                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end flex-shrink-0">
-                  {isAnalyzing ? (
-                    <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-semibold">
-                      <RotateCw size={12} className="animate-spin" />
-                      <span>Analyzing 62%</span>
-                    </div>
-                  ) : userAccuracy !== undefined ? (
-                    <div className="text-right">
-                      <div className="text-xs uppercase font-bold text-theme-muted">Accuracy</div>
-                      <div className="font-mono tabular-nums font-bold text-emerald-500 text-sm">
-                        {userAccuracy}%
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <Button
-                    size="md"
-                    variant="primary"
-                    className="!h-11 min-h-[44px] md:min-h-[36px]"
-                    icon={<ChevronRight size={15} />}
-                    onClick={() => navigate(`/review/${game.id}`)}
-                  >
-                    Review
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Quick Launch & Friends Mini Leaderboard Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Quick Launch Actions */}
-        <Card className="p-4 space-y-3">
-          <h3 className="font-bold font-display text-theme-text text-base">Quick Actions</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/play')}
-              className="p-3.5 rounded-xl bg-theme-raised hover:bg-amber-500/10 border border-theme-border hover:border-amber-500 text-left transition-colors group"
-            >
-              <Swords size={20} className="text-amber-500 group-hover:scale-110 transition-transform mb-2" />
-              <div className="font-bold text-sm text-theme-text">Play Coach</div>
-              <div className="text-xs text-theme-muted mt-0.5">Custom rated sparring</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/review')}
-              className="p-3.5 rounded-xl bg-theme-raised hover:bg-amber-500/10 border border-theme-border hover:border-amber-500 text-left transition-colors group"
-            >
-              <TrendingUp size={20} className="text-amber-500 group-hover:scale-110 transition-transform mb-2" />
-              <div className="font-bold text-sm text-theme-text">Games Library</div>
-              <div className="text-xs text-theme-muted mt-0.5">Explore 12 mock games</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/scout')}
-              className="p-3.5 rounded-xl bg-theme-raised hover:bg-amber-500/10 border border-theme-border hover:border-amber-500 text-left transition-colors group"
-            >
-              <Users size={20} className="text-amber-500 group-hover:scale-110 transition-transform mb-2" />
-              <div className="font-bold text-sm text-theme-text">Scout Opponent</div>
-              <div className="text-xs text-theme-muted mt-0.5">Repertoire insights</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="p-3.5 rounded-xl bg-theme-raised hover:bg-amber-500/10 border border-theme-border hover:border-amber-500 text-left transition-colors group"
-            >
-              <Sparkles size={20} className="text-amber-500 group-hover:scale-110 transition-transform mb-2" />
-              <div className="font-bold text-sm text-theme-text">Board &amp; Themes</div>
-              <div className="text-xs text-theme-muted mt-0.5">8 boards, presets &amp; AI</div>
-            </button>
+                  <div className="flex items-end justify-between mt-1">
+                    <span className="text-[28px] font-black font-display tabular-nums text-theme-text leading-none">{r.rating}</span>
+                    <span className="flex items-center text-[13px] font-bold text-[var(--class-best)]">
+                      <ArrowUpRight size={15} />+{r.deltaWeekly}
+                    </span>
+                  </div>
+                </button>
+              </Reveal>
+            ))}
           </div>
         </Card>
-
-        {/* Friends Mini Leaderboard */}
-        <Card className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold font-display text-theme-text text-base flex items-center gap-2">
-              <Users size={16} className="text-amber-500" />
-              Friends Status
-            </h3>
-            <button
-              type="button"
-              onClick={() => navigate('/profile')}
-              className="min-h-[44px] min-w-[44px] px-2 py-2 inline-flex items-center justify-center text-xs text-amber-500 font-bold hover:underline"
-            >
-              Full Profile
-            </button>
-          </div>
-
-          <div className="space-y-2">
+        <Card>
+          <SectionTitle icon={<Users size={17} className="text-amber-500" />}>Friends</SectionTitle>
+          <div className="space-y-1">
             {friends.map((f) => (
-              <div
+              <button
                 key={f.id}
-                className="flex items-center justify-between p-2.5 rounded-lg bg-theme-raised border border-theme-border/60"
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="w-full flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors text-left"
               >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      f.online ? 'bg-emerald-500' : 'bg-neutral-500'
-                    }`}
-                  />
-                  <div>
-                    <span className="font-semibold text-sm text-theme-text">{f.username}</span>
-                    <span className="text-xs text-theme-muted ml-2">({f.lastActive})</span>
-                  </div>
+                <span className="relative">
+                  <PlayerAvatar name={f.username} size={34} />
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--color-card)] ${f.online ? 'bg-emerald-500' : 'bg-neutral-500'}`} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-bold text-theme-text truncate">{f.username}</div>
+                  <div className="text-[12px] text-theme-muted">{f.online ? 'Online' : f.lastActive}</div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono tabular-nums text-xs font-bold text-amber-500">{f.rating}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => navigate('/profile')}
-                  >
-                    Compare
-                  </Button>
-                </div>
-              </div>
+                <span className="text-[14px] font-black tabular-nums text-theme-text/85">{f.rating}</span>
+              </button>
             ))}
           </div>
         </Card>
       </div>
-    </div>
+
+      {/* Game history */}
+      <Card className="!p-0 overflow-hidden">
+        <div className="px-4 md:px-5 pt-4">
+          <SectionTitle
+            right={
+              <button type="button" onClick={() => navigate('/review')} className="text-[13px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-0.5">
+                View all games <ChevronRight size={15} />
+              </button>
+            }
+          >
+            Game history
+          </SectionTitle>
+        </div>
+        <GameHistoryTable games={recentGames} analyzingId={recentGames[2]?.id} />
+      </Card>
+    </PageContainer>
   );
 };
-
 export default Home;

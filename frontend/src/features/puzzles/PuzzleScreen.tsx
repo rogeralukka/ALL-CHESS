@@ -443,7 +443,7 @@ export const PuzzleScreen: React.FC = () => {
 
       {/* Side panel: a rounded card the height of the board */}
       <aside
-        className="w-full lg:w-[400px] xl:w-[420px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] lg:max-h-[calc(100vh-32px)] bg-theme-card lg:rounded-lg border-t lg:border border-theme-border shadow-xl overflow-hidden"
+        className="w-full lg:w-[400px] xl:w-[420px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] lg:max-h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] overflow-hidden"
         data-testid="puzzle-panel"
       >
         {/* Header */}

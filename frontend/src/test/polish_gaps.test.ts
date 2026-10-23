@@ -110,14 +110,15 @@ describe('ALL-CHESS P1 Fixes & Polish Suite', () => {
 
       // Check Dusk theme tokens
       expect(cssContent).toContain(':root[data-theme="dusk"]');
-      expect(cssContent).toMatch(/--color-page:\s*#141312/);
-      expect(cssContent).toMatch(/--color-card:\s*#1e1d1b/);
-      expect(cssContent).toMatch(/--color-raised:\s*#2a2826/);
+      // phase 1.9: warm charcoal page with darker panels on top
+      expect(cssContent).toMatch(/--color-page:\s*#2a2825/);
+      expect(cssContent).toMatch(/--color-card:\s*#201e1c/);
+      expect(cssContent).toMatch(/--color-raised:\s*#36332f/);
       expect(cssContent).toMatch(/--color-accent:\s*#f59e0b/);
 
       // Check Dawn theme tokens
       expect(cssContent).toContain(':root[data-theme="dawn"]');
-      expect(cssContent).toMatch(/--color-page:\s*#faf8f5/);
+      expect(cssContent).toMatch(/--color-page:\s*#f4f1ec/);
       expect(cssContent).toMatch(/--color-card:\s*#ffffff/);
       expect(cssContent).toMatch(/--color-raised:\s*#f2efe9/);
 

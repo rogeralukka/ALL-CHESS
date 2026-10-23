@@ -5,6 +5,8 @@ import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
 import { EvalGraph } from '@/features/board/EvalGraph';
 import { MoveList } from '@/features/board/MoveList';
+import { PlayerBar } from '@/components/PlayerBar';
+import { PlayerAvatar } from '@/components/Bits';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { Button } from '@/components/Button';
@@ -470,47 +472,32 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   };
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
+    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
       {/* --- CENTER ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile) --- */}
       <div className="sticky top-0 z-20 w-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page border-b lg:border-b-0 border-theme-border/60 flex-shrink-0 lg:flex-1 min-w-0">
-        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
+        <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
           {/* Top Player Row (Black) + Material Tally */}
-          <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
-                B
-              </span>
-              <span className="font-bold text-theme-text truncate">{game.black.username}</span>
-              <span className="font-mono">({game.black.rating})</span>
-
-              {/* Material Difference & Captured Pieces for Black */}
-              <div className="flex items-center gap-1 ml-1">
-                {materialState.blackDiff && (
-                  <span className="font-mono font-bold text-xs bg-theme-raised px-1 py-0.5 rounded text-amber-500 border border-theme-border/60">
-                    {materialState.blackDiff}
-                  </span>
-                )}
-                {materialState.blackCaptured.length > 0 && (
-                  <span className="text-xs opacity-80 tracking-tighter" title="Captured by Black">
-                    {materialState.blackCaptured.map((p, i) => (
-                      <span key={`bc-${i}`} className="text-white drop-shadow-sm">
-                        {PIECE_FIGURINES[p]}
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <span className="font-mono font-semibold flex-shrink-0">{game.speed} • {game.timeControl}</span>
-          </div>
+          <PlayerBar
+            name={game.black.username}
+            rating={game.black.rating}
+            avatar={<PlayerAvatar name={game.black.username === 'You' ? 'Master' : game.black.username} size={40} className="!rounded-none" />}
+            captured={
+              <>
+                {materialState.blackCaptured.map((p, i) => (
+                  <span key={`bc-${i}`}>{PIECE_FIGURINES[p]}</span>
+                ))}
+                {materialState.blackDiff && <span className="ml-1 text-[13px] font-bold">{materialState.blackDiff}</span>}
+              </>
+            }
+            right={<span className="px-2.5 py-1 rounded-md bg-black/[0.06] dark:bg-black/25 text-[13px] font-bold text-theme-muted capitalize">{game.speed} · {game.timeControl}</span>}
+          />
 
           {/* Board + Eval Bar Container */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 w-full">
+          <div className="flex items-stretch justify-center gap-1.5 sm:gap-2.5 w-full">
             <EvalBar
               evalScore={showingBest ? currentMove?.eval?.lines?.[0]?.eval ?? currentMove?.eval?.eval : currentMove?.eval?.eval}
               orientation={orientation}
-              height="100%"
+              height="auto"
             />
             <div className="flex-1 aspect-square">
               <Board
@@ -530,50 +517,37 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           </div>
 
           {/* Bottom Player Row (White) + Material Tally */}
-          <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-5 h-5 rounded-full bg-white border border-neutral-300 text-black font-bold flex items-center justify-center text-xs flex-shrink-0">
-                W
-              </span>
-              <span className="font-bold text-theme-text truncate">{game.white.username}</span>
-              <span className="font-mono">({game.white.rating})</span>
-
-              {/* Material Difference & Captured Pieces for White */}
-              <div className="flex items-center gap-1 ml-1">
-                {materialState.whiteDiff && (
-                  <span className="font-mono font-bold text-xs bg-theme-raised px-1 py-0.5 rounded text-amber-500 border border-theme-border/60">
-                    {materialState.whiteDiff}
-                  </span>
-                )}
-                {materialState.whiteCaptured.length > 0 && (
-                  <span className="text-xs opacity-80 tracking-tighter" title="Captured by White">
-                    {materialState.whiteCaptured.map((p, i) => (
-                      <span key={`wc-${i}`} className="text-neutral-900 dark:text-neutral-400">
-                        {PIECE_FIGURINES[p]}
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </div>
-            </div>
-
+          <PlayerBar
+            name={game.white.username}
+            rating={game.white.rating}
+            avatar={<PlayerAvatar name={game.white.username === 'You' ? 'Master' : game.white.username} size={40} className="!rounded-none" />}
+            captured={
+              <>
+                {materialState.whiteCaptured.map((p, i) => (
+                  <span key={`wc-${i}`}>{PIECE_FIGURINES[p]}</span>
+                ))}
+                {materialState.whiteDiff && <span className="ml-1 text-[13px] font-bold">{materialState.whiteDiff}</span>}
+              </>
+            }
+            right={
             <button
               type="button"
               onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
-              className="min-h-[44px] md:min-h-[32px] hover:text-theme-text transition-colors inline-flex items-center gap-1 font-semibold flex-shrink-0"
+              className="h-9 px-3 rounded-lg btn-secondary text-[13px] inline-flex items-center gap-1.5 font-bold flex-shrink-0"
               title="Flip Board (F)"
             >
               <RotateCcw size={14} />
               <span>Flip</span>
             </button>
-          </div>
+            }
+          />
         </div>
       </div>
 
       {/* --- RIGHT ZONE: MODE PANEL (460px to 500px, clamp 380-500) --- */}
-      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 min-h-0">
+      <div className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] z-20 min-h-0">
         {/* Panel Header: 48px bar, title centred with icon, back on left, sound & settings on right. Drop ply counter. */}
-        <div className="h-12 min-h-[48px] px-4 border-b border-theme-border/60 flex items-center justify-between flex-shrink-0">
+        <div className="h-14 min-h-[56px] px-4 border-b border-theme-border/60 flex items-center justify-between flex-shrink-0">
           <button
             type="button"
             onClick={onBackToSummary}
@@ -585,8 +559,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             <span className="hidden sm:inline">Summary</span>
           </button>
 
-          <div className="flex items-center gap-1.5 font-display font-bold text-sm text-theme-text">
-            <Sparkles size={16} className="text-amber-500" />
+          <div className="flex items-center gap-2 font-display font-extrabold text-xl text-theme-text">
+            <img src="/assets/ui/icon_review.webp" alt="" className="w-7 h-7 object-contain" />
             <span>Game Review</span>
           </div>
 

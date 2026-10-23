@@ -1,137 +1,159 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
+import { PageContainer, PageHeader, SectionTitle } from '@/components/PageHeader';
+import { PlayerAvatar, WDLBar, Pill, Reveal } from '@/components/Bits';
 import { MOCK_SCOUT_PROFILES } from '@/data/mock/mockScout';
 import { ScoutProfile } from './ScoutProfile';
 import { ScoutProfile as ScoutProfileType } from '@/data/types';
-import { Search, UserCheck, Shield, Sparkles, X } from 'lucide-react';
+import { Search, X, ChevronRight, BookOpen } from 'lucide-react';
+
+const PLATFORMS = ['Chess.com', 'Lichess'] as const;
 
 export const ScoutSearch: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [platform, setPlatform] = useState<(typeof PLATFORMS)[number]>('Chess.com');
   const [selectedOpponent, setSelectedOpponent] = useState<ScoutProfileType | null>(null);
 
   const allProfiles = Object.values(MOCK_SCOUT_PROFILES);
-
-  const filteredProfiles = allProfiles.filter((p) =>
-    p.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProfiles = allProfiles.filter((p) => p.username.toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (selectedOpponent) {
     return <ScoutProfile profile={selectedOpponent} onBack={() => setSelectedOpponent(null)} />;
   }
 
+  const exact = allProfiles.find((p) => p.username.toLowerCase() === searchQuery.trim().toLowerCase());
+
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-black font-display text-theme-text">Opponent Scout &amp; Prep</h1>
-        <p className="text-sm text-theme-muted mt-1">
-          Explore opening repertoires, tactical tendencies, and win rates without needing authentication.
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Scout an opponent"
+        subtitle="See what they open with, where they win, and where they crack. Then prep a plan before the game."
+        art="/assets/ui/hero_scout.webp"
+        tint="rgba(255,107,74,0.16)"
+        eyebrow={<Pill tone="amber">Opponent prep</Pill>}
+      />
 
-      {/* Search Bar & Quick Pick Chips */}
-      <Card className="p-5 space-y-4">
-        <div className="relative">
-          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-muted" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search opponent username (e.g. PawnStorm22, GM_Example)..."
-            className="w-full pl-10 pr-10 py-3 bg-theme-raised border border-theme-border rounded-lg text-theme-text placeholder:text-theme-muted focus:outline-none focus:border-amber-500 transition-colors text-sm"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-theme-muted hover:text-theme-text"
-              aria-label="Clear search"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-
-        {/* Quick Picks */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-          <span className="text-theme-muted font-medium">Quick scout:</span>
+      {/* Search */}
+      <Card className="!p-4 md:!p-5 space-y-3">
+        <form
+          className="flex flex-col sm:flex-row gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (exact) setSelectedOpponent(exact);
+          }}
+        >
+          <div className="relative flex-1">
+            <Search size={19} className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`${platform} username`}
+              aria-label="Opponent username"
+              className="w-full h-12 pl-11 pr-10 rounded-[10px] bg-black/[0.06] dark:bg-black/25 border border-theme-border text-[15px] font-semibold text-theme-text placeholder:text-theme-muted/80 placeholder:font-medium focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15 transition"
+            />
+            {searchQuery && (
+              <button type="button" onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-theme-muted hover:text-theme-text" aria-label="Clear search">
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <div className="flex p-1 rounded-[10px] bg-black/[0.06] dark:bg-black/25 border border-theme-border" role="radiogroup" aria-label="Platform">
+              {PLATFORMS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  role="radio"
+                  aria-checked={platform === p}
+                  onClick={() => setPlatform(p)}
+                  className={`px-3 h-10 rounded-lg text-[13px] font-bold transition ${platform === p ? 'bg-black/[0.05] dark:bg-white/[0.1] text-theme-text shadow-sm' : 'text-theme-muted hover:text-theme-text'}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <Button type="submit" variant="primary" size="lg" icon={<Search size={18} />} disabled={!exact}>
+              Scout
+            </Button>
+          </div>
+        </form>
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <span className="text-theme-muted font-semibold">Recent:</span>
           {allProfiles.map((p) => (
             <button
               key={p.username}
               type="button"
               onClick={() => setSelectedOpponent(p)}
-              className="min-h-[44px] min-w-[44px] px-3 py-2 rounded-full bg-theme-raised hover:bg-theme-card border border-theme-border text-theme-text font-medium flex items-center gap-1.5 transition-colors"
+              className="group flex items-center gap-2 h-9 pl-1 pr-3 rounded-full bg-black/[0.05] dark:bg-white/[0.05] hover:bg-black/[0.05] dark:hover:bg-white/[0.1] border border-theme-border text-theme-text font-semibold transition"
             >
-              <UserCheck size={14} className="text-amber-500" />
-              <span>{p.username}</span>
-              <span className="text-xs text-theme-muted font-mono">({p.rating})</span>
+              <PlayerAvatar name={p.username} size={26} />
+              {p.username}
+              <span className="text-theme-muted tabular-nums">{p.rating}</span>
             </button>
           ))}
         </div>
       </Card>
 
-      {/* Scout Results Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {filteredProfiles.map((p) => (
-          <Card key={p.username} className="p-5 space-y-4 hover:border-amber-500/50 transition-all flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-full bg-theme-raised border border-theme-border flex items-center justify-center font-bold text-amber-500 font-display">
-                  {p.username.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="text-right">
-                  <div className="text-xs uppercase font-bold text-theme-muted">Rating</div>
-                  <div className="text-base font-black font-mono text-amber-500">{p.rating}</div>
-                </div>
-              </div>
+      <section>
+        <SectionTitle right={<span className="text-xs font-semibold text-theme-muted">{filteredProfiles.length} opponents</span>}>Scouted opponents</SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProfiles.map((p, i) => {
+            const top = p.mostPlayed[0];
+            const draw = top?.drawRate ?? 10;
+            return (
+              <Reveal key={p.username} i={i}>
+                <Card interactive className="h-full flex flex-col gap-4" onClick={() => setSelectedOpponent(p)} data-testid={`scout-card-${p.username}`}>
+                  <div className="flex items-center gap-3">
+                    <PlayerAvatar name={p.username} size={52} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-extrabold text-[17px] text-theme-text truncate">{p.username}</h3>
+                        {p.title && <Pill tone="red">{p.title}</Pill>}
+                      </div>
+                      <div className="text-[13px] text-theme-muted">
+                        Rapid <strong className="text-theme-text tabular-nums">{p.rating}</strong> · {p.recentGames.length} games scouted
+                      </div>
+                    </div>
+                    <ChevronRight size={20} className="text-theme-muted" />
+                  </div>
 
-              <div>
-                <h3 className="font-bold text-base text-theme-text flex items-center gap-1.5">
-                  {p.username}
-                  {p.title && (
-                    <span className="text-xs bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded font-black">
-                      {p.title}
-                    </span>
-                  )}
-                </h3>
-                <div className="text-xs text-theme-muted mt-1 flex items-center gap-2">
-                  <span>Win Rate: <strong className="text-emerald-500">{p.winRate}%</strong></span>
-                  <span>•</span>
-                  <span>{p.recentGames.length} Recent Games</span>
-                </div>
-              </div>
+                  <div>
+                    <div className="flex justify-between text-[12px] font-bold mb-1.5">
+                      <span className="text-theme-muted uppercase tracking-wide">Results</span>
+                      <span className="text-[var(--class-best)] tabular-nums">{p.winRate}% wins</span>
+                    </div>
+                    <WDLBar win={p.winRate} draw={draw} loss={Math.max(0, 100 - p.winRate - draw)} />
+                  </div>
 
-              {/* Top opening preview */}
-              <div className="p-2.5 rounded bg-theme-raised border border-theme-border/60 text-xs">
-                <div className="text-theme-muted font-medium">Favorite Opening:</div>
-                <div className="font-semibold text-theme-text truncate mt-0.5">
-                  {p.mostPlayed[0]?.name || 'Italian Game'} ({p.mostPlayed[0]?.winRate}% win)
-                </div>
-              </div>
-            </div>
+                  <div className="space-y-1.5 mt-auto">
+                    <div className="text-[12px] font-bold uppercase tracking-wide text-theme-muted flex items-center gap-1.5">
+                      <BookOpen size={13} /> Favourite openings
+                    </div>
+                    {p.mostPlayed.slice(0, 2).map((op) => (
+                      <div key={op.eco} className="flex items-center gap-2 text-[13px]">
+                        <span className="font-mono text-[12px] font-bold text-amber-500 w-8">{op.eco}</span>
+                        <span className="flex-1 truncate font-semibold text-theme-text">{op.name}</span>
+                        <span className="tabular-nums text-theme-muted">{op.winRate}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </Reveal>
+            );
+          })}
 
-            <Button
-              variant="primary"
-              size="sm"
-              fullWidth
-              icon={<Sparkles size={16} />}
-              onClick={() => setSelectedOpponent(p)}
-            >
-              Inspect Scout Profile
-            </Button>
-          </Card>
-        ))}
-
-        {filteredProfiles.length === 0 && (
-          <div className="col-span-full py-12 text-center text-theme-muted">
-            <Shield size={32} className="mx-auto mb-2 opacity-50 text-amber-500" />
-            <p className="text-sm font-semibold">No opponents matched "{searchQuery}"</p>
-            <p className="text-xs mt-1">Try searching for fictional opponents like "PawnStorm22" or "GM_Example".</p>
-          </div>
-        )}
-      </div>
-    </div>
+          {filteredProfiles.length === 0 && (
+            <Card className="col-span-full flex flex-col items-center text-center py-10 gap-3">
+              <img src="/assets/ui/icon_scout.webp" alt="" className="w-20 h-20 object-contain opacity-90" />
+              <p className="text-[15px] font-bold text-theme-text">No one called “{searchQuery}” yet</p>
+              <p className="text-[13px] text-theme-muted max-w-sm">Try one of the recent names above. Live lookups arrive with the backend.</p>
+            </Card>
+          )}
+        </div>
+      </section>
+    </PageContainer>
   );
 };
 export default ScoutSearch;

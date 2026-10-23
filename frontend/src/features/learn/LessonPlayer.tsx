@@ -118,15 +118,15 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
   );
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
+    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
       {/* Board Zone */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 bg-theme-page min-w-0">
-        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-3">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 min-w-0 lg:!p-0 lg:h-full">
+        <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-3">
           <div className="flex items-center justify-between text-xs font-semibold text-theme-muted">
             <button
               type="button"
               onClick={onExit}
-              className="flex items-center gap-1.5 hover:text-theme-text transition-colors"
+              className="h-9 px-3 rounded-lg btn-secondary text-[13px] font-bold flex items-center gap-1.5"
             >
               <ArrowLeft size={16} />
               <span>Exit Lesson</span>
@@ -153,7 +153,12 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
       </div>
 
       {/* Mode Panel */}
-      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl p-5 justify-between">
+      <div className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] z-20 overflow-hidden">
+        <div className="h-14 flex-shrink-0 flex items-center justify-center gap-2 border-b border-theme-border/60">
+          <img src="/assets/ui/icon_learn.webp" alt="" className="w-7 h-7 object-contain" />
+          <span className="text-xl font-extrabold font-display text-theme-text">Lesson</span>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col justify-between gap-5">
         <div className="space-y-5">
           <CoachSpeech
             expression={stepSolved ? 'brilliant' : coachExp !== 'neutral' ? coachExp : 'thinking'}
@@ -210,6 +215,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
               ? currentStep.buttonText || 'Next Step'
               : 'Complete Lesson (+XP)'}
           </Button>
+        </div>
         </div>
       </div>
     </div>
