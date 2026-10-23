@@ -13,6 +13,7 @@ import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { getExpressionForEvent } from '@/features/coach/expressionMap';
 import { formatEval } from '@/lib/formatters';
+import { sound } from '@/lib/sound';
 import {
   SkipBack,
   SkipForward,
@@ -89,11 +90,27 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   const handleNext = useCallback(() => {
     resetModes();
-    setCurrentMoveIndex((prev) => Math.min(game.moves.length - 1, prev + 1));
-  }, [game.moves.length, resetModes]);
+    setCurrentMoveIndex((prev) => {
+      const nextIdx = Math.min(game.moves.length - 1, prev + 1);
+      if (nextIdx !== prev) {
+        const nextMove = game.moves[nextIdx];
+        if (nextMove?.san.includes('x')) {
+          sound.capture();
+        } else if (nextMove?.san.includes('#') || nextMove?.san.includes('+')) {
+          sound.check();
+        } else if (nextMove?.san.includes('O-O')) {
+          sound.castle();
+        } else {
+          sound.move();
+        }
+      }
+      return nextIdx;
+    });
+  }, [game.moves, resetModes]);
 
   const handlePrev = useCallback(() => {
     resetModes();
+    sound.move();
     setCurrentMoveIndex((prev) => Math.max(0, prev - 1));
   }, [resetModes]);
 

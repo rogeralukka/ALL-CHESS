@@ -4,6 +4,8 @@ import { BoardTheme, PieceSet, Arrow, BoardBadge, MoveClassification } from '@/d
 import { ArrowLayer } from './ArrowLayer';
 import { BadgeLayer } from './BadgeLayer';
 import { PromotionDialog } from './PromotionDialog';
+import { useMotion } from '@/lib/useMotion';
+import { sound } from '@/lib/sound';
 
 export interface LastMoveInfo {
   from: string;
@@ -105,9 +107,13 @@ export const Board: React.FC<BoardProps> = ({
   const [computedLegalTargets, setComputedLegalTargets] = useState<string[]>([]);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string; color: 'w' | 'b' } | null>(null);
   const [draggedPiece, setDraggedPiece] = useState<DraggedPieceState | null>(null);
+  const [hoveredSquare, setHoveredSquare] = useState<string | null>(null);
+  const [isShaking, setIsShaking] = useState<boolean>(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const idPrefix = useId();
   const counterRef = useRef<number>(1);
+
+  const { pieceMs, isFull, isOff } = useMotion();
 
   // Parse FEN into chess instance for legal move computations
   const chessInstance = useRef(new Chess());
@@ -119,26 +125,15 @@ export const Board: React.FC<BoardProps> = ({
     }
   }, [fen]);
 
-  // Reduced motion detection
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      setPrefersReducedMotion(mediaQuery.matches);
-      const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-      mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
-    }
-  }, []);
-
-  const speedMs = prefersReducedMotion
+  const speedMs = isOff
     ? 0
-    : {
-        off: 0,
-        fast: 100,
-        medium: 200,
-        slow: 350,
-      }[animationSpeed];
+    : animationSpeed === 'off'
+    ? 0
+    : animationSpeed === 'fast'
+    ? Math.min(pieceMs, 100)
+    : animationSpeed === 'slow'
+    ? Math.round(pieceMs * 1.5)
+    : pieceMs;
 
   const displayFiles = useMemo(
     () => (orientation === 'white' ? BOARD_FILES : [...BOARD_FILES].reverse()),
@@ -283,10 +278,30 @@ export const Board: React.FC<BoardProps> = ({
         return true;
       }
 
+      const destPiece = chessInstance.current.get(to as Square);
+      const isCapture = !!destPiece;
+      const isCastle = piece.type === 'k' && Math.abs(from.charCodeAt(0) - to.charCodeAt(0)) === 2;
+
       const success = onMove?.(from, to, isPawnPromotion ? 'q' : undefined);
+      if (success !== false) {
+        if (isPawnPromotion) {
+          sound.promote();
+        } else if (isCastle) {
+          sound.castle();
+        } else if (isCapture) {
+          sound.capture();
+        } else {
+          sound.move();
+        }
+      }
       setSelectedSquare(null);
       return success !== false;
     } else {
+      sound.illegal();
+      if (isFull) {
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 300);
+      }
       onIllegalMove?.(from, to);
     }
     return false;
@@ -348,6 +363,21 @@ export const Board: React.FC<BoardProps> = ({
     // Only initiate full drag if moved more than 4px (preserves clean clicks)
     const isDragging = distance > 4 || draggedPiece.isDragging;
 
+    let hovered: string | null = null;
+    if (boardRef.current) {
+      const rect = boardRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+        const col = Math.floor((x / rect.width) * 8);
+        const row = Math.floor((y / rect.height) * 8);
+        if (col >= 0 && col < 8 && row >= 0 && row < 8) {
+          hovered = `${displayFiles[col]}${displayRanks[row]}`;
+        }
+      }
+    }
+    setHoveredSquare(hovered);
+
     setDraggedPiece({
       ...draggedPiece,
       currentX: e.clientX,
@@ -382,10 +412,12 @@ export const Board: React.FC<BoardProps> = ({
       }
     }
 
+    setHoveredSquare(null);
     setDraggedPiece(null);
   };
 
   const handlePiecePointerCancel = () => {
+    setHoveredSquare(null);
     setDraggedPiece(null);
   };
 
@@ -437,7 +469,9 @@ export const Board: React.FC<BoardProps> = ({
       <div
         ref={boardRef}
         data-board="true"
-        className="relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm overflow-hidden shadow-2xl border border-black/20 touch-none"
+        className={`relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm overflow-hidden shadow-2xl border border-black/20 touch-none ${
+          isShaking ? 'animate-shake' : ''
+        }`}
         style={{
           boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.5)',
         }}
@@ -452,6 +486,7 @@ export const Board: React.FC<BoardProps> = ({
               const coordColor = isLight ? boardTheme.dark : boardTheme.light;
               const tintClass = getSquareTint(sq);
               const isTarget = computedLegalTargets.includes(sq);
+              const isHoveredTarget = draggedPiece?.isDragging && hoveredSquare === sq;
 
               let piece: { type: PieceSymbol; color: Color } | null = null;
               try {
@@ -467,7 +502,9 @@ export const Board: React.FC<BoardProps> = ({
                   tabIndex={interactive ? 0 : -1}
                   onClick={() => handleSquareClick(sq)}
                   onKeyDown={(e) => handleKeyDown(e, sq)}
-                  className="relative w-full h-full flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className={`relative w-full h-full flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                    isHoveredTarget ? 'ring-2 ring-amber-400/80 ring-inset shadow-inner' : ''
+                  }`}
                   style={{ backgroundColor: bgColor }}
                   aria-label={`Square ${sq}${piece ? `, ${piece.color === 'w' ? 'White' : 'Black'} ${piece.type}` : ''}`}
                 >
@@ -499,7 +536,7 @@ export const Board: React.FC<BoardProps> = ({
                   {/* Legal move target dot */}
                   {isTarget && (
                     <div
-                      className={`absolute pointer-events-none rounded-full z-10 ${
+                      className={`absolute pointer-events-none rounded-full z-10 transition-opacity duration-150 ${
                         piece ? 'inset-1 ring-4 ring-emerald-500/60 bg-transparent' : 'w-3.5 h-3.5 bg-emerald-500/60'
                       }`}
                     />
@@ -526,12 +563,12 @@ export const Board: React.FC<BoardProps> = ({
                 onPointerMove={handlePiecePointerMove}
                 onPointerUp={handlePiecePointerUp}
                 onPointerCancel={handlePiecePointerCancel}
-                className="absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-auto cursor-grab active:cursor-grabbing p-0.5 will-change-transform"
+                className="absolute w-[12.5%] h-[12.5%] top-0 left-0 pointer-events-auto cursor-grab active:cursor-grabbing p-0.5 will-change-transform transition-transform duration-100 hover:scale-[1.04]"
                 style={{
                   transform: `translate3d(${p.col * 100}%, ${p.row * 100}%, 0)`,
                   transition:
                     speedMs > 0 && !isBeingDragged
-                      ? `transform ${speedMs}ms cubic-bezier(0.2, 0, 0, 1)`
+                      ? `transform ${speedMs}ms cubic-bezier(0, 0, 0.2, 1)`
                       : 'none',
                   opacity: isBeingDragged ? 0.25 : 1,
                   zIndex: isBeingDragged ? 40 : 15,

@@ -179,7 +179,7 @@ export const GameList: React.FC<GameListProps> = ({ onSelectGame }) => {
                 onClick={() => onSelectGame(g.id)}
                 className="group cursor-pointer"
               >
-                <Card className="hover:border-amber-500/60 transition-all hover:shadow-lg space-y-3 relative overflow-hidden">
+                <Card className="hover:border-amber-500/60 hover:bg-theme-raised/60 transition-colors duration-100 hover:shadow-lg space-y-3 relative overflow-hidden">
                   {/* Top Bar: Speed & Result */}
                   <div className="flex items-center justify-between text-xs font-semibold">
                     <span className="font-bold text-amber-500 uppercase tracking-wide">

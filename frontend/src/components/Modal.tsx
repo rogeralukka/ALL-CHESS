@@ -55,17 +55,17 @@ export const Modal: React.FC<ModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3 }}
             onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm"
           />
 
           {/* Dialog Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] }}
             className={`relative w-full ${maxWidthClasses[maxWidth]} bg-theme-card border border-theme-border rounded-lg shadow-2xl overflow-hidden z-10 ${className}`}
           >
             {title && (

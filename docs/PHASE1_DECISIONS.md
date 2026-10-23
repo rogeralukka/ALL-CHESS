@@ -68,3 +68,11 @@ This document records all architectural choices, design trade-offs, and open-sou
   - Works seamlessly across Duskboard and Dawnboard without hardcoding dark or light backgrounds into the SVG canvas.
 - **Opponent Scout Decoupling:**
   - Scout analysis is built around public player identities with zero authentication requirements, preparing the application for direct Chess.com / Lichess public API ingestion in Phase 4.
+
+---
+
+## 6. Procedural Sound System & Audio Licence Terms
+- **Approach:** Procedural synthesis via native HTML5 Web Audio API (`src/lib/sound.ts`).
+- **Zero Proprietary Audio:** Zero audio samples from Chess.com, Lichess, or any proprietary soundboard are used.
+- **Licence Terms:** CC0 1.0 Universal (Public Domain Dedication). The synthesizer produces acoustic wooden board knocks, capture thuds, harmonic alert chimes, double-strike castling, and celebratory puzzle chords directly in real-time.
+- **Performance & Reliability:** 0 byte download footprint, zero network latency, non-overlapping channel management with gain curves, and graceful fallback when audio contexts are unavailable.

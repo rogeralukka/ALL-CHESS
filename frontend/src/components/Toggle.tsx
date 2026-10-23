@@ -19,7 +19,7 @@ export const Toggle: React.FC<ToggleProps> = ({
 }) => {
   return (
     <label
-      className={`flex items-center justify-between gap-4 cursor-pointer select-none ${
+      className={`flex items-center justify-between gap-4 cursor-pointer select-none p-2 -mx-2 rounded-lg hover:bg-theme-raised/50 transition-colors duration-100 ${
         disabled ? 'opacity-50 pointer-events-none' : ''
       } ${className}`}
     >

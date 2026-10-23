@@ -174,9 +174,9 @@ export const LearnPath: React.FC = () => {
                         : isCurrent
                         ? 'bg-amber-500/15 border-amber-500/80 shadow-lg cursor-pointer'
                         : isDone
-                        ? 'bg-theme-card/90 border-theme-border hover:border-amber-500/50 cursor-pointer shadow-md'
+                        ? 'bg-theme-card/90 border-theme-border hover:border-amber-500/50 hover:bg-theme-raised/60 transition-colors duration-100 cursor-pointer shadow-md'
                         : isUnlocked
-                        ? 'bg-theme-card/75 border-amber-500/40 hover:border-amber-500 cursor-pointer shadow-md'
+                        ? 'bg-theme-card/75 border-amber-500/40 hover:border-amber-500 hover:bg-theme-raised/60 transition-colors duration-100 cursor-pointer shadow-md'
                         : 'bg-theme-card/30 border-theme-border/30 opacity-50 cursor-not-allowed'
                     }`}
                   >

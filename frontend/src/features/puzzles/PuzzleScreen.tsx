@@ -13,6 +13,7 @@ import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { storage } from '@/lib/storage';
 import { formatTime } from '@/lib/formatters';
 import { CoachExpression } from '@/data/types';
+import { sound } from '@/lib/sound';
 import {
   Lightbulb,
   RotateCcw,
@@ -95,6 +96,7 @@ export const PuzzleScreen: React.FC = () => {
           setStatus('solved');
           setCoachExp('brilliant');
           setBubbleText('Bingo! You got it. Outstanding tactical foresight!');
+          sound.puzzleCorrect();
           const newRating = puzzleRating + 15;
           setPuzzleRating(newRating);
           storage.set('all_chess_puzzle_rating', newRating);
@@ -111,6 +113,7 @@ export const PuzzleScreen: React.FC = () => {
             chess.move(oppMove);
             setFen(chess.fen());
             setSolutionStep(nextStep + 1);
+            sound.move();
           }, 400);
         }
         return true;
@@ -119,6 +122,7 @@ export const PuzzleScreen: React.FC = () => {
         setStatus('failed');
         setCoachExp('embarrassed');
         setBubbleText("That move leaves tactical counterplay. Let's retry and find the cleaner strike.");
+        sound.puzzleWrong();
         return false;
       }
     } catch {

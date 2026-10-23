@@ -118,7 +118,7 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isWhiteActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.whiteIdx!)}
-                  className={`flex-1 flex items-center justify-between px-2 py-1 rounded text-left font-semibold transition-all ${
+                  className={`flex-1 flex items-center justify-between px-2 py-1 rounded text-left font-semibold transition-colors duration-100 ${
                     isWhiteActive
                       ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/50 font-bold'
                       : 'text-theme-text hover:bg-theme-raised'
@@ -137,7 +137,7 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isBlackActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.blackIdx!)}
-                  className={`flex-1 flex items-center justify-between px-2 py-1 rounded text-left font-semibold ml-1.5 transition-all ${
+                  className={`flex-1 flex items-center justify-between px-2 py-1 rounded text-left font-semibold ml-1.5 transition-colors duration-100 ${
                     isBlackActive
                       ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/50 font-bold'
                       : 'text-theme-text hover:bg-theme-raised'

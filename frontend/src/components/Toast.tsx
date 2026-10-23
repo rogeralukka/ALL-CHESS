@@ -69,10 +69,10 @@ export const ToastContainer: React.FC = () => {
         {toasts.map((t) => (
           <motion.div
             key={t.id}
-            initial={{ opacity: 0, y: 16, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
-            transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] }}
             className="pointer-events-auto flex items-start gap-3 p-3.5 bg-theme-card border border-theme-border rounded-lg shadow-xl"
           >
             <div className="flex-shrink-0 mt-0.5">{getIcon(t.type)}</div>

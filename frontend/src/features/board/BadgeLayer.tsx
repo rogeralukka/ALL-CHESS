@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BoardBadge } from '@/data/types';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
+import { useMotion } from '@/lib/useMotion';
 
 interface BadgeLayerProps {
   badges: BoardBadge[];
@@ -9,6 +10,7 @@ interface BadgeLayerProps {
 }
 
 export const BadgeLayer: React.FC<BadgeLayerProps> = ({ badges, orientation }) => {
+  const { isFull, isReduced, isOff } = useMotion();
   if (!badges || badges.length === 0) return null;
 
   const squareToPercent = (sq: string) => {
@@ -18,8 +20,6 @@ export const BadgeLayer: React.FC<BadgeLayerProps> = ({ badges, orientation }) =
     const row = orientation === 'white' ? 7 - rank : rank;
 
     // Position at top-right inside the destination square:
-    // Destination square bounds: [col * 12.5%, (col + 1) * 12.5%] horizontally, [row * 12.5%, (row + 1) * 12.5%] vertically.
-    // Clamped inside the destination square with a slight inward padding so it never covers neighboring squares
     return {
       left: `${(col + 1) * 12.5}%`,
       top: `${row * 12.5}%`,
@@ -36,15 +36,30 @@ export const BadgeLayer: React.FC<BadgeLayerProps> = ({ badges, orientation }) =
               key={`${b.square}-${b.label}`}
               data-testid={`badge-${b.square}`}
               data-square={b.square}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              initial={
+                isOff
+                  ? { scale: 1, opacity: 1 }
+                  : isReduced
+                  ? { scale: 1, opacity: 0 }
+                  : { scale: 0.6, opacity: 0 }
+              }
+              animate={
+                isOff
+                  ? { scale: 1, opacity: 1 }
+                  : isReduced
+                  ? { scale: 1, opacity: 1 }
+                  : { scale: [0.6, 1.08, 1], opacity: 1 }
+              }
               exit={{ scale: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+              transition={{
+                duration: isOff ? 0 : isReduced ? 0.15 : isFull ? 0.25 : 0.25,
+                ease: [0, 0, 0.2, 1],
+              }}
               style={{
                 position: 'absolute',
                 left: pos.left,
                 top: pos.top,
-                // Shift -90% horizontally and +8% vertically so it sits entirely inside the square's top-right corner
+                // Shift -92% horizontally and +8% vertically so it sits entirely inside the square's top-right corner
                 transform: 'translate(-92%, 8%)',
               }}
             >

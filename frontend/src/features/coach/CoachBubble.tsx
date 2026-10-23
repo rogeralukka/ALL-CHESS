@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoveClassification } from '@/data/types';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
+import { useMotion } from '@/lib/useMotion';
 import { Volume2, VolumeX } from 'lucide-react';
 
 export interface BubbleMessage {
@@ -29,18 +30,10 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
   onToggleVoice,
   className = '',
 }) => {
+  const { typeCps, isFull, isReduced, isOff } = useMotion();
   const messages = propMessages || (text ? [{ id: 'single', text }] : []);
   const [displayedTextMap, setDisplayedTextMap] = useState<Record<string, string>>({});
   const [completedMap, setCompletedMap] = useState<Record<string, boolean>>({});
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduceMotion(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   // Handle typewriter for the latest message
   const activeMessage = messages[messages.length - 1];
@@ -56,7 +49,7 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
       window.speechSynthesis.speak(utterance);
     }
 
-    if (reduceMotion) {
+    if (isOff) {
       setDisplayedTextMap((prev) => ({ ...prev, [activeMessage.id]: activeMessage.text }));
       setCompletedMap((prev) => ({ ...prev, [activeMessage.id]: true }));
       return;
@@ -64,7 +57,7 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
 
     let currentIndex = 0;
     const fullText = activeMessage.text;
-    const interval = 1000 / 30; // ~30 chars per second
+    const interval = Math.max(10, Math.floor(1000 / typeCps));
 
     const timer = setInterval(() => {
       currentIndex += 1;
@@ -80,7 +73,7 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
     }, interval);
 
     return () => clearInterval(timer);
-  }, [activeMessage, reduceMotion, voiceEnabled]);
+  }, [activeMessage, isOff, typeCps, voiceEnabled]);
 
   const handleSkip = (msgId: string, fullText: string) => {
     setDisplayedTextMap((prev) => ({ ...prev, [msgId]: fullText }));
@@ -113,7 +106,7 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
       <AnimatePresence initial={false}>
         {visibleMessages.map((msg, index) => {
           const isLatest = index === visibleMessages.length - 1;
-          const isCompleted = completedMap[msg.id] || reduceMotion;
+          const isCompleted = completedMap[msg.id] || isOff;
           const currentText = isCompleted ? msg.text : displayedTextMap[msg.id] || '';
 
           // Eval chip color styling
@@ -128,10 +121,17 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
           return (
             <motion.div
               key={msg.id}
-              initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+              layout={isFull}
+              initial={
+                isOff
+                  ? { opacity: 1 }
+                  : isReduced
+                  ? { opacity: 0 }
+                  : { opacity: 0, y: 6 }
+              }
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+              exit={isOff ? { opacity: 1 } : { opacity: 0, scale: isReduced ? 1 : 0.96 }}
+              transition={{ duration: isOff ? 0 : isReduced ? 0.12 : 0.2, ease: [0, 0, 0.2, 1] }}
               onClick={() => handleSkip(msg.id, msg.text)}
               className={`p-3.5 rounded-md cursor-pointer select-none transition-shadow ${
                 isLatest
@@ -186,7 +186,7 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
                 {/* Full text hidden visually for screen readers if currently typing */}
                 <span className="sr-only">{msg.text}</span>
                 <span aria-hidden="true">{currentText}</span>
-                {!isCompleted && !reduceMotion && (
+                {!isCompleted && !isOff && (
                   <span className="inline-block w-1 h-3.5 ml-0.5 bg-theme-accent animate-pulse" />
                 )}
               </div>

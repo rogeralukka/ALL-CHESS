@@ -1,5 +1,7 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Arrow } from '@/data/types';
+import { useMotion } from '@/lib/useMotion';
 
 interface ArrowLayerProps {
   arrows: Arrow[];
@@ -14,6 +16,7 @@ const ARROW_COLORS = {
 };
 
 export const ArrowLayer: React.FC<ArrowLayerProps> = ({ arrows, orientation }) => {
+  const { isFull } = useMotion();
   if (!arrows || arrows.length === 0) return null;
 
   const squareToCoords = (sq: string) => {
@@ -67,7 +70,7 @@ export const ArrowLayer: React.FC<ArrowLayerProps> = ({ arrows, orientation }) =
         const toY = to.y - shortenBy * Math.sin(angle);
 
         return (
-          <line
+          <motion.line
             key={`${arr.from}-${arr.to}-${i}`}
             x1={from.x}
             y1={from.y}
@@ -77,6 +80,9 @@ export const ArrowLayer: React.FC<ArrowLayerProps> = ({ arrows, orientation }) =
             strokeWidth="2.4"
             strokeLinecap="round"
             markerEnd={`url(#arrowhead-${color})`}
+            initial={isFull ? { pathLength: 0, opacity: 0 } : { pathLength: 1, opacity: 1 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ duration: isFull ? 0.2 : 0, ease: [0, 0, 0.2, 1] }}
           />
         );
       })}

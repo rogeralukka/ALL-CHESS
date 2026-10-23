@@ -4,9 +4,11 @@ import { Toggle } from '@/components/Toggle';
 import { Button } from '@/components/Button';
 import { Segmented } from '@/components/Segmented';
 import { Tabs } from '@/components/Tabs';
-import { useSettingsStore, AppTheme, AnimationSpeed, CoordinateStyle, BackgroundStyle } from '@/data/settingsStore';
+import { useSettingsStore, AppTheme, MotionLevel, AnimationSpeed, CoordinateStyle, BackgroundStyle } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS, BOARD_PRESETS } from '@/data/boardThemes';
 import { storage } from '@/lib/storage';
+import { useMotion } from '@/lib/useMotion';
+import { sound } from '@/lib/sound';
 import {
   Palette,
   Sliders,
@@ -26,6 +28,7 @@ import {
 
 export const SettingsShell: React.FC = () => {
   const settings = useSettingsStore();
+  const { systemPrefersReduced } = useMotion();
 
   const [activeTab, setActiveTab] = useState<'board' | 'gameplay' | 'coach' | 'appearance' | 'accounts' | 'byok'>('board');
 
@@ -455,6 +458,33 @@ export const SettingsShell: React.FC = () => {
               description="Subtle acoustic clicks for moves, captures, checks, and game results"
             />
 
+            {settings.soundEnabled && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pl-4 border-l-2 border-amber-500/40">
+                <div>
+                  <div className="text-sm font-semibold text-theme-text">Sound Volume</div>
+                  <div className="text-xs text-theme-muted">Adjust acoustic effect volume level</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={settings.soundVolume ?? 0.7}
+                    onChange={(e) => {
+                      const vol = parseFloat(e.target.value);
+                      settings.updateSettings({ soundVolume: vol });
+                      sound.move();
+                    }}
+                    className="w-32 accent-amber-500 cursor-pointer"
+                  />
+                  <span className="font-mono text-xs font-bold text-amber-500 w-8 text-right">
+                    {Math.round((settings.soundVolume ?? 0.7) * 100)}%
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Coordinates Selector */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
               <div>
@@ -569,6 +599,42 @@ export const SettingsShell: React.FC = () => {
               />
             </div>
 
+            {/* Motion Mode Selector (Section 3) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-theme-border">
+              <div>
+                <div className="text-sm font-semibold text-theme-text">Motion &amp; Animations</div>
+                <div className="text-xs text-theme-muted">Full (rich transitions), Reduced (gentle cross-fades), or Off</div>
+              </div>
+              <Segmented<MotionLevel>
+                value={settings.motionLevel || 'full'}
+                onChange={(m) => settings.updateSettings({ motionLevel: m })}
+                options={[
+                  { value: 'full', label: 'Full' },
+                  { value: 'reduced', label: 'Reduced' },
+                  { value: 'off', label: 'Off' },
+                ]}
+              />
+            </div>
+
+            {/* System prefers reduced motion notice */}
+            {systemPrefersReduced && settings.motionLevel === 'full' && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-theme-text flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Shield size={16} className="text-amber-500 flex-shrink-0" />
+                  <span className="text-theme-text font-medium">
+                    Your system prefers less motion. Switch to Reduced?
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => settings.updateSettings({ motionLevel: 'reduced' })}
+                >
+                  Switch to Reduced
+                </Button>
+              </div>
+            )}
+
             {/* Animation Speed Selector */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-theme-border">
               <div>
@@ -585,15 +651,6 @@ export const SettingsShell: React.FC = () => {
                   { value: 'slow', label: '400ms' },
                 ]}
               />
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-theme-raised border border-theme-border text-xs text-theme-muted flex items-start gap-2.5">
-              <Shield size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-              <span>
-                <strong>Accessibility Note:</strong> When your device enables{' '}
-                <code>prefers-reduced-motion</code>, all sliding animations, particle rays, and typewriter delays
-                are automatically bypassed instantly.
-              </span>
             </div>
           </div>
         </Card>

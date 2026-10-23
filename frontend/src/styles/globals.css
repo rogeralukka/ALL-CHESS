@@ -58,19 +58,42 @@
   border-right: 8px solid var(--coach-bubble-bg);
 }
 
-/* Primary Button Styling */
+/* Primary Bevelled Button */
 .btn-primary {
   background: var(--btn-primary-bg);
   box-shadow: var(--btn-primary-shadow);
+  border: 1px solid var(--btn-primary-border);
   color: var(--color-accent-text);
-  font-weight: 600;
-  transition: transform var(--motion-fast) var(--ease-default), filter var(--motion-fast) var(--ease-default);
+  font-weight: 700;
+  transition: background 100ms ease, box-shadow 100ms ease, transform 100ms ease, filter 100ms ease;
 }
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: var(--btn-primary-hover-bg);
+  box-shadow: var(--btn-primary-shadow-hover);
   transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) {
-  filter: brightness(0.96);
-  transform: translateY(0);
+  background: var(--btn-primary-active-bg);
+  box-shadow: var(--btn-primary-shadow-active);
+  transform: translateY(1px);
+}
+
+/* Secondary Bevelled Button */
+.btn-secondary {
+  background: var(--btn-secondary-bg);
+  box-shadow: var(--btn-secondary-shadow);
+  border: 1px solid var(--btn-secondary-border);
+  color: var(--color-text);
+  font-weight: 600;
+  transition: background 100ms ease, box-shadow 100ms ease, transform 100ms ease;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--btn-secondary-hover-bg);
+  box-shadow: var(--btn-secondary-shadow-hover);
+  transform: translateY(-1px);
+}
+.btn-secondary:active:not(:disabled) {
+  background: var(--btn-secondary-active-bg);
+  box-shadow: var(--btn-secondary-shadow-active);
+  transform: translateY(1px);
 }

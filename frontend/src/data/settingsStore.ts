@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { storage } from '@/lib/storage';
 
 export type AppTheme = 'dusk' | 'dawn' | 'system';
+export type MotionLevel = 'full' | 'reduced' | 'off';
 export type AnimationSpeed = 'off' | 'fast' | 'medium' | 'slow';
 export type MoveMethod = 'both' | 'drag' | 'click';
 export type CoordinateStyle = 'inside' | 'outside';
@@ -9,6 +10,7 @@ export type BackgroundStyle = 'standard' | 'felt' | 'wood';
 
 export interface UserSettings {
   appTheme: AppTheme;
+  motionLevel: MotionLevel;
   boardThemeId: string;
   pieceSetId: string;
   background: BackgroundStyle;
@@ -19,6 +21,7 @@ export interface UserSettings {
   coachEnabled: boolean;
   coachVoiceEnabled: boolean;
   soundEnabled: boolean;
+  soundVolume: number; // 0 to 1
   evalBarEnabled: boolean;
   showLegalMoves: boolean;
   suggestionArrows: boolean;
@@ -32,6 +35,7 @@ export interface UserSettings {
 
 const DEFAULT_SETTINGS: UserSettings = {
   appTheme: 'dusk',
+  motionLevel: 'full',
   boardThemeId: 'sand-clay',
   pieceSetId: 'cburnett',
   background: 'standard',
@@ -42,6 +46,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   coachEnabled: true,
   coachVoiceEnabled: false,
   soundEnabled: true,
+  soundVolume: 0.7,
   evalBarEnabled: true,
   showLegalMoves: true,
   suggestionArrows: true,
@@ -68,9 +73,16 @@ export const applyThemeToDom = (theme: AppTheme) => {
   document.documentElement.setAttribute('data-theme', effective);
 };
 
+export const applyMotionToDom = (motion: MotionLevel) => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-motion', motion);
+  }
+};
+
 export const useSettingsStore = create<SettingsStore>((set, get) => {
   const initial = getInitialSettings();
   applyThemeToDom(initial.appTheme);
+  applyMotionToDom(initial.motionLevel || 'full');
 
   return {
     ...initial,
@@ -81,6 +93,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
       if (newSettings.appTheme) {
         applyThemeToDom(newSettings.appTheme);
       }
+      if (newSettings.motionLevel) {
+        applyMotionToDom(newSettings.motionLevel);
+      }
     },
     setAppTheme: (theme) => {
       get().updateSettings({ appTheme: theme });
@@ -89,6 +104,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
       set(DEFAULT_SETTINGS);
       storage.set('all_chess_settings', DEFAULT_SETTINGS);
       applyThemeToDom(DEFAULT_SETTINGS.appTheme);
+      applyMotionToDom(DEFAULT_SETTINGS.motionLevel);
     },
   };
 });

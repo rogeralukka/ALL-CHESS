@@ -14,6 +14,7 @@ import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { Move, CoachExpression, Arrow } from '@/data/types';
 import { getExpressionForEvent } from '@/features/coach/expressionMap';
 import { ILLEGAL_MOVE_TEACHING_LINES } from '@/features/coach/coachLines';
+import { sound } from '@/lib/sound';
 import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -72,6 +73,7 @@ export const PlayGame: React.FC = () => {
 
   const checkGameStatus = useCallback(() => {
     if (chess.isCheckmate()) {
+      sound.gameEnd();
       const turn = chess.turn();
       const userWon = (orientation === 'white' && turn === 'b') || (orientation === 'black' && turn === 'w');
       setGameOver({
@@ -80,6 +82,7 @@ export const PlayGame: React.FC = () => {
       });
       setCoachExpression(userWon ? 'brilliant' : 'embarrassed');
     } else if (chess.isDraw()) {
+      sound.gameEnd();
       setGameOver({
         winner: 'draw',
         reason: 'by draw / stalemate',
@@ -103,6 +106,16 @@ export const PlayGame: React.FC = () => {
       const result = chess.move(move);
 
       if (result) {
+        if (result.captured) {
+          sound.capture();
+        } else if (chess.isCheck()) {
+          sound.check();
+        } else if (result.san.includes('O-O')) {
+          sound.castle();
+        } else {
+          sound.move();
+        }
+
         const newFen = chess.fen();
         setFen(newFen);
 
