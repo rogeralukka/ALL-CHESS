@@ -14,6 +14,8 @@ export interface BubbleMessage {
   moveSan?: string;
   evalText?: string;
   evalScore?: number;
+  /** Plain header text (e.g. "White to move", "Solved", "Incorrect"); used instead of "<move> is <label>". */
+  title?: string;
 }
 
 interface CoachBubbleProps {
@@ -62,6 +64,8 @@ interface SingleBubbleItemProps {
   voiceEnabled: boolean;
   hasSpokenSetRef: React.MutableRefObject<Set<string>>;
   onToggleVoice?: () => void;
+  /** true when this bubble is part of a stack of 2+; enables layout animation for the stack */
+  stacked?: boolean;
 }
 
 const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
@@ -74,6 +78,7 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
   voiceEnabled,
   hasSpokenSetRef,
   onToggleVoice,
+  stacked = false,
 }) => {
   const { displayedText, isComplete, skip } = useTypewriter({
     text: msg.text,
@@ -106,7 +111,7 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
 
   return (
     <motion.div
-      layout={isFull}
+      layout={isFull && stacked}
       initial={
         isOff
           ? { opacity: 1 }
@@ -125,11 +130,14 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
       }`}
     >
       {/* Header row: classification badge + move notation with label + right-aligned eval chip */}
-      {(msg.classification || msg.moveSan || msg.evalText) && (
+      {(msg.classification || msg.moveSan || msg.evalText || msg.title) && (
         <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-black/5 dark:border-white/10">
           <div className="flex items-center gap-1.5 min-w-0">
             {msg.classification && (
               <ClassificationBadge classification={msg.classification} size="sm" showLabel={false} />
+            )}
+            {msg.title && !msg.moveSan && (
+              <span className="font-semibold text-[15px] leading-tight">{msg.title}</span>
             )}
             {msg.moveSan && (
               <span className="font-bold text-sm truncate">
@@ -172,12 +180,6 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
         )}
       </div>
 
-      {/* Typewriter Skip Hint */}
-      {isLatest && !isComplete && !isOff && (
-        <div className="text-xs text-theme-muted/70 text-right mt-1 font-mono">
-          Click to skip typing
-        </div>
-      )}
     </motion.div>
   );
 };
@@ -209,9 +211,13 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
       <AnimatePresence initial={false}>
         {visibleMessages.map((msg, index) => {
           const isLatest = index === visibleMessages.length - 1;
+          const isSingle = visibleMessages.length === 1;
           return (
             <SingleBubbleItem
-              key={msg.id}
+              // A lone bubble (review, puzzles) updates in place: swapping elements made the old and
+              // new bubbles overlap the content below for ~200ms while they animated.
+              key={isSingle ? 'single-bubble' : msg.id}
+              stacked={!isSingle}
               msg={msg}
               isLatest={isLatest}
               isOff={isOff}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { isCorrectPuzzleMove } from '@/lib/puzzleCheck';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Chess } from 'chess.js';
 import { Board } from '@/features/board/Board';
@@ -31,16 +32,13 @@ function animateCountUp(start: number, end: number, duration: number, callback: 
   requestAnimationFrame(step);
 }
 
-function getSquareCenterStyle(sq: string, orientation: 'white' | 'black') {
+function getChipStyle(sq: string, orientation: 'white' | 'black'): React.CSSProperties {
   const file = sq.charCodeAt(0) - 97;
   const rank = parseInt(sq[1], 10) - 1;
   const col = orientation === 'white' ? file : 7 - file;
   const row = orientation === 'white' ? 7 - rank : rank;
-  return {
-    left: `${(col + 0.5) * 12.5}%`,
-    top: `${(row + 0.5) * 12.5}%`,
-    transform: 'translate(-50%, -50%)',
-  };
+  // just above the badge (which sits at the square's top-right corner)
+  return { left: `${(col + 0.94) * 12.5}%`, top: `${(row - 0.12) * 12.5}%`, transform: 'translate(-50%, -100%)' };
 }
 
 export const PuzzleScreen: React.FC = () => {
@@ -100,45 +98,47 @@ export const PuzzleScreen: React.FC = () => {
     };
   }, [status]);
 
+  const [wrongSquare, setWrongSquare] = useState<string | null>(null);
+  const [penalisedPuzzleId, setPenalisedPuzzleId] = useState<string | null>(null);
+
   const handleMove = (_from: string, _to: string, promotion?: string) => {
     if (status !== 'solving') return false;
 
     try {
-      const legalMoves = chess.moves({ verbose: true });
       const expectedMoveSan = currentPuzzle.solution[solutionStep];
-
+      const legalMoves = chess.moves({ verbose: true });
       const matchingMove = legalMoves.find(
-        (m) =>
-          m.from === _from &&
-          m.to === _to &&
-          (!promotion || m.promotion === promotion)
+        (m) => m.from === _from && m.to === _to && (!promotion || m.promotion === promotion)
       );
-
       if (!matchingMove) return false;
 
-      if (matchingMove.san === expectedMoveSan || currentPuzzle.solution.length === 1) {
-        chess.move(matchingMove);
+      const beforeFen = chess.fen();
+      chess.move(matchingMove);
+      const givesMate = chess.isCheckmate();
+      const correct = isCorrectPuzzleMove(matchingMove.san, expectedMoveSan, givesMate);
+
+      if (correct) {
         setFen(chess.fen());
 
         const nextStep = solutionStep + 1;
-        if (nextStep >= currentPuzzle.solution.length) {
+        if (nextStep >= currentPuzzle.solution.length || givesMate) {
           // --- BEAT 1 (0ms): Immediate solve state ---
           setLastSolvedSquare(_to);
           setFloatingChip(15);
           setStatus('solved');
           setCoachExp('brilliant');
-          setBubbleText('Solved! Brilliant tactical foresight.');
+          setBubbleText('Solved! Nicely spotted.');
           sound.puzzleCorrect();
 
-          const targetRating = puzzleRating + 15;
+          const alreadyFailed = penalisedPuzzleId === currentPuzzle.id;
+          const delta = alreadyFailed ? 0 : 15;
+          const targetRating = puzzleRating + delta;
           setPuzzleRating(targetRating);
           storage.set('all_chess_puzzle_rating', targetRating);
           animateCountUp(displayedRating, targetRating, 400, setDisplayedRating);
           setProgressValue(puzzleIndex + 1);
 
-          setTimeout(() => {
-            setFloatingChip(null);
-          }, 900);
+          setTimeout(() => setFloatingChip(null), 900);
 
           // --- BEAT 2 (1000ms): Cross-fade to level map ---
           setTimeout(() => {
@@ -148,34 +148,56 @@ export const PuzzleScreen: React.FC = () => {
 
           // Only when a level completes (every 5 puzzles)
           if ((puzzleIndex + 1) % 5 === 0) {
-            setTimeout(() => {
-              setShowRewardCascade(true);
-            }, 1800);
+            setTimeout(() => setShowRewardCascade(true), 1800);
           }
         } else {
           setSolutionStep(nextStep);
+          setCoachExp('thumbsup');
+          setBubbleText('Good. Keep going.');
           setTimeout(() => {
             const oppMove = currentPuzzle.solution[nextStep];
             chess.move(oppMove);
             setFen(chess.fen());
             setSolutionStep(nextStep + 1);
             sound.move();
-          }, 400);
+          }, 450);
         }
         return true;
-      } else {
-        setStatus('failed');
-        setCoachExp('embarrassed');
-        setBubbleText("That move leaves tactical counterplay. Let's retry and find the cleaner strike.");
-        sound.puzzleWrong();
-        return false;
       }
+
+      // --- Wrong move: show it, mark it, then take it back (like the reference) ---
+      setFen(chess.fen());
+      setWrongSquare(_to);
+      setStatus('failed');
+      setCoachExp('embarrassed');
+      setBubbleText(
+        givesMate
+          ? 'That mates too, but not the way this puzzle is built. Try the main line.'
+          : chess.inCheck()
+          ? 'A check, but it lets the king escape. Look for something more forcing.'
+          : "Not quite. That gives the opponent time. Look for checks, captures and threats first."
+      );
+      sound.puzzleWrong();
+      if (penalisedPuzzleId !== currentPuzzle.id) {
+        const targetRating = Math.max(100, puzzleRating - 10);
+        setPuzzleRating(targetRating);
+        storage.set('all_chess_puzzle_rating', targetRating);
+        animateCountUp(displayedRating, targetRating, 400, setDisplayedRating);
+        setPenalisedPuzzleId(currentPuzzle.id);
+      }
+      setTimeout(() => {
+        chess.load(beforeFen);
+        setFen(beforeFen);
+        setWrongSquare(null);
+      }, 700);
+      return true;
     } catch {
       return false;
     }
   };
 
   const handleRetry = () => {
+    setWrongSquare(null);
     chess.load(currentPuzzle.fen);
     setFen(currentPuzzle.fen);
     setStatus('solving');
@@ -210,10 +232,9 @@ export const PuzzleScreen: React.FC = () => {
       {
         id: `puzzle-${puzzleIndex}-${status}-${bubbleText.slice(0, 10)}`,
         text: bubbleText,
+        // Puzzle bubbles: plain title, no eval chip (the reference never shows an eval here)
         classification: status === 'solved' ? 'best' : status === 'failed' ? 'mistake' : undefined,
-        moveSan: status === 'solved' ? 'Solved' : undefined,
-        evalText: isWhiteToMove ? '+2.4' : '-2.4',
-        evalScore: isWhiteToMove ? 2.4 : -2.4,
+        title: status === 'solved' ? 'Solved' : status === 'failed' ? 'Incorrect' : `${isWhiteToMove ? 'White' : 'Black'} to move`,
       },
     ],
     [puzzleIndex, status, bubbleText, isWhiteToMove]
@@ -223,14 +244,16 @@ export const PuzzleScreen: React.FC = () => {
     () =>
       status === 'solved' && lastSolvedSquare
         ? [{ square: lastSolvedSquare, label: 'best' }]
+        : wrongSquare
+        ? [{ square: wrongSquare, label: 'mistake' }]
         : [],
-    [status, lastSolvedSquare]
+    [status, lastSolvedSquare, wrongSquare]
   );
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full bg-theme-bg select-none">
+    <div className="flex flex-col lg:flex-row h-full w-full bg-theme-bg select-none overflow-y-auto lg:overflow-hidden">
       {/* Left/Main Zone: Board + Top Status Bar */}
-      <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
+      <div className="flex-none lg:flex-1 flex flex-col items-center justify-center p-2 sm:p-4 md:p-6 lg:overflow-y-auto min-w-0">
         <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col items-center">
           {/* Header Row: Single User Rating + Muted Puzzle Rating */}
           <div className="w-full flex items-center justify-between mb-3 px-1">
@@ -265,16 +288,17 @@ export const PuzzleScreen: React.FC = () => {
             />
 
             {/* Floating Points Chip Over Destination Square (+15) */}
-            {floatingChip && lastSolvedSquare && (
-              <motion.div
-                initial={{ opacity: 1, y: 0, scale: 0.9 }}
-                animate={{ opacity: 0, y: -16, scale: 1.15 }}
-                transition={{ duration: 0.9, ease: 'easeOut' }}
-                className="absolute z-40 px-2 py-0.5 rounded bg-emerald-500 text-black font-extrabold text-sm shadow-xl pointer-events-none"
-                style={getSquareCenterStyle(lastSolvedSquare, isWhiteToMove ? 'white' : 'black')}
-              >
-                +{floatingChip}
-              </motion.div>
+            {floatingChip && lastSolvedSquare && penalisedPuzzleId !== currentPuzzle.id && (
+              <div className="absolute z-40 pointer-events-none" style={getChipStyle(lastSolvedSquare, isWhiteToMove ? 'white' : 'black')}>
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.8 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: [6, 0, -10, -18], scale: [0.8, 1.05, 1, 1] }}
+                  transition={{ duration: 1.1, times: [0, 0.18, 0.7, 1], ease: 'easeOut' }}
+                  className="px-2.5 py-1 rounded-full bg-[#7bb661] text-white font-extrabold text-[15px] leading-none shadow-lg tabular-nums"
+                >
+                  +{floatingChip}
+                </motion.div>
+              </div>
             )}
 
             {/* Reward Cascade Celebration Overlay (Only on level completion) */}
@@ -314,7 +338,7 @@ export const PuzzleScreen: React.FC = () => {
       </div>
 
       {/* Right Zone: Mode Panel (460px to 500px, clamp 380-500) */}
-      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20">
+      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col lg:h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20">
         {/* Panel Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60">
           <div className="flex items-center gap-2">
@@ -329,7 +353,7 @@ export const PuzzleScreen: React.FC = () => {
         </div>
 
         {/* Panel Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="lg:flex-1 lg:overflow-y-auto p-4 space-y-4">
           <AnimatePresence mode="wait">
             {showLevelMap ? (
               <motion.div
@@ -419,14 +443,14 @@ export const PuzzleScreen: React.FC = () => {
                 {status === 'solved' && (
                   <Card className="p-3 bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-semibold text-sm flex items-center gap-2">
                     <CheckCircle2 size={18} />
-                    <span>Solved! +15 Rating Points Earned</span>
+                    <span>{penalisedPuzzleId === currentPuzzle.id ? 'Solved on retry. No rating change.' : 'Solved! +15 rating'}</span>
                   </Card>
                 )}
 
                 {status === 'failed' && (
                   <Card className="p-3 bg-red-500/15 border-red-500/40 text-red-400 font-semibold text-sm flex items-center gap-2">
                     <XCircle size={18} />
-                    <span>Incorrect move. Review the position and retry!</span>
+                    <span>Incorrect. -10 rating. Try again.</span>
                   </Card>
                 )}
 
@@ -436,7 +460,7 @@ export const PuzzleScreen: React.FC = () => {
                     <span>Level Progress</span>
                     <span>Level {Math.floor(puzzleIndex / 5) + 1}</span>
                   </div>
-                  <ProgressBar value={progressValue} max={MOCK_PUZZLES.length} height={6} />
+                  <ProgressBar value={progressValue % 5 === 0 && progressValue > 0 && status === 'solved' ? 5 : progressValue % 5} max={5} height={6} />
                 </Card>
 
                 {/* Actions: Retry / Next / Hint (48px tall buttons) */}

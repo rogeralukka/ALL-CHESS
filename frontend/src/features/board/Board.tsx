@@ -541,7 +541,7 @@ export const Board: React.FC<BoardProps> = ({
       <div
         ref={boardRef}
         data-board="true"
-        className={`relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm overflow-hidden shadow-2xl border border-black/20 touch-none ${
+        className={`relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm shadow-2xl border border-black/20 touch-none ${
           isShaking ? 'animate-shake' : ''
         }`}
         style={{
@@ -549,7 +549,7 @@ export const Board: React.FC<BoardProps> = ({
         }}
       >
         {/* 8x8 Board Grid (Squares, Tints, Coordinates, Legal Targets) */}
-        <div className="w-full h-full grid grid-cols-8 grid-rows-8">
+        <div className="w-full h-full grid grid-cols-8 grid-rows-8 rounded-sm overflow-hidden">
           {displayRanks.map((rank: string, rankIndex: number) =>
             displayFiles.map((file: string, fileIndex: number) => {
               const sq = `${file}${rank}`;
