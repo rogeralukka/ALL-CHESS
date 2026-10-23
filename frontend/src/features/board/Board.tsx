@@ -427,13 +427,26 @@ export const Board: React.FC<BoardProps> = ({
       return 'bg-amber-400/50 shadow-inner ring-2 ring-amber-400';
     }
 
+    // Red tint on the attacked king when in check
+    try {
+      if (chessInstance.current.inCheck()) {
+        const turnColor = chessInstance.current.turn();
+        const kingPiece = boardPieces.find((p) => p.type === 'k' && p.color === turnColor);
+        if (kingPiece && kingPiece.square === sq) {
+          return 'bg-red-600/50 ring-2 ring-red-500 shadow-inner';
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     if (lastMove) {
       const isFrom = lastMove.from === sq;
       const isTo = lastMove.to === sq;
 
       if (isFrom || isTo) {
         if (lastMove.classification === 'blunder') {
-          return isFrom ? 'bg-red-400/40' : 'bg-orange-500/50';
+          return isFrom ? 'bg-red-400/35' : 'bg-amber-500/60 ring-1 ring-amber-500/80';
         }
         if (lastMove.classification === 'best') {
           return 'bg-emerald-500/40';

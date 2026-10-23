@@ -18,7 +18,7 @@ describe('ALL-CHESS Step 1B: Review Suite', () => {
     const blunderMove = game?.moves[10];
     expect(blunderMove?.san).toBe('Bxf7+');
     expect(blunderMove?.classification).toBe('blunder');
-    expect(blunderMove?.eval?.eval).toBe(-2.4);
+    expect(blunderMove?.eval?.eval).toBe(-3.54);
     expect(blunderMove?.eval?.bestMove).toBe('c3');
     expect(blunderMove?.eval?.lines?.[0]?.move).toBe('c3');
     expect(blunderMove?.eval?.lines?.[0]?.eval).toBe(0.3);

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MoveClassification } from '@/data/types';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
 import { useMotion } from '@/lib/useMotion';
+import { toFigurineSan } from '@/lib/formatters';
 import { Volume2, VolumeX } from 'lucide-react';
 
 export interface BubbleMessage {
@@ -148,7 +149,7 @@ export const CoachBubble: React.FC<CoachBubbleProps> = ({
                     )}
                     {msg.moveSan && (
                       <span className="font-bold text-sm truncate">
-                        <span className="font-mono">{msg.moveSan}</span>{' '}
+                        <span className="font-mono text-[15px]">{toFigurineSan(msg.moveSan)}</span>{' '}
                         <span className="font-sans font-semibold opacity-90">{getHeaderPhrase(msg.classification)}</span>
                       </span>
                     )}

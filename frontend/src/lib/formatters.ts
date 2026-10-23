@@ -12,6 +12,29 @@ export function formatEval(evalScore?: number, mate?: number | null): string {
 }
 
 /**
+ * Standard chess figurine piece symbols
+ */
+export const FIGURINE_MAP: Record<string, string> = {
+  N: '♞',
+  B: '♝',
+  R: '♜',
+  Q: '♛',
+  K: '♚',
+};
+
+/**
+ * Converts a standard SAN move (e.g. "Bxf7+") into figurine notation (e.g. "♝xf7+")
+ */
+export function toFigurineSan(san?: string): string {
+  if (!san) return '';
+  const first = san[0];
+  if (FIGURINE_MAP[first]) {
+    return `${FIGURINE_MAP[first]}${san.slice(1)}`;
+  }
+  return san;
+}
+
+/**
  * Formats time in seconds to mm:ss
  */
 export function formatTime(seconds: number): string {

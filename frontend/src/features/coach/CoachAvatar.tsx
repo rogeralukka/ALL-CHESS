@@ -57,7 +57,7 @@ export const CoachAvatar: React.FC<CoachAvatarProps> = ({
 
   return (
     <div
-      className={`relative overflow-hidden flex items-end justify-center select-none flex-shrink-0 ${
+      className={`relative overflow-visible flex items-end justify-center select-none flex-shrink-0 ${
         mode === 'bust' ? 'rounded-md' : 'rounded-lg'
       } ${className}`}
       style={{ width: `${width}px`, height: `${height}px` }}

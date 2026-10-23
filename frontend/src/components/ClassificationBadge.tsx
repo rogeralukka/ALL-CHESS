@@ -84,7 +84,7 @@ export const CLASSIFICATION_META: Record<MoveClassification, ClassificationMeta>
 
 interface ClassificationBadgeProps {
   classification: MoveClassification;
-  size?: 'sm' | 'md' | 'lg' | 'square';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'square';
   showLabel?: boolean;
   className?: string;
 }
@@ -99,6 +99,7 @@ export const ClassificationBadge: React.FC<ClassificationBadgeProps> = ({
   if (!meta) return null;
 
   const sizeClasses = {
+    xs: 'w-3.5 h-3.5 text-[9px]',
     sm: 'w-4 h-4 text-[10px]',
     md: 'w-5 h-5 text-xs',
     lg: 'w-7 h-7 text-sm',

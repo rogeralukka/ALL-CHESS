@@ -27,6 +27,9 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  Volume2,
+  VolumeX,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface ReviewBoardProps {
@@ -35,6 +38,10 @@ interface ReviewBoardProps {
 }
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+const START_PIECE_COUNTS = { p: 8, n: 2, b: 2, r: 2, q: 1 };
+const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const PIECE_FIGURINES: Record<string, string> = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛' };
 
 function getMoveSquares(fen: string, san: string): { from: string; to: string } | null {
   try {
@@ -47,8 +54,77 @@ function getMoveSquares(fen: string, san: string): { from: string; to: string } 
   }
 }
 
+/**
+ * Calculates captured pieces and material difference from current FEN
+ */
+function getMaterialState(fen: string) {
+  const [placement] = fen.split(' ');
+  const currentCounts: Record<'w' | 'b', Record<string, number>> = {
+    w: { p: 0, n: 0, b: 0, r: 0, q: 0 },
+    b: { p: 0, n: 0, b: 0, r: 0, q: 0 },
+  };
+
+  for (const char of placement) {
+    if (char === '/' || (char >= '1' && char <= '8')) continue;
+    const isWhite = char === char.toUpperCase();
+    const type = char.toLowerCase();
+    if (type !== 'k') {
+      currentCounts[isWhite ? 'w' : 'b'][type] = (currentCounts[isWhite ? 'w' : 'b'][type] || 0) + 1;
+    }
+  }
+
+  // Captured pieces:
+  // White captured = missing black pieces
+  const whiteCaptured: string[] = [];
+  let whiteMaterial = 0;
+  for (const [piece, max] of Object.entries(START_PIECE_COUNTS)) {
+    const remaining = currentCounts.b[piece] || 0;
+    const captured = Math.max(0, max - remaining);
+    for (let i = 0; i < captured; i++) {
+      whiteCaptured.push(piece);
+    }
+  }
+
+  // Black captured = missing white pieces
+  const blackCaptured: string[] = [];
+  let blackMaterial = 0;
+  for (const [piece, max] of Object.entries(START_PIECE_COUNTS)) {
+    const remaining = currentCounts.w[piece] || 0;
+    const captured = Math.max(0, max - remaining);
+    for (let i = 0; i < captured; i++) {
+      blackCaptured.push(piece);
+    }
+  }
+
+  // Total material value on board
+  for (const [piece, count] of Object.entries(currentCounts.w)) {
+    whiteMaterial += (PIECE_VALUES[piece] || 0) * count;
+  }
+  for (const [piece, count] of Object.entries(currentCounts.b)) {
+    blackMaterial += (PIECE_VALUES[piece] || 0) * count;
+  }
+
+  const diff = whiteMaterial - blackMaterial;
+
+  return {
+    whiteCaptured,
+    blackCaptured,
+    whiteDiff: diff > 0 ? `+${diff}` : null,
+    blackDiff: diff < 0 ? `+${Math.abs(diff)}` : null,
+  };
+}
+
 export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary }) => {
-  const { boardThemeId, pieceSetId, animationSpeed, coordinates, coachVoiceEnabled } = useSettingsStore();
+  const {
+    boardThemeId,
+    pieceSetId,
+    animationSpeed,
+    coordinates,
+    coachVoiceEnabled,
+    soundEnabled,
+    updateSettings,
+  } = useSettingsStore();
+
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
   const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
 
@@ -264,6 +340,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     isMistakeOrBlunder,
   ]);
 
+  // Compute Material Difference and Captured Pieces
+  const materialState = useMemo(() => getMaterialState(displayFen), [displayFen]);
+
   // --- COACH EXPRESSION & DIALOGUE ---
   let coachExpression: CoachExpression = getExpressionForEvent(classification);
   let coachText = currentMove?.coachComment || currentMove?.eval?.why || 'Solid positional continuation.';
@@ -357,16 +436,35 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
       {/* --- CENTER ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile) --- */}
       <div className="sticky top-0 z-20 w-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page border-b lg:border-b-0 border-theme-border/60 flex-shrink-0 lg:flex-1 min-w-0">
         <div className="w-full max-w-[min(88vh,680px)] flex flex-col gap-2">
-          {/* Top Player Row */}
+          {/* Top Player Row (Black) + Material Tally */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-bold flex items-center justify-center text-[10px]">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0">
                 B
               </span>
-              <span className="font-bold text-theme-text">{game.black.username}</span>
+              <span className="font-bold text-theme-text truncate">{game.black.username}</span>
               <span className="font-mono">({game.black.rating})</span>
+
+              {/* Material Difference & Captured Pieces for Black */}
+              <div className="flex items-center gap-1 ml-1">
+                {materialState.blackDiff && (
+                  <span className="font-mono font-bold text-[11px] bg-theme-raised px-1 py-0.2 rounded text-amber-500 border border-theme-border/60">
+                    {materialState.blackDiff}
+                  </span>
+                )}
+                {materialState.blackCaptured.length > 0 && (
+                  <span className="text-[11px] opacity-80 tracking-tighter" title="Captured by Black">
+                    {materialState.blackCaptured.map((p, i) => (
+                      <span key={`bc-${i}`} className="text-white drop-shadow-sm">
+                        {PIECE_FIGURINES[p]}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
             </div>
-            <span className="font-mono font-semibold">{game.speed} • {game.timeControl}</span>
+
+            <span className="font-mono font-semibold flex-shrink-0">{game.speed} • {game.timeControl}</span>
           </div>
 
           {/* Board + Eval Bar Container */}
@@ -393,19 +491,38 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             </div>
           </div>
 
-          {/* Bottom Player Row */}
+          {/* Bottom Player Row (White) + Material Tally */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-white border border-neutral-300 text-black font-bold flex items-center justify-center text-[10px]">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 h-5 rounded-full bg-white border border-neutral-300 text-black font-bold flex items-center justify-center text-[10px] flex-shrink-0">
                 W
               </span>
-              <span className="font-bold text-theme-text">{game.white.username}</span>
+              <span className="font-bold text-theme-text truncate">{game.white.username}</span>
               <span className="font-mono">({game.white.rating})</span>
+
+              {/* Material Difference & Captured Pieces for White */}
+              <div className="flex items-center gap-1 ml-1">
+                {materialState.whiteDiff && (
+                  <span className="font-mono font-bold text-[11px] bg-theme-raised px-1 py-0.2 rounded text-amber-500 border border-theme-border/60">
+                    {materialState.whiteDiff}
+                  </span>
+                )}
+                {materialState.whiteCaptured.length > 0 && (
+                  <span className="text-[11px] opacity-80 tracking-tighter" title="Captured by White">
+                    {materialState.whiteCaptured.map((p, i) => (
+                      <span key={`wc-${i}`} className="text-neutral-900 dark:text-neutral-400">
+                        {PIECE_FIGURINES[p]}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
             </div>
+
             <button
               type="button"
               onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
-              className="hover:text-theme-text transition-colors flex items-center gap-1 font-semibold"
+              className="hover:text-theme-text transition-colors flex items-center gap-1 font-semibold flex-shrink-0"
               title="Flip Board (F)"
             >
               <RotateCcw size={13} />
@@ -417,27 +534,46 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
       {/* --- RIGHT ZONE: MODE PANEL (FIXED SKELETON ~420px) --- */}
       <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 min-h-0">
-        {/* Panel Header */}
+        {/* Panel Header: Back arrow, "Game Review", sound toggle, move count */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={onBackToSummary}>
-              Highlights
-            </Button>
+            <button
+              type="button"
+              onClick={onBackToSummary}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-theme-muted hover:text-theme-text transition-colors"
+              title="Return to Summary"
+            >
+              <ArrowLeft size={16} />
+              <span>Summary</span>
+            </button>
             <span className="text-xs text-theme-muted font-bold">|</span>
-            <span className="text-xs font-bold text-theme-text truncate max-w-[180px]">
-              {game.opening.name}
+            <span className="text-xs font-bold font-display text-theme-text">
+              Game Review
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-xs text-theme-muted font-mono font-bold">
-            Move {currentMoveIndex + 1} / {game.moves.length}
+          <div className="flex items-center gap-3">
+            {/* Sound toggle button */}
+            <button
+              type="button"
+              onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
+              className="text-theme-muted hover:text-theme-text transition-colors p-1 rounded"
+              title={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
+              aria-label={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
+            >
+              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            </button>
+
+            <div className="text-xs text-theme-muted font-mono font-bold">
+              {currentMoveIndex + 1} / {game.moves.length}
+            </div>
           </div>
         </div>
 
-        {/* Panel Content (Scrollable without clipping) */}
+        {/* Panel Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
           {/* Coach Portrait + Speech Bubble (Unclipped) */}
-          <div className="flex items-start gap-3 flex-shrink-0">
+          <div className="flex items-start gap-3 flex-shrink-0 pt-0.5">
             <CoachAvatar expression={coachExpression} mode="bust" size={68} />
             <div className="flex-1 min-w-0">
               <CoachBubble
@@ -447,162 +583,151 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             </div>
           </div>
 
-          {/* Mini Eval Graph with Key Moves */}
-          <div className="bg-theme-raised/40 p-2.5 rounded-lg border border-theme-border/60">
-            <EvalGraph
-              moves={game.moves}
-              currentMoveIndex={currentMoveIndex}
-              onSeek={(idx) => {
-                resetModes();
-                setCurrentMoveIndex(idx);
-              }}
-              height={65}
-              mini={true}
-            />
-          </div>
-
-          {/* --- ACTION ROW: BUTTON RULES FROM PROMPT --- */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {/* RETRY BUTTON (Only for Inaccuracy, Mistake, Miss, Blunder) */}
-            {isMistakeOrBlunder && !retryMode && !showingBest && !explaining && (
+          {/* --- ACTION ROW: 3 EQUAL-WIDTH BUTTONS IN ONE ROW --- */}
+          {retryMode ? (
+            <div className="grid grid-cols-3 gap-2 w-full pt-1">
               <Button
                 variant="secondary"
                 size="sm"
-                icon={<HelpCircle size={15} />}
-                onClick={() => {
-                  setRetryMode(true);
-                  setShowingBest(false);
-                  setExplaining(false);
-                  setRetrySuccess(null);
-                  setRetryFen(null);
-                }}
+                fullWidth
+                onClick={() => setRetryFen(null)}
               >
-                Retry Mistake
+                Try Again
               </Button>
-            )}
-
-            {/* RETRY MODE ACTIONS */}
-            {retryMode && (
-              <>
-                {retrySuccess === false && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setRetryFen(null)}
-                  >
-                    Try Again
-                  </Button>
-                )}
-
-                {!retrySuccess && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon={<Sparkles size={15} />}
-                    onClick={handleShowAnswer}
-                  >
-                    Show Answer
-                  </Button>
-                )}
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={resetModes}
-                >
-                  Resume Game
-                </Button>
-              </>
-            )}
-
-            {/* SHOW BEST (Hidden when move was Best or Book) */}
-            {!isBestMove && !isBookMove && !showingBest && !retryMode && (
               <Button
                 variant="secondary"
                 size="sm"
-                icon={<Sparkles size={15} />}
-                onClick={() => {
-                  setShowingBest(true);
-                  setExplaining(false);
-                  setRetryMode(false);
-                }}
+                fullWidth
+                icon={<Sparkles size={14} />}
+                onClick={handleShowAnswer}
               >
-                Show Best
+                Show Answer
               </Button>
-            )}
-
-            {/* RESUME BEST */}
-            {showingBest && (
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="sm"
+                fullWidth
                 onClick={resetModes}
               >
-                Resume Game
+                Resume
               </Button>
-            )}
-
-            {/* EXPLAIN MOVE / VARIATION STEPPER */}
-            {!retryMode && !showingBest && (
-              <>
+            </div>
+          ) : (
+            <div className="space-y-1.5 pt-1">
+              <div className="grid grid-cols-3 gap-2 w-full">
+                {/* 1. EXPLAIN BUTTON */}
                 {explaining ? (
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setVariationStep((s) => Math.max(0, s - 1))}
-                      disabled={variationStep <= 0}
-                    >
-                      Prev
-                    </Button>
-                    <span className="text-xs font-mono font-bold px-1.5 text-theme-muted">
-                      {variationStep + 1}/{Math.max(1, refutationMoves.length)}
-                    </span>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setVariationStep((s) => Math.min(refutationMoves.length - 1, s + 1))}
-                      disabled={variationStep >= refutationMoves.length - 1}
-                    >
-                      Next
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={resetModes}
-                    >
-                      Got it!
-                    </Button>
-                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth
+                    onClick={resetModes}
+                  >
+                    Got it!
+                  </Button>
                 ) : (
                   <Button
                     variant="secondary"
                     size="sm"
+                    fullWidth
+                    icon={<HelpCircle size={15} />}
                     onClick={() => {
                       setExplaining(true);
                       setShowingBest(false);
+                      setRetryMode(false);
                       setVariationStep(0);
                     }}
                   >
-                    Explain Move
+                    Explain
                   </Button>
                 )}
-              </>
-            )}
 
-            {/* NEXT MOVE BUTTON */}
-            {!explaining && (
-              <Button
-                variant="primary"
-                size="sm"
-                icon={<ArrowRight size={15} />}
-                onClick={handleNext}
-                disabled={currentMoveIndex >= game.moves.length - 1}
-              >
-                Next Move
-              </Button>
-            )}
-          </div>
+                {/* 2. BEST BUTTON */}
+                {showingBest ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth
+                    onClick={resetModes}
+                  >
+                    Resume
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth
+                    icon={<Sparkles size={15} />}
+                    onClick={() => {
+                      setShowingBest(true);
+                      setExplaining(false);
+                      setRetryMode(false);
+                    }}
+                    disabled={isBestMove || isBookMove}
+                  >
+                    Best
+                  </Button>
+                )}
+
+                {/* 3. NEXT BUTTON (PRIMARY) */}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  fullWidth
+                  icon={<ArrowRight size={15} />}
+                  onClick={handleNext}
+                  disabled={currentMoveIndex >= game.moves.length - 1}
+                >
+                  Next
+                </Button>
+              </div>
+
+              {/* Variation stepper controls if in explain mode */}
+              {explaining && refutationMoves.length > 0 && (
+                <div className="flex items-center justify-between px-2 py-1 bg-theme-raised/50 rounded border border-theme-border/40 text-xs">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setVariationStep((s) => Math.max(0, s - 1))}
+                    disabled={variationStep <= 0}
+                  >
+                    Prev
+                  </Button>
+                  <span className="font-mono font-bold text-theme-muted">
+                    Variation Step {variationStep + 1} / {refutationMoves.length}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setVariationStep((s) => Math.min(refutationMoves.length - 1, s + 1))}
+                    disabled={variationStep >= refutationMoves.length - 1}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+
+              {/* Retry Mistake Link/Prompt if Mistake/Blunder */}
+              {isMistakeOrBlunder && !showingBest && !explaining && (
+                <div className="text-center pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRetryMode(true);
+                      setShowingBest(false);
+                      setExplaining(false);
+                      setRetrySuccess(null);
+                      setRetryFen(null);
+                    }}
+                    className="text-xs text-amber-500 font-bold hover:underline inline-flex items-center gap-1"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Retry this position yourself</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Top 3 Engine Lines (Collapsible) */}
           <div className="border border-theme-border/60 rounded-lg overflow-hidden bg-theme-raised/30">
@@ -642,12 +767,18 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             )}
           </div>
 
-          {/* Move List */}
+          {/* Move List Card with Opening Name above it */}
           <Card className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-theme-muted">Move Notation</span>
-              <span className="text-[11px] text-theme-muted">Figurine Notation</span>
+            {/* Opening name moved to a line above the move list */}
+            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-theme-border/40">
+              <span className="text-xs font-bold text-theme-text truncate" title={game.opening.name}>
+                {game.opening.name}
+              </span>
+              <span className="text-[10px] font-mono text-theme-muted px-1.5 py-0.5 rounded bg-theme-raised">
+                {game.opening.eco}
+              </span>
             </div>
+
             <MoveList
               moves={game.moves}
               currentMoveIndex={currentMoveIndex}
@@ -660,8 +791,22 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           </Card>
         </div>
 
+        {/* --- MINI EVAL GRAPH (Thin graph at bottom of panel, above transport controls) --- */}
+        <div className="px-3 pt-2 pb-1 border-t border-theme-border/60 bg-theme-raised/20 flex-shrink-0">
+          <EvalGraph
+            moves={game.moves}
+            currentMoveIndex={currentMoveIndex}
+            onSeek={(idx) => {
+              resetModes();
+              setCurrentMoveIndex(idx);
+            }}
+            height={36}
+            mini={true}
+          />
+        </div>
+
         {/* Transport Controls Bar */}
-        <div className="p-3 border-t border-theme-border/70 flex items-center justify-center gap-2 bg-theme-card flex-shrink-0">
+        <div className="p-2.5 border-t border-theme-border/70 flex items-center justify-center gap-2 bg-theme-card flex-shrink-0">
           <Button size="sm" variant="ghost" onClick={handleFirst} title="First Move (Home)">
             <SkipBack size={16} />
           </Button>

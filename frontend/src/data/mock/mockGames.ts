@@ -347,7 +347,7 @@ export const MOCK_GAMES: Game[] = [
           "Kg8"
         ],
         "eval": {
-          "eval": -2.4,
+          "eval": -3.54,
           "mate": null,
           "bestMove": "c3",
           "why": "Bxf7+ sacrifices a bishop for just one pawn with no follow-up attack, leaving White down material.",
@@ -399,14 +399,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "best",
         "coachComment": "Black accepts the gift with the king.",
         "eval": {
-          "eval": -2.4,
+          "eval": -3.54,
           "mate": null,
           "bestMove": "Kxf7",
           "why": "Black accepts the sacrificed bishop and is clearly ahead.",
           "lines": [
             {
               "move": "Kxf7",
-              "eval": -2.4,
+              "eval": -3.54,
               "mate": null,
               "depth": 18,
               "why": "Black accepts the sacrificed bishop and is clearly ahead.",
@@ -428,14 +428,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "inaccuracy",
         "coachComment": "Checking without sufficient support just loses time.",
         "eval": {
-          "eval": -3,
+          "eval": -4.0,
           "mate": null,
           "bestMove": "c3",
           "why": "Premature knight check that does not trouble Black.",
           "lines": [
             {
               "move": "c3",
-              "eval": -2.4,
+              "eval": -3.54,
               "depth": 16,
               "why": "c3 stabilizes the center and prevents Black’s knight from penetrating.",
               "pv": [
@@ -458,14 +458,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "best",
         "coachComment": "King finds shelter safely on g8.",
         "eval": {
-          "eval": -3,
+          "eval": -4.0,
           "mate": null,
           "bestMove": "Kg8",
           "why": "The king tucks away safely on g8.",
           "lines": [
             {
               "move": "Kg8",
-              "eval": -3,
+              "eval": -4.0,
               "mate": null,
               "depth": 18,
               "why": "The king tucks away safely on g8.",
@@ -487,14 +487,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "mistake",
         "coachComment": "Early queen sortie leaves White vulnerable to tactical counters.",
         "eval": {
-          "eval": -4.5,
+          "eval": -5.1,
           "mate": null,
           "bestMove": "Nc3",
           "why": "Brings queen out early into potential tactical counter-attacks.",
           "lines": [
             {
               "move": "Nc3",
-              "eval": -3,
+              "eval": -4.0,
               "depth": 16,
               "why": "Nc3 develops a piece rather than exposing the queen early.",
               "pv": [
@@ -517,7 +517,7 @@ export const MOCK_GAMES: Game[] = [
         "classification": "best",
         "coachComment": "Calm queen development connecting rooks.",
         "eval": {
-          "eval": -4.5,
+          "eval": -5.1,
           "mate": null,
           "bestMove": "Qe7",
           "why": "Connects rooks and guards key central squares.",
@@ -546,14 +546,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "good",
         "coachComment": "Developing the queenside knight.",
         "eval": {
-          "eval": -4.6,
+          "eval": -5.1,
           "mate": null,
           "bestMove": "Nc3",
           "why": "Develops knight toward central squares.",
           "lines": [
             {
               "move": "Nc3",
-              "eval": -4.6,
+              "eval": -5.1,
               "mate": null,
               "depth": 18,
               "why": "Develops knight toward central squares.",
@@ -575,14 +575,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "best",
         "coachComment": "Neutralizes White’s minor piece activity.",
         "eval": {
-          "eval": -4.6,
+          "eval": -5.1,
           "mate": null,
           "bestMove": "Be6",
           "why": "Offers bishop exchange to neutralize White’s remaining piece.",
           "lines": [
             {
               "move": "Be6",
-              "eval": -4.6,
+              "eval": -5.1,
               "mate": null,
               "depth": 18,
               "why": "Offers bishop exchange to neutralize White’s remaining piece.",
@@ -604,14 +604,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "inaccuracy",
         "coachComment": "Trades off White’s only active piece while down material.",
         "eval": {
-          "eval": -5.2,
+          "eval": -5.6,
           "mate": null,
           "bestMove": "Be3",
           "why": "Exchanges the attacking knight, simplifying into a lost endgame.",
           "lines": [
             {
               "move": "Be3",
-              "eval": -4.6,
+              "eval": -5.1,
               "depth": 16,
               "why": "Be3 maintains tension rather than trading White’s active knight.",
               "pv": [
@@ -634,14 +634,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "best",
         "coachComment": "Central queen recapture with total control.",
         "eval": {
-          "eval": -5.2,
+          "eval": -5.6,
           "mate": null,
           "bestMove": "Qxe6",
           "why": "Black recaptures with the queen, dominating the center.",
           "lines": [
             {
               "move": "Qxe6",
-              "eval": -5.2,
+              "eval": -5.6,
               "mate": null,
               "depth": 18,
               "why": "Black recaptures with the queen, dominating the center.",
@@ -663,14 +663,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "good",
         "coachComment": "Pinning the knight to seek counterplay.",
         "eval": {
-          "eval": -5.3,
+          "eval": -5.6,
           "mate": null,
           "bestMove": "Bg5",
           "why": "Pins the f6 knight against the queen.",
           "lines": [
             {
               "move": "Bg5",
-              "eval": -5.3,
+              "eval": -5.6,
               "mate": null,
               "depth": 18,
               "why": "Pins the f6 knight against the queen.",
@@ -692,14 +692,14 @@ export const MOCK_GAMES: Game[] = [
         "classification": "excellent",
         "coachComment": "Taking control of the semi-open f-file.",
         "eval": {
-          "eval": -5.3,
+          "eval": -5.6,
           "mate": null,
           "bestMove": "Rf8",
           "why": "Reinforces the f-file and readies a counter-strike.",
           "lines": [
             {
               "move": "Rf8",
-              "eval": -5.3,
+              "eval": -5.6,
               "mate": null,
               "depth": 18,
               "why": "Reinforces the f-file and readies a counter-strike.",

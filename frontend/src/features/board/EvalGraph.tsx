@@ -40,21 +40,6 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
     return { x, y, move: m, index: idx };
   });
 
-  // Calculate the biggest eval swing across the game
-  let biggestSwingIdx = -1;
-  let maxSwing = 0;
-  moves.forEach((m, idx) => {
-    const prev = idx === 0 ? 0.2 : (moves[idx - 1].eval?.eval ?? 0);
-    const curr = m.eval?.eval ?? 0;
-    const diff = Math.abs(curr - prev);
-    if (diff > maxSwing) {
-      maxSwing = diff;
-      biggestSwingIdx = idx;
-    }
-  });
-  const swingPoint = biggestSwingIdx >= 0 && maxSwing >= 0.8 ? points[biggestSwingIdx] : null;
-  const swingMove = biggestSwingIdx >= 0 ? moves[biggestSwingIdx] : null;
-
   // Start position at x=0, y=zeroY
   const startPoint = { x: 0, y: zeroY };
 
@@ -125,49 +110,24 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
         />
 
         {/* Key move colored dots (brilliant, blunder, great, mistake, miss) */}
-        {!mini &&
-          points.map((p) => {
-            const cls = p.move.classification;
-            if (!cls || (cls !== 'brilliant' && cls !== 'blunder' && cls !== 'great' && cls !== 'mistake' && cls !== 'miss')) {
-              return null;
-            }
-            const dotColor = CLASSIFICATION_META[cls]?.color;
-            return (
-              <circle
-                key={`dot-${p.index}`}
-                cx={p.x}
-                cy={p.y}
-                r="4.5"
-                fill={dotColor}
-                stroke="#141312"
-                strokeWidth="1.5"
-              />
-            );
-          })}
-
-        {/* Biggest Swing Highlight Marker */}
-        {swingPoint && (
-          <g className="pointer-events-none">
+        {points.map((p) => {
+          const cls = p.move.classification;
+          if (!cls || (cls !== 'brilliant' && cls !== 'blunder' && cls !== 'great' && cls !== 'mistake' && cls !== 'miss')) {
+            return null;
+          }
+          const dotColor = CLASSIFICATION_META[cls]?.color;
+          return (
             <circle
-              cx={swingPoint.x}
-              cy={swingPoint.y}
-              r={mini ? 5 : 6}
-              fill="#ef4444"
-              stroke="#ffffff"
-              strokeWidth="2"
-            />
-            <circle
-              cx={swingPoint.x}
-              cy={swingPoint.y}
-              r={mini ? 8 : 10}
-              fill="none"
-              stroke="#ef4444"
+              key={`dot-${p.index}`}
+              cx={p.x}
+              cy={p.y}
+              r={mini ? 3.5 : 4.5}
+              fill={dotColor}
+              stroke="#141312"
               strokeWidth="1.5"
-              strokeDasharray="2 2"
-              opacity="0.85"
             />
-          </g>
-        )}
+          );
+        })}
 
         {/* Active / Current Move Cursor Line */}
         {activePoint && (
@@ -183,7 +143,7 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
             <circle
               cx={activePoint.x}
               cy={activePoint.y}
-              r="5"
+              r={mini ? 4 : 5}
               fill={cursorColor}
               stroke="#ffffff"
               strokeWidth="2"
@@ -192,28 +152,15 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
         )}
       </svg>
 
-      {/* Biggest Swing Floating Label */}
-      {swingPoint && swingMove && (
+      {/* Floating Hover Tooltip (clean & small, no swing blob) */}
+      {hoveredIndex !== null && activeMove && activePoint && (
         <div
-          className="absolute pointer-events-none transform -translate-x-1/2 z-20 px-2 py-0.5 rounded-full bg-rose-600/90 text-white font-bold text-[9px] shadow flex items-center gap-1 border border-rose-300"
+          className="absolute z-30 pointer-events-none transform -translate-x-1/2 -top-9 px-2 py-0.5 bg-theme-raised border border-theme-border rounded shadow-md text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap"
           style={{
-            left: `${(swingPoint.x / width) * 100}%`,
-            top: swingPoint.y > h / 2 ? `${Math.max(2, swingPoint.y - 24)}px` : `${Math.min(h - 20, swingPoint.y + 8)}px`,
+            left: `${Math.max(10, Math.min(90, (activePoint.x / width) * 100))}%`,
           }}
         >
-          <span>Swing: {swingMove.moveNumber}. {swingMove.san}</span>
-        </div>
-      )}
-
-      {/* Floating Hover Tooltip */}
-      {hoveredIndex !== null && activeMove && activePoint && !mini && (
-        <div
-          className="absolute z-30 pointer-events-none transform -translate-x-1/2 -top-10 px-2.5 py-1 bg-theme-raised border border-theme-border rounded shadow-lg text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap"
-          style={{
-            left: `${(activePoint.x / width) * 100}%`,
-          }}
-        >
-          <span className="text-theme-muted">Move {activeMove.moveNumber}:</span>
+          <span className="text-theme-muted font-mono">{activeMove.moveNumber}.</span>
           <span className="font-mono font-bold text-theme-text">{activeMove.san}</span>
           <span
             className="px-1.5 py-0.2 rounded font-bold text-[10px]"
@@ -224,7 +171,7 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
           >
             {CLASSIFICATION_META[activeCls]?.label}
           </span>
-          <span className="font-mono text-amber-500 font-bold ml-0.5">
+          <span className="font-mono text-amber-500 font-bold text-[11px]">
             {formatEval(activeMove.eval?.eval)}
           </span>
         </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Move } from '@/data/types';
+import { Move, MoveClassification } from '@/data/types';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
 
 interface MoveListProps {
@@ -91,10 +91,20 @@ export const MoveList: React.FC<MoveListProps> = ({
     );
   };
 
+  // Color bad moves according to their severity
+  const getSanColorStyle = (cls?: MoveClassification) => {
+    if (!cls) return undefined;
+    if (cls === 'blunder') return { color: '#fa412d' };
+    if (cls === 'miss') return { color: '#ef7d6e' };
+    if (cls === 'mistake') return { color: '#f59a4b' };
+    if (cls === 'inaccuracy') return { color: '#f2c14e' };
+    return undefined;
+  };
+
   return (
     <div
       ref={containerRef}
-      className={`overflow-y-auto max-h-[340px] pr-1.5 flex flex-col gap-1 text-sm select-none ${className}`}
+      className={`overflow-y-auto max-h-[340px] pr-1 flex flex-col gap-0.5 text-sm select-none w-full ${className}`}
     >
       {groupedMoves.map((group) => {
         const isWhiteActive = currentMoveIndex === group.whiteIdx;
@@ -105,10 +115,10 @@ export const MoveList: React.FC<MoveListProps> = ({
             activeVariation.parentMoveIndex === group.blackIdx);
 
         return (
-          <div key={`row-${group.moveNum}`} className="flex flex-col">
-            <div className="flex items-center py-1 px-2 rounded hover:bg-theme-raised/40 transition-colors">
+          <div key={`row-${group.moveNum}`} className="flex flex-col w-full">
+            <div className="h-[27px] flex items-center px-1.5 rounded hover:bg-theme-raised/40 transition-colors w-full">
               {/* Move number */}
-              <span className="w-9 font-mono text-xs font-semibold text-theme-muted flex-shrink-0">
+              <span className="w-8 font-mono text-[11px] font-semibold text-theme-muted flex-shrink-0">
                 {group.moveNum}.
               </span>
 
@@ -118,16 +128,21 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isWhiteActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.whiteIdx!)}
-                  className={`flex-1 flex items-center justify-between px-2 py-1 rounded text-left font-semibold transition-colors duration-100 ${
+                  className={`flex-1 h-[25px] flex items-center gap-1.5 px-2 py-0.5 rounded text-left font-semibold text-xs transition-colors duration-100 ${
                     isWhiteActive
                       ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/50 font-bold'
                       : 'text-theme-text hover:bg-theme-raised'
                   }`}
                 >
-                  <span className="font-mono">{renderFigurine(group.white.san, 'w')}</span>
                   {group.white.classification && (
-                    <ClassificationBadge classification={group.white.classification} size="sm" />
+                    <ClassificationBadge classification={group.white.classification} size="xs" showLabel={false} />
                   )}
+                  <span
+                    className="font-mono text-xs font-semibold"
+                    style={getSanColorStyle(group.white.classification)}
+                  >
+                    {renderFigurine(group.white.san, 'w')}
+                  </span>
                 </button>
               )}
 
@@ -137,25 +152,30 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isBlackActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.blackIdx!)}
-                  className={`flex-1 flex items-center justify-between px-2 py-1 rounded text-left font-semibold ml-1.5 transition-colors duration-100 ${
+                  className={`flex-1 h-[25px] flex items-center gap-1.5 px-2 py-0.5 rounded text-left font-semibold text-xs ml-1 transition-colors duration-100 ${
                     isBlackActive
                       ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/50 font-bold'
                       : 'text-theme-text hover:bg-theme-raised'
                   }`}
                 >
-                  <span className="font-mono">{renderFigurine(group.black.san, 'b')}</span>
                   {group.black.classification && (
-                    <ClassificationBadge classification={group.black.classification} size="sm" />
+                    <ClassificationBadge classification={group.black.classification} size="xs" showLabel={false} />
                   )}
+                  <span
+                    className="font-mono text-xs font-semibold"
+                    style={getSanColorStyle(group.black.classification)}
+                  >
+                    {renderFigurine(group.black.san, 'b')}
+                  </span>
                 </button>
               ) : (
-                <div className="flex-1 ml-1.5" />
+                <div className="flex-1 ml-1" />
               )}
             </div>
 
             {/* Inline Variation Sub-lines (indented with left border) */}
             {hasVariation && activeVariation && (
-              <div className="ml-9 my-1 pl-3 border-l-2 border-amber-500/70 bg-amber-500/10 py-1.5 px-2 rounded-r text-xs">
+              <div className="ml-8 my-1 pl-3 border-l-2 border-amber-500/70 bg-amber-500/10 py-1.5 px-2 rounded-r text-xs">
                 <div className="font-bold text-amber-500 mb-0.5">{activeVariation.title}</div>
                 <div className="font-mono text-theme-text flex flex-wrap gap-1.5">
                   {activeVariation.moves.map((vm, vIdx) => (

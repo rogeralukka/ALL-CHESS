@@ -21,14 +21,25 @@ export const EvalBar: React.FC<EvalBarProps> = ({
   // If orientation is black, flip fill
   const bottomFillPct = orientation === 'white' ? whitePct : 100 - whitePct;
 
-  const scoreText = formatEval(evalScore, mate);
-  const isWhiteLeading = (mate && mate > 0) || (evalScore !== undefined && evalScore >= 0);
+  const rawScore = evalScore ?? 0;
+  const isWhiteLeading = (mate && mate > 0) || (!mate && rawScore >= 0);
+  const absScoreText = mate !== null && mate !== undefined
+    ? `M${Math.abs(mate)}`
+    : Math.abs(rawScore).toFixed(1);
+
+  // Determine whether top or bottom shows the leading score
+  // If orientation === 'white': top is Black, bottom is White
+  // If orientation === 'black': top is White, bottom is Black
+  const showTopScore = orientation === 'white' ? !isWhiteLeading : isWhiteLeading;
+  const showBottomScore = orientation === 'white' ? isWhiteLeading : !isWhiteLeading;
+  const topTextColor = orientation === 'white' ? 'text-[#faf8f5]' : 'text-[#141312]';
+  const bottomTextColor = orientation === 'white' ? 'text-[#141312]' : 'text-[#faf8f5]';
 
   return (
     <div
       className={`relative w-7 rounded-sm overflow-hidden flex flex-col justify-between border border-neutral-700/60 shadow-md select-none ${className}`}
       style={{ height, minHeight: '280px' }}
-      aria-label={`Evaluation bar: ${scoreText}`}
+      aria-label={`Evaluation bar: ${formatEval(evalScore, mate)}`}
       role="progressbar"
       aria-valuenow={Math.round(whitePct)}
       aria-valuemin={0}
@@ -43,18 +54,18 @@ export const EvalBar: React.FC<EvalBarProps> = ({
         style={{ height: `${bottomFillPct}%` }}
       />
 
-      {/* Numerical score printed at leading side's end */}
+      {/* Numerical score printed as positive absolute value at leading side's end */}
       <div className="relative z-10 flex flex-col justify-between h-full py-1 text-center font-mono font-bold text-[11px] leading-tight pointer-events-none">
-        {/* Top score for Black leading */}
-        {!isWhiteLeading ? (
-          <span className="text-[#faf8f5] px-0.5">{scoreText}</span>
+        {/* Top score */}
+        {showTopScore ? (
+          <span className={`${topTextColor} px-0.5`}>{absScoreText}</span>
         ) : (
           <span />
         )}
 
-        {/* Bottom score for White leading */}
-        {isWhiteLeading ? (
-          <span className="text-[#141312] px-0.5">{scoreText}</span>
+        {/* Bottom score */}
+        {showBottomScore ? (
+          <span className={`${bottomTextColor} px-0.5`}>{absScoreText}</span>
         ) : (
           <span />
         )}
