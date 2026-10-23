@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
 import { MoveList } from '@/features/board/MoveList';
+import { PlayerBar } from '@/components/PlayerBar';
+import { PlayerAvatar } from '@/components/Bits';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { badgeBox } from '@/features/board/BadgeLayer';
@@ -626,46 +628,31 @@ export const PlayGame: React.FC = () => {
   const coachAdvantage = userIsWhite ? blackAdvantage : whiteAdvantage;
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
+    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
       {/* Center Zone: Board & Eval Bar */}
-      <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page min-w-0 relative">
-        <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
+      <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 min-w-0 lg:!p-0 lg:h-full relative">
+        <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
           {/* Top Player (Coach) */}
-          <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full overflow-hidden border border-amber-500/40 bg-theme-raised flex-shrink-0">
-                <img src="/assets/coach/coach_neutral.webp" alt="Coach Bust" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm text-theme-text">Coach All-Chess</span>
-                <span className="font-mono text-xs tabular-nums text-theme-muted">
-                  ({activeConfig ? activeConfig.levelRating : lobbyLevel})
-                </span>
-                <span className="text-xs" title="International">🌐</span>
-              </div>
-              {coachAdvantage > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-mono font-bold bg-white/10 text-theme-text">
-                  +{coachAdvantage}
-                </span>
-              )}
-              <span className="text-xs tracking-tight text-theme-muted select-none ml-0.5">
-                {coachCaptured.map((p, idx) => (
-                  <span key={idx} className="opacity-75">{PIECE_FIGURINES[p]}</span>
-                ))}
-              </span>
-            </div>
-            <span className="font-mono font-semibold">
-              {activeConfig ? activeConfig.levelName : `Rated ${lobbyLevel}`}
-            </span>
-          </div>
+          <PlayerBar
+            testId="player-top"
+            name="Coach All-Chess"
+            rating={activeConfig ? activeConfig.levelRating : lobbyLevel}
+            avatar={<img src="/assets/coach/coach_neutral.webp" alt="Coach" className="w-full h-full object-cover" />}
+            captured={coachCaptured.map((p, idx) => (
+              <span key={idx}>{PIECE_FIGURINES[p]}</span>
+            ))}
+            advantage={coachAdvantage}
+            active={!!activeConfig && !gameOver && fen.split(' ')[1] !== (userIsWhite ? 'w' : 'b')}
+            right={<span className="px-2.5 py-1 rounded-md bg-black/[0.06] dark:bg-black/25 text-[13px] font-bold text-theme-muted">{activeConfig ? activeConfig.levelName : `Rated ${lobbyLevel}`}</span>}
+          />
 
           {/* Board + Eval Bar */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 w-full">
+          <div className="flex items-stretch justify-center gap-1.5 sm:gap-2.5 w-full">
             {activeConfig?.evalBar && (
               <EvalBar
                 evalScore={lastMoveObj?.eval?.eval || 0}
                 orientation={orientation}
-                height="100%"
+                height="auto"
               />
             )}
             <div className="flex-1 aspect-square relative">
@@ -747,58 +734,52 @@ export const PlayGame: React.FC = () => {
           </div>
 
           {/* Bottom Player (User) */}
-          <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-theme-raised text-theme-text font-bold flex items-center justify-center text-xs border border-theme-border flex-shrink-0">
-                YO
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm text-theme-text">You</span>
-                <span className="font-mono text-xs tabular-nums text-theme-muted">(905)</span>
-                <span className="text-xs" title="Player">🌐</span>
-              </div>
-              {userAdvantage > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-mono font-bold bg-white/10 text-theme-text">
-                  +{userAdvantage}
-                </span>
-              )}
-              <span className="text-xs tracking-tight text-theme-muted select-none ml-0.5">
-                {userCaptured.map((p, idx) => (
-                  <span key={idx} className="opacity-75">{PIECE_FIGURINES[p]}</span>
-                ))}
-              </span>
-            </div>
-            {activeConfig && (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveConfig(null);
-                  chess.reset();
-                  setFen(chess.fen());
-                  setMoves([]);
-                  setArrows([]);
-                  setHighlights([]);
-                  setGameOver(null);
+          <PlayerBar
+            testId="player-bottom"
+            name="You"
+            rating={905}
+            avatar={<PlayerAvatar name="Master" size={40} className="!rounded-none" />}
+            captured={userCaptured.map((p, idx) => (
+              <span key={idx}>{PIECE_FIGURINES[p]}</span>
+            ))}
+            advantage={userAdvantage}
+            active={!!activeConfig && !gameOver && fen.split(' ')[1] === (userIsWhite ? 'w' : 'b')}
+            right={
+              <>
+                {activeConfig && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveConfig(null);
+                      chess.reset();
+                      setFen(chess.fen());
+                      setMoves([]);
+                      setArrows([]);
+                      setHighlights([]);
+                      setGameOver(null);
     setTippingSquare(null);
-                  setKingBadges([]);
-                  setShowGameOverModal(false);
-                }}
-                className="text-xs font-semibold text-theme-muted hover:text-theme-text flex items-center gap-1 transition-colors"
-              >
-                <ArrowLeft size={13} />
-                <span>Exit to Lobby</span>
-              </button>
-            )}
-          </div>
+                      setKingBadges([]);
+                      setShowGameOverModal(false);
+                    }}
+                    className="text-xs font-semibold text-theme-muted hover:text-theme-text flex items-center gap-1 transition-colors"
+                  >
+                    <ArrowLeft size={13} />
+                    <span>Exit to Lobby</span>
+                  </button>
+                )}
+              </>
+            }
+          />
         </div>
       </div>
 
       {/* Right Zone: Lobby or In-Game Panel (460px to 500px, clamp 380-500) */}
-      <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 overflow-hidden">
+      <div className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] z-20 overflow-hidden">
         {/* Panel Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60">
+        <div className="flex items-center justify-between px-4 h-14 flex-shrink-0 border-b border-theme-border/60">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold font-display text-theme-text">Play Coach</span>
+            <img src="/assets/ui/icon_play.webp" alt="" className="w-7 h-7 object-contain" />
+            <span className="text-xl font-extrabold font-display text-theme-text">Play Coach</span>
             <span
               className={`text-xs font-bold uppercase px-1.5 py-0.2 rounded border ${
                 activeConfig
