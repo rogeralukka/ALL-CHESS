@@ -5,7 +5,7 @@ import { Toggle } from '@/components/Toggle';
 import { Segmented } from '@/components/Segmented';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { CoachBubble } from '@/features/coach/CoachBubble';
-import { Swords, ChevronDown, ChevronUp, Zap, Shield, Sparkles } from 'lucide-react';
+import { Swords, ChevronDown, ChevronUp, Zap, Shield, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export interface PlayConfig {
   levelRating: number;
@@ -22,10 +22,22 @@ export interface PlayConfig {
 
 interface PlayLobbyProps {
   onStartGame: (config: PlayConfig) => void;
+  selectedLevel?: number;
+  onLevelChange?: (level: number) => void;
 }
 
-export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
-  const [selectedLevel, setSelectedLevel] = useState<number>(800);
+export const PlayLobby: React.FC<PlayLobbyProps> = ({
+  onStartGame,
+  selectedLevel: controlledLevel,
+  onLevelChange,
+}) => {
+  const [internalLevel, setInternalLevel] = useState<number>(800);
+  const selectedLevel = controlledLevel ?? internalLevel;
+  const setSelectedLevel = (lvl: number) => {
+    setInternalLevel(lvl);
+    onLevelChange?.(lvl);
+  };
+
   const [userColor, setUserColor] = useState<'white' | 'random' | 'black'>('white');
   const [showAllLevels, setShowAllLevels] = useState(false);
 
@@ -64,10 +76,10 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
   };
 
   return (
-    <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full space-y-6">
+    <div className="w-full space-y-4">
       {/* Top Banner with Coach Portrait + Welcome Bubble */}
-      <Card className="flex flex-col sm:flex-row items-center gap-5 p-5 bg-gradient-to-r from-theme-raised via-theme-card to-theme-card border-amber-500/20 shadow-md">
-        <CoachAvatar expression="wave" mode="bust" size={84} />
+      <Card className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gradient-to-r from-theme-raised via-theme-card to-theme-card border-amber-500/20 shadow-md">
+        <CoachAvatar expression="wave" mode="bust" size={68} />
         <div className="flex-1 min-w-0">
           <CoachBubble
             messages={[
@@ -81,23 +93,23 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
       </Card>
 
       {/* Level Selection Cards */}
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold font-display uppercase tracking-wider text-theme-muted">
-            Choose Difficulty Level
+          <h2 className="text-xs font-bold font-display uppercase tracking-wider text-theme-muted">
+            Difficulty Level
           </h2>
           <button
             type="button"
             onClick={() => setShowAllLevels(!showAllLevels)}
             className="text-xs font-semibold text-amber-500 hover:underline flex items-center gap-1"
           >
-            <span>{showAllLevels ? 'Show presets' : 'Show all ratings (400-2000)'}</span>
+            <span>{showAllLevels ? 'Presets' : 'All (400-2000)'}</span>
             {showAllLevels ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
 
         {!showAllLevels ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-2.5">
             {levelPresets.map((lvl) => {
               const isSelected = selectedLevel === lvl.rating;
               return (
@@ -105,22 +117,27 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
                   key={lvl.rating}
                   type="button"
                   onClick={() => setSelectedLevel(lvl.rating)}
-                  className={`p-4 rounded-lg border text-left transition-all relative select-none flex flex-col justify-between h-28 ${
+                  className={`p-3 rounded-lg text-left transition-all relative select-none flex flex-col justify-between gap-1.5 ${
                     isSelected
-                      ? 'bg-amber-500/15 border-amber-500 shadow-md ring-1 ring-amber-500'
-                      : 'bg-theme-card border-theme-border hover:bg-theme-raised/60'
+                      ? 'bg-amber-500/15 border-2 border-amber-500 ring-2 ring-amber-500/40 shadow-md'
+                      : 'bg-theme-card border border-theme-border hover:bg-theme-raised/60'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-base text-theme-text flex items-center gap-2">
+                    <span className="font-bold text-sm text-theme-text flex items-center gap-2">
                       <span className={isSelected ? 'text-amber-500' : 'text-theme-muted'}>
                         {lvl.icon}
                       </span>
                       {lvl.name}
                     </span>
-                    <span className="text-xs font-mono font-bold bg-theme-raised px-2 py-0.5 rounded">
-                      {lvl.rating}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono tabular-nums font-bold bg-theme-raised px-2 py-0.5 rounded">
+                        {lvl.rating}
+                      </span>
+                      {isSelected && (
+                        <CheckCircle2 size={16} className="text-amber-500 flex-shrink-0" />
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-theme-muted leading-snug">{lvl.desc}</p>
                 </button>
@@ -128,19 +145,20 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {allRatings.map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setSelectedLevel(r)}
-                className={`py-3 rounded-md border text-center font-mono font-bold text-xs transition-all ${
+                className={`py-2 px-1 rounded-md border text-center font-mono tabular-nums font-bold text-xs transition-all flex items-center justify-center gap-1 ${
                   selectedLevel === r
-                    ? 'bg-amber-500 text-black border-amber-500 shadow'
+                    ? 'bg-amber-500 text-black border-2 border-amber-400 shadow ring-2 ring-amber-500/40'
                     : 'bg-theme-card border-theme-border text-theme-text hover:bg-theme-raised'
                 }`}
               >
-                {r}
+                <span>{r}</span>
+                {selectedLevel === r && <CheckCircle2 size={12} className="stroke-[3]" />}
               </button>
             ))}
           </div>
@@ -156,8 +174,8 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
           value={userColor}
           onChange={(v) => setUserColor(v)}
           options={[
-            { value: 'white', label: 'White (First move)' },
-            { value: 'random', label: 'Random Color' },
+            { value: 'white', label: 'White' },
+            { value: 'random', label: 'Random' },
             { value: 'black', label: 'Black' },
           ]}
         />
@@ -165,39 +183,39 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
 
       {/* Assistant & Coaching Toggles */}
       <Card className="p-4 space-y-3">
-        <h3 className="text-xs font-bold font-display uppercase tracking-wider text-theme-muted mb-2">
-          Coaching Assistance Settings
+        <h3 className="text-xs font-bold font-display uppercase tracking-wider text-theme-muted mb-1">
+          Coaching Assistance
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3">
           <Toggle
             checked={coachComments}
             onChange={setCoachComments}
             label="Coach Speech Feedback"
-            description="Real-time speech bubbles reacting to both sides' moves"
+            description="Real-time speech bubbles reacting to moves"
           />
           <Toggle
             checked={showHints}
             onChange={setShowHints}
             label="Allow In-Game Hints"
-            description="Highlighted hint button available whenever you need guidance"
+            description="Visual hint button when guidance is needed"
           />
           <Toggle
             checked={allowTakebacks}
             onChange={setAllowTakebacks}
             label="Allow Take-backs"
-            description="Rewind accidental slips or tactical blunders"
+            description="Rewind accidental slips or blunders"
           />
           <Toggle
             checked={evalBar}
             onChange={setEvalBar}
             label="Evaluation Bar"
-            description="Display live advantage balance alongside the board"
+            description="Display live advantage balance"
           />
           <Toggle
             checked={threatArrows}
             onChange={setThreatArrows}
             label="Threat Arrows"
-            description="Highlight dangerous opponent skewers and discovered checks"
+            description="Highlight dangerous opponent skewers & checks"
           />
           <Toggle
             checked={suggestionArrows}
@@ -209,13 +227,13 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({ onStartGame }) => {
             checked={moveFeedback}
             onChange={setMoveFeedback}
             label="Move Classification Badges"
-            description="Show Best, Great, or Mistake badges after moves"
+            description="Show Best, Great, or Mistake badges"
           />
         </div>
       </Card>
 
       {/* Primary Play Button */}
-      <div className="pt-2">
+      <div className="pt-1">
         <Button
           variant="primary"
           size="lg"

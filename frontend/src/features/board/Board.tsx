@@ -27,7 +27,7 @@ export interface BoardProps {
   boardTheme: BoardTheme;
   pieceSet: PieceSet;
   animationSpeed?: 'off' | 'fast' | 'medium' | 'slow';
-  coordinates?: 'inside' | 'outside';
+  coordinates?: 'inside' | 'outside' | 'none';
   autoQueen?: boolean;
   className?: string;
 }

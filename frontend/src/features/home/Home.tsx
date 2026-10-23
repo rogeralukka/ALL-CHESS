@@ -4,6 +4,9 @@ import { Button } from '@/components/Button';
 import { ProgressBar } from '@/components/ProgressBar';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { CoachBubble } from '@/features/coach/CoachBubble';
+import { Board } from '@/features/board/Board';
+import { useSettingsStore } from '@/data/settingsStore';
+import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import {
   gameRepository,
   statsRepository,
@@ -61,8 +64,19 @@ export const Home: React.FC = () => {
     };
   }, []);
 
-  const streakDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const streakCompleted = [true, true, true, true, true, false, false];
+  const { boardThemeId, pieceSetId } = useSettingsStore();
+  const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
+  const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
+
+  const streakDays = [
+    { day: 'M', state: 'done' },
+    { day: 'T', state: 'done' },
+    { day: 'W', state: 'done' },
+    { day: 'T', state: 'done' },
+    { day: 'F', state: 'today' },
+    { day: 'S', state: 'pending' },
+    { day: 'S', state: 'pending' },
+  ];
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
@@ -80,19 +94,21 @@ export const Home: React.FC = () => {
                 Active
               </span>
             </div>
-            {/* 7-Day Pill Strip */}
+            {/* 7-Day Pill Strip: Filled for done days, outline for today */}
             <div className="flex gap-1.5 mt-1">
-              {streakDays.map((day, idx) => (
+              {streakDays.map((chip, idx) => (
                 <div
                   key={idx}
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    streakCompleted[idx]
-                      ? 'bg-amber-500 text-black'
-                      : 'bg-theme-raised text-theme-muted border border-theme-border'
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
+                    chip.state === 'done'
+                      ? 'bg-amber-500 text-black shadow-sm'
+                      : chip.state === 'today'
+                      ? 'border-2 border-amber-500 text-amber-500 bg-amber-500/10 ring-1 ring-amber-500/40 font-black'
+                      : 'bg-theme-raised text-theme-muted/50 border border-theme-border/50'
                   }`}
-                  title={`${day}: ${streakCompleted[idx] ? 'Completed' : 'Pending'}`}
+                  title={`${chip.day}: ${chip.state === 'done' ? 'Completed' : chip.state === 'today' ? 'Today (Active)' : 'Upcoming'}`}
                 >
-                  {day}
+                  {chip.day}
                 </div>
               ))}
             </div>
@@ -109,7 +125,7 @@ export const Home: React.FC = () => {
 
       {/* Coach Daily Drill Hero Card */}
       {!coachDismissed && (
-        <div className="flex flex-col md:flex-row items-center gap-5 p-6 rounded-2xl bg-gradient-to-r from-amber-500/15 via-theme-raised to-theme-card border border-amber-500/30 shadow-md">
+        <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-theme-raised to-theme-card border border-amber-500/30 shadow-md">
           <div className="relative flex-shrink-0">
             <CoachAvatar expression="thumbsup" mode="bust" size={84} />
             <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full">
@@ -143,7 +159,7 @@ export const Home: React.FC = () => {
       )}
 
       {/* Your Ratings Section */}
-      <Card className="p-5 space-y-4">
+      <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TrendingUp size={18} className="text-amber-500" />
@@ -169,11 +185,11 @@ export const Home: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-theme-muted block">
                   {r.mode}
                 </span>
-                <span className="text-2xl font-black font-mono text-theme-text mt-0.5 block">
+                <span className="text-2xl font-black font-mono tabular-nums text-theme-text mt-0.5 block">
                   {r.rating}
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-xs font-bold font-mono px-2 py-1 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30">
+              <div className="flex items-center gap-1 text-xs font-bold font-mono tabular-nums px-2 py-1 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30">
                 <ArrowUpRight size={14} />
                 <span>+{r.deltaWeekly}</span>
               </div>
@@ -182,30 +198,43 @@ export const Home: React.FC = () => {
         </div>
       </Card>
 
-      {/* 2-Column Section: Continue Learning & Daily Tactical Puzzle */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Card 1: Continue Learning */}
-        <Card className="p-5 flex flex-col justify-between space-y-4 hover:border-amber-500/50 transition-colors">
+      {/* 3 Entry Cards: Lessons, Puzzles, Play Coach (Mini Board Preview, Icon + Title, Progress, One Button) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card 1: Lessons */}
+        <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                <BookOpen size={18} />
-              </div>
-              <span className="text-xs font-bold text-amber-500 font-mono">Stage 2 of 8</span>
+            <div className="w-full aspect-square max-w-[140px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
+              <Board
+                fen="8/8/4k3/8/4K3/8/4P3/8 w - - 0 1"
+                boardTheme={currentBoardTheme}
+                pieceSet={currentPieceSet}
+                interactive={false}
+                coordinates="none"
+                animationSpeed="off"
+              />
             </div>
-            <div>
-              <h3 className="font-bold font-display text-theme-text text-base">
-                {currentStage?.title || 'Endgame: Back-Rank Basics'}
-              </h3>
-              <p className="text-xs text-theme-muted mt-1 leading-relaxed">
-                {currentStage?.description ||
-                  'Spotting back-rank pawn barriers and delivering deflection checkmates.'}
-              </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                  <BookOpen size={16} />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-theme-muted block">
+                    Lessons
+                  </span>
+                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]">
+                    {currentStage?.title || 'Endgame Basics'}
+                  </h3>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums">
+                Stage 2/8
+              </span>
             </div>
             <div className="space-y-1">
               <div className="flex justify-between text-[11px] font-semibold text-theme-muted">
-                <span>Progress</span>
-                <span className="font-mono text-amber-500">62%</span>
+                <span>Roadmap Progress</span>
+                <span className="font-mono text-amber-500 tabular-nums">62%</span>
               </div>
               <ProgressBar value={62} max={100} color="bg-amber-500" />
             </div>
@@ -214,55 +243,116 @@ export const Home: React.FC = () => {
             variant="secondary"
             size="sm"
             fullWidth
-            icon={<ChevronRight size={16} />}
+            icon={<ChevronRight size={15} />}
             onClick={() => navigate('/learn')}
           >
-            Resume Roadmap
+            Resume Lessons
           </Button>
         </Card>
 
-        {/* Card 2: Daily Tactical Puzzle */}
-        <Card className="p-5 flex flex-col justify-between space-y-4 hover:border-amber-500/50 transition-colors">
+        {/* Card 2: Puzzles */}
+        <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
           <div className="space-y-3">
+            <div className="w-full aspect-square max-w-[140px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
+              <Board
+                fen={dailyPuzzle?.fen || '6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1'}
+                boardTheme={currentBoardTheme}
+                pieceSet={currentPieceSet}
+                interactive={false}
+                coordinates="none"
+                animationSpeed="off"
+              />
+            </div>
             <div className="flex items-center justify-between">
-              <div className="w-9 h-9 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                <PuzzleIcon size={18} />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                  <PuzzleIcon size={16} />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-theme-muted block">
+                    Puzzles
+                  </span>
+                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]">
+                    {dailyPuzzle?.goal || 'Daily Tactical Mate'}
+                  </h3>
+                </div>
               </div>
-              <span className="text-xs font-mono font-bold text-purple-400">
-                Rating {dailyPuzzle?.rating || 650}
+              <span className="text-xs font-mono font-bold text-purple-400 tabular-nums">
+                {dailyPuzzle?.rating || 650}
               </span>
             </div>
-            <div>
-              <h3 className="font-bold font-display text-theme-text text-base">
-                {dailyPuzzle?.goal || 'Daily Mate in 1'}
-              </h3>
-              <p className="text-xs text-theme-muted mt-1 leading-relaxed">
-                {dailyPuzzle
-                  ? `Tactical theme: ${dailyPuzzle.theme.join(', ')}. White to move!`
-                  : 'White to move. Strike the back rank and box the king behind pawns!'}
-              </p>
-            </div>
-            <div className="p-2.5 rounded bg-theme-raised text-xs flex items-center gap-2">
-              <Flame size={14} className="text-amber-500" />
-              <span className="text-theme-muted">
-                Average solve time: <strong>14s</strong>
-              </span>
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px] font-semibold text-theme-muted">
+                <span>Daily Challenge</span>
+                <span className="font-mono text-theme-text tabular-nums">14s avg</span>
+              </div>
+              <ProgressBar value={80} max={100} color="bg-purple-500" />
             </div>
           </div>
           <Button
             variant="secondary"
             size="sm"
             fullWidth
-            icon={<ChevronRight size={16} />}
+            icon={<ChevronRight size={15} />}
             onClick={() => navigate('/puzzles')}
           >
             Solve Puzzle
           </Button>
         </Card>
+
+        {/* Card 3: Play Coach */}
+        <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-colors">
+          <div className="space-y-3">
+            <div className="w-full aspect-square max-w-[140px] mx-auto rounded-lg overflow-hidden border border-theme-border/60 shadow-sm pointer-events-none">
+              <Board
+                fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                boardTheme={currentBoardTheme}
+                pieceSet={currentPieceSet}
+                interactive={false}
+                coordinates="none"
+                animationSpeed="off"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                  <Swords size={16} />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-theme-muted block">
+                    Play Coach
+                  </span>
+                  <h3 className="font-bold font-display text-theme-text text-sm truncate max-w-[150px]">
+                    Rated Sparring
+                  </h3>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold text-amber-500 tabular-nums">
+                Level 2
+              </span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px] font-semibold text-theme-muted">
+                <span>Sparring Record</span>
+                <span className="font-mono text-emerald-500 tabular-nums">59 Wins</span>
+              </div>
+              <ProgressBar value={56} max={100} color="bg-amber-500" />
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            fullWidth
+            icon={<ChevronRight size={15} />}
+            onClick={() => navigate('/play')}
+          >
+            Play Coach
+          </Button>
+        </Card>
       </div>
 
       {/* Review Your Games Section (3 Recent Games from Repository) */}
-      <Card className="p-5 space-y-4">
+      <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-amber-500" />
@@ -292,13 +382,13 @@ export const Home: React.FC = () => {
             return (
               <div
                 key={game.id}
-                className="p-4 rounded-xl bg-theme-raised border border-theme-border/60 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
               >
                 {/* Left: Result Chip + Game Info */}
                 <div className="flex items-center gap-3.5 min-w-0">
                   {/* Result Chip */}
                   <span
-                    className={`font-mono text-xs font-bold px-2.5 py-1 rounded border flex-shrink-0 ${
+                    className={`font-mono tabular-nums text-xs font-bold px-2.5 py-1 rounded border flex-shrink-0 ${
                       userWon
                         ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
                         : userLost
@@ -320,7 +410,7 @@ export const Home: React.FC = () => {
                           {opponent.title}
                         </span>
                       )}
-                      <span className="text-xs text-theme-muted font-mono">({opponent.rating})</span>
+                      <span className="text-xs text-theme-muted font-mono tabular-nums">({opponent.rating})</span>
                     </div>
                     <p className="text-xs text-theme-muted truncate mt-0.5">
                       {game.opening.name} • {game.timeControl} • {fullMoves} moves
@@ -338,7 +428,7 @@ export const Home: React.FC = () => {
                   ) : userAccuracy !== undefined ? (
                     <div className="text-right">
                       <div className="text-[10px] uppercase font-bold text-theme-muted">Accuracy</div>
-                      <div className="font-mono font-bold text-emerald-500 text-sm">
+                      <div className="font-mono tabular-nums font-bold text-emerald-500 text-sm">
                         {userAccuracy}%
                       </div>
                     </div>
@@ -360,9 +450,9 @@ export const Home: React.FC = () => {
       </Card>
 
       {/* Quick Launch & Friends Mini Leaderboard Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Quick Launch Actions */}
-        <Card className="p-5 space-y-3">
+        <Card className="p-4 space-y-3">
           <h3 className="font-bold font-display text-theme-text text-base">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -408,7 +498,7 @@ export const Home: React.FC = () => {
         </Card>
 
         {/* Friends Mini Leaderboard */}
-        <Card className="p-5 space-y-3">
+        <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold font-display text-theme-text text-base flex items-center gap-2">
               <Users size={16} className="text-amber-500" />
@@ -441,7 +531,7 @@ export const Home: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs font-bold text-amber-500">{f.rating}</span>
+                  <span className="font-mono tabular-nums text-xs font-bold text-amber-500">{f.rating}</span>
                   <Button
                     size="sm"
                     variant="ghost"

@@ -27,26 +27,26 @@ export const StatsSections: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Win / Draw / Loss Record Card */}
-      <Card className="p-5 space-y-4">
+      <Card className="p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
             <h3 className="font-bold font-display text-theme-text text-base">Game Record</h3>
             <p className="text-xs text-theme-muted">{totalGames} Games Analyzed (All Time Controls)</p>
           </div>
           <div className="flex gap-4 text-xs font-semibold">
-            <span className="text-emerald-500">{wins} Wins ({winPct}%)</span>
-            <span className="text-neutral-400">{draws} Draws ({drawPct}%)</span>
-            <span className="text-red-500">{losses} Losses ({lossPct}%)</span>
+            <span className="text-emerald-500 font-mono tabular-nums">{wins} Wins ({winPct}%)</span>
+            <span className="text-neutral-400 font-mono tabular-nums">{draws} Draws ({drawPct}%)</span>
+            <span className="text-red-500 font-mono tabular-nums">{losses} Losses ({lossPct}%)</span>
           </div>
         </div>
 
-        {/* Visual Record Bar */}
-        <div className="w-full h-3 rounded-full overflow-hidden flex bg-theme-raised">
+        {/* Visual Record Segmented Bar */}
+        <div className="w-full flex gap-1.5 h-3">
           <div
             style={{ width: `${winPct}%` }}
-            className="bg-emerald-500 transition-all duration-500"
+            className="bg-emerald-500 rounded-l-full transition-all duration-500"
             title={`Wins: ${winPct}%`}
           />
           <div
@@ -56,15 +56,37 @@ export const StatsSections: React.FC = () => {
           />
           <div
             style={{ width: `${lossPct}%` }}
-            className="bg-red-500 transition-all duration-500"
+            className="bg-red-500 rounded-r-full transition-all duration-500"
             title={`Losses: ${lossPct}%`}
           />
+        </div>
+
+        {/* Labels under each segment */}
+        <div className="flex justify-between items-center text-xs pt-1">
+          <div className="text-left">
+            <span className="block text-[11px] uppercase font-bold text-theme-muted tracking-wider">Wins</span>
+            <span className="font-mono font-bold text-emerald-500 tabular-nums">
+              {wins} <span className="text-theme-muted font-normal">({winPct}%)</span>
+            </span>
+          </div>
+          <div className="text-center">
+            <span className="block text-[11px] uppercase font-bold text-theme-muted tracking-wider">Draws</span>
+            <span className="font-mono font-bold text-neutral-400 tabular-nums">
+              {draws} <span className="text-theme-muted font-normal">({drawPct}%)</span>
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="block text-[11px] uppercase font-bold text-theme-muted tracking-wider">Losses</span>
+            <span className="font-mono font-bold text-red-500 tabular-nums">
+              {losses} <span className="text-theme-muted font-normal">({lossPct}%)</span>
+            </span>
+          </div>
         </div>
       </Card>
 
       {/* Strengths & Areas to Polish Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-5 space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Card className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <ShieldCheck size={18} className="text-emerald-500" />
             <h3 className="font-bold font-display text-theme-text text-base">Key Strengths</h3>
@@ -73,13 +95,14 @@ export const StatsSections: React.FC = () => {
           <div className="flex flex-wrap gap-2 pt-1">
             {MOCK_STRENGTHS.map((s) => (
               <Chip key={s.label} variant="success">
-                {s.label} <span className="font-mono ml-1 font-bold">{s.delta}</span>
+                <span>{s.label}</span>
+                <span className="font-mono tabular-nums inline-block w-12 text-right font-bold ml-1.5">{s.delta}</span>
               </Chip>
             ))}
           </div>
         </Card>
 
-        <Card className="p-5 space-y-3">
+        <Card className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle size={18} className="text-amber-500" />
             <h3 className="font-bold font-display text-theme-text text-base">Areas to Polish</h3>
@@ -88,7 +111,8 @@ export const StatsSections: React.FC = () => {
           <div className="flex flex-wrap gap-2 pt-1">
             {MOCK_WEAKNESSES.map((w) => (
               <Chip key={w.label} variant="danger">
-                {w.label} <span className="font-mono ml-1 font-bold">{w.delta}</span>
+                <span>{w.label}</span>
+                <span className="font-mono tabular-nums inline-block w-12 text-right font-bold ml-1.5">{w.delta}</span>
               </Chip>
             ))}
           </div>
@@ -96,7 +120,7 @@ export const StatsSections: React.FC = () => {
       </div>
 
       {/* Phase Points Lost Comparison */}
-      <Card className="p-5 space-y-4">
+      <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers size={18} className="text-amber-500" />
@@ -105,7 +129,7 @@ export const StatsSections: React.FC = () => {
           <span className="text-xs text-theme-muted font-medium">Lower is better</span>
         </div>
 
-        <div className="space-y-4 pt-1">
+        <div className="space-y-3 pt-1">
           {/* Opening */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs">
@@ -157,7 +181,7 @@ export const StatsSections: React.FC = () => {
       </Card>
 
       {/* Most Played Openings Table */}
-      <Card className="p-5 space-y-4">
+      <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen size={18} className="text-amber-500" />

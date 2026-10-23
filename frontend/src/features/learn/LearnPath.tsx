@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Segmented } from '@/components/Segmented';
 import { ProgressBar } from '@/components/ProgressBar';
 import { toast } from '@/components/Toast';
+import { useMotion } from '@/lib/useMotion';
 import {
   CheckCircle2,
   Lock,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 
 export const LearnPath: React.FC = () => {
+  const { isFull } = useMotion();
   const [activeCategory, setActiveCategory] = useState<'endgame' | 'openings' | 'middlegame'>('endgame');
   const stages = MOCK_LEARN_STAGES.filter((s) => s.category === activeCategory);
 
@@ -151,8 +153,8 @@ export const LearnPath: React.FC = () => {
             />
           </svg>
 
-          {/* Roadmap Nodes */}
-          <div className="relative z-10 space-y-6">
+          {/* Roadmap Nodes (Round nodes with titles underneath, evenly spaced) */}
+          <div className="relative z-10 space-y-12">
             {stages.map((stg, index) => {
               const isDone = stg.status === 'done';
               const isCurrent = stg.status === 'current';
@@ -165,68 +167,53 @@ export const LearnPath: React.FC = () => {
                 <div
                   key={stg.id}
                   onClick={() => !isLocked && setSelectedStage(stg)}
-                  className={`transition-all duration-300 transform ${offsetClass}`}
+                  className={`flex flex-col items-center transition-all duration-300 transform ${offsetClass}`}
                 >
-                  <div
-                    className={`inline-flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all select-none max-w-sm w-full ${
-                      isSelected
-                        ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/60 shadow-xl'
-                        : isCurrent
-                        ? 'bg-amber-500/15 border-amber-500/80 shadow-lg cursor-pointer'
-                        : isDone
-                        ? 'bg-theme-card/90 border-theme-border hover:border-amber-500/50 hover:bg-theme-raised/60 transition-colors duration-100 cursor-pointer shadow-md'
-                        : isUnlocked
-                        ? 'bg-theme-card/75 border-amber-500/40 hover:border-amber-500 hover:bg-theme-raised/60 transition-colors duration-100 cursor-pointer shadow-md'
-                        : 'bg-theme-card/30 border-theme-border/30 opacity-50 cursor-not-allowed'
-                    }`}
-                  >
-                    {/* Circle Node with State */}
-                    <div className="relative flex-shrink-0">
-                      {isCurrent && (
-                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500 text-black shadow-md flex items-center gap-1 animate-bounce">
-                          <span>You are here</span>
-                        </div>
+                  {/* Round Node with State */}
+                  <div className="relative">
+                    {isCurrent && (
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500 text-black shadow-md flex items-center gap-1">
+                        <span>You are here</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm shadow-lg transition-transform ${
+                        isSelected
+                          ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-theme-page scale-105'
+                          : ''
+                      } ${
+                        isDone
+                          ? 'bg-emerald-500 text-black border-2 border-emerald-400 hover:scale-105'
+                          : isCurrent
+                          ? `bg-amber-500 text-black shadow-amber-500/50 hover:scale-105 ${
+                              isFull ? 'animate-pulse' : ''
+                            }`
+                          : isUnlocked
+                          ? 'bg-theme-card text-amber-500 border-2 border-amber-500/60 hover:scale-105 hover:bg-theme-raised'
+                          : 'bg-theme-raised/60 text-theme-muted border border-theme-border/40 opacity-50 cursor-not-allowed'
+                      }`}
+                      aria-label={`${stg.title} (${stg.status})`}
+                    >
+                      {isDone ? (
+                        <CheckCircle2 size={24} />
+                      ) : isCurrent ? (
+                        <Play size={22} className="fill-black ml-0.5" />
+                      ) : isUnlocked ? (
+                        <Sparkles size={20} />
+                      ) : (
+                        <Lock size={18} />
                       )}
-                      <div
-                        className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-md transition-transform ${
-                          isDone
-                            ? 'bg-emerald-500 text-black border-2 border-emerald-400'
-                            : isCurrent
-                            ? 'bg-amber-500 text-black ring-4 ring-amber-500/40 shadow-amber-500/50 animate-pulse'
-                            : isUnlocked
-                            ? 'bg-amber-500/20 text-amber-500 border-2 border-amber-500/60'
-                            : 'bg-theme-raised text-theme-muted border border-theme-border'
-                        }`}
-                      >
-                        {isDone ? (
-                          <CheckCircle2 size={20} />
-                        ) : isCurrent ? (
-                          <Play size={18} className="fill-black ml-0.5" />
-                        ) : isUnlocked ? (
-                          <Sparkles size={18} />
-                        ) : (
-                          <Lock size={16} />
-                        )}
-                      </div>
-                    </div>
+                    </button>
+                  </div>
 
-                    {/* Node Text & XP */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-mono font-bold text-theme-muted">
-                          #{index + 1}
-                        </span>
-                        <h3 className="font-bold text-sm text-theme-text truncate">
-                          {stg.title}
-                        </h3>
-                      </div>
-                      <p className="text-xs text-theme-muted truncate mt-0.5">
-                        {stg.description}
-                      </p>
-                    </div>
-
-                    <span className="text-[11px] font-mono font-bold text-amber-500 bg-theme-raised px-2 py-0.5 rounded border border-theme-border flex-shrink-0">
-                      +{stg.xp}
+                  {/* Title under node */}
+                  <div className="mt-2 text-center max-w-[140px] select-none">
+                    <span className="text-xs font-bold text-theme-text block leading-snug">
+                      #{index + 1} {stg.title}
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-500 font-semibold block mt-0.5">
+                      +{stg.xp} XP
                     </span>
                   </div>
                 </div>

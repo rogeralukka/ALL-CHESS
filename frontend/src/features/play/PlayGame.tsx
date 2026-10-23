@@ -282,6 +282,8 @@ export const PlayGame: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const [lobbyLevel, setLobbyLevel] = useState<number>(800);
+
   const lastMoveObj = moves[moves.length - 1];
   const lastMoveFrom = lastMoveObj?.from;
   const lastMoveTo = lastMoveObj?.to;
@@ -289,13 +291,9 @@ export const PlayGame: React.FC = () => {
     return lastMoveFrom && lastMoveTo ? { from: lastMoveFrom, to: lastMoveTo } : null;
   }, [lastMoveFrom, lastMoveTo]);
 
-  if (!activeConfig) {
-    return <PlayLobby onStartGame={handleStartGame} />;
-  }
-
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
-      {/* Center Zone: Board & Eval Bar */}
+      {/* Center Zone: Board & Eval Bar (Visible both in Lobby and in Game, matching Chess.com) */}
       <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0 relative">
         <div className="w-full max-w-[min(88vh,680px)] flex flex-col gap-2">
           {/* Top Player (Coach) */}
@@ -305,14 +303,18 @@ export const PlayGame: React.FC = () => {
                 🤖
               </span>
               <span className="font-bold text-theme-text">Coach All-Chess</span>
-              <span className="font-mono">({activeConfig.levelRating})</span>
+              <span className="font-mono tabular-nums">
+                ({activeConfig ? activeConfig.levelRating : lobbyLevel})
+              </span>
             </div>
-            <span className="font-mono font-semibold">{activeConfig.levelName}</span>
+            <span className="font-mono font-semibold">
+              {activeConfig ? activeConfig.levelName : `Rated ${lobbyLevel}`}
+            </span>
           </div>
 
           {/* Board + Eval Bar */}
           <div className="flex items-center justify-center gap-2.5 w-full">
-            {activeConfig.evalBar && (
+            {activeConfig?.evalBar && (
               <EvalBar
                 evalScore={lastMoveObj?.eval?.eval || 0}
                 orientation={orientation}
@@ -330,7 +332,7 @@ export const PlayGame: React.FC = () => {
                 arrows={arrows}
                 highlights={highlights}
                 lastMove={boardLastMove}
-                interactive={!gameOver}
+                interactive={Boolean(activeConfig && !gameOver)}
                 onMove={handleUserMove}
                 onIllegalMove={handleIllegalMove}
               />
@@ -341,7 +343,15 @@ export const PlayGame: React.FC = () => {
                   isOpen={true}
                   winner={gameOver.winner}
                   reason={gameOver.reason}
-                  onNewGame={() => setActiveConfig(null)}
+                  onNewGame={() => {
+                    setActiveConfig(null);
+                    chess.reset();
+                    setFen(chess.fen());
+                    setMoves([]);
+                    setArrows([]);
+                    setHighlights([]);
+                    setGameOver(null);
+                  }}
                   onGameReview={() => navigate('/review/game-01')}
                 />
               )}
@@ -355,136 +365,164 @@ export const PlayGame: React.FC = () => {
                 You
               </span>
               <span className="font-bold text-theme-text">You</span>
-              <span className="font-mono">(905)</span>
+              <span className="font-mono tabular-nums">(905)</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setActiveConfig(null)}
-              className="text-xs font-semibold text-theme-muted hover:text-theme-text flex items-center gap-1"
-            >
-              <ArrowLeft size={13} />
-              <span>Back to Lobby</span>
-            </button>
+            {activeConfig && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveConfig(null);
+                  chess.reset();
+                  setFen(chess.fen());
+                  setMoves([]);
+                  setArrows([]);
+                  setHighlights([]);
+                  setGameOver(null);
+                }}
+                className="text-xs font-semibold text-theme-muted hover:text-theme-text flex items-center gap-1 transition-colors"
+              >
+                <ArrowLeft size={13} />
+                <span>Exit to Lobby</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Right Zone: Mode Panel (~420px fixed skeleton) */}
-      <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20">
+      {/* Right Zone: Lobby or In-Game Panel (~420px fixed width on desktop) */}
+      <div className="w-full lg:w-[420px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl z-20 overflow-hidden">
         {/* Panel Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border/60">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold font-display text-theme-text">Play Coach</span>
-            <span className="text-xs font-bold text-amber-500 uppercase px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/30">
-              Live Game
+            <span
+              className={`text-xs font-bold uppercase px-1.5 py-0.2 rounded border ${
+                activeConfig
+                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                  : 'bg-theme-raised text-theme-muted border-theme-border'
+              }`}
+            >
+              {activeConfig ? 'Live Game' : 'Match Setup'}
             </span>
           </div>
-          <span className="text-xs font-mono font-bold text-theme-muted">
-            Moves: {Math.floor(moves.length / 2)}
-          </span>
+          {activeConfig && (
+            <span className="text-xs font-mono tabular-nums font-bold text-theme-muted">
+              Moves: {Math.floor(moves.length / 2)}
+            </span>
+          )}
         </div>
 
         {/* Panel Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Coach Portrait + Stacked Speech Bubbles */}
-          <div className="flex items-start gap-3">
-            <CoachAvatar expression={coachExpression} mode="bust" size={68} />
-            <div className="flex-1 min-w-0">
-              <CoachBubble
-                messages={stackedMessages}
-                voiceEnabled={coachVoiceEnabled}
-              />
-            </div>
-          </div>
-
-          {/* Live Action Controls: Hint, Takeback, Resign, PGN */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {activeConfig.showHints && (
-              <Button
-                variant="highlight"
-                size="sm"
-                icon={<Lightbulb size={15} />}
-                onClick={handleHint}
-                disabled={Boolean(gameOver)}
-              >
-                Hint
-              </Button>
-            )}
-
-            {activeConfig.allowTakebacks && (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<RotateCcw size={15} />}
-                onClick={handleTakeback}
-                disabled={moves.length < 2 || Boolean(gameOver)}
-              >
-                Take Back
-              </Button>
-            )}
-
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Download size={15} />}
-              onClick={handleDownloadPgn}
-            >
-              PGN
-            </Button>
-
-            {/* Resign with Confirmation Popover */}
-            <div className="relative">
-              <Button
-                variant="danger"
-                size="sm"
-                icon={<Flag size={15} />}
-                onClick={() => setShowResignPopover(true)}
-                disabled={Boolean(gameOver)}
-              >
-                Resign
-              </Button>
-
-              {showResignPopover && (
-                <div className="absolute right-0 bottom-full mb-2 w-48 p-3 rounded-lg bg-theme-raised border border-theme-border shadow-2xl z-30 flex flex-col gap-2">
-                  <span className="text-xs font-bold text-theme-text text-center">Confirm Resignation?</span>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      fullWidth
-                      onClick={() => setShowResignPopover(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      fullWidth
-                      onClick={() => {
-                        setShowResignPopover(false);
-                        setGameOver({ winner: 'coach', reason: 'by resignation' });
-                      }}
-                    >
-                      Resign
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Live Move List */}
-          <Card className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-theme-muted">Game Notation</span>
-              <span className="text-[11px] text-theme-muted">Live Tracking</span>
-            </div>
-            <MoveList
-              moves={moves}
-              currentMoveIndex={moves.length - 1}
-              onSelectMove={() => {}}
+          {!activeConfig ? (
+            <PlayLobby
+              onStartGame={handleStartGame}
+              selectedLevel={lobbyLevel}
+              onLevelChange={setLobbyLevel}
             />
-          </Card>
+          ) : (
+            <>
+              {/* Coach Portrait + Stacked Speech Bubbles */}
+              <div className="flex items-start gap-3">
+                <CoachAvatar expression={coachExpression} mode="bust" size={68} />
+                <div className="flex-1 min-w-0">
+                  <CoachBubble
+                    messages={stackedMessages}
+                    voiceEnabled={coachVoiceEnabled}
+                  />
+                </div>
+              </div>
+
+              {/* Live Action Controls: Hint, Takeback, Resign, PGN */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {activeConfig.showHints && (
+                  <Button
+                    variant="highlight"
+                    size="sm"
+                    icon={<Lightbulb size={15} />}
+                    onClick={handleHint}
+                    disabled={Boolean(gameOver)}
+                  >
+                    Hint
+                  </Button>
+                )}
+
+                {activeConfig.allowTakebacks && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<RotateCcw size={15} />}
+                    onClick={handleTakeback}
+                    disabled={moves.length < 2 || Boolean(gameOver)}
+                  >
+                    Take Back
+                  </Button>
+                )}
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Download size={15} />}
+                  onClick={handleDownloadPgn}
+                >
+                  PGN
+                </Button>
+
+                {/* Resign with Confirmation Popover */}
+                <div className="relative">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    icon={<Flag size={15} />}
+                    onClick={() => setShowResignPopover(true)}
+                    disabled={Boolean(gameOver)}
+                  >
+                    Resign
+                  </Button>
+
+                  {showResignPopover && (
+                    <div className="absolute right-0 bottom-full mb-2 w-48 p-3 rounded-lg bg-theme-raised border border-theme-border shadow-2xl z-30 flex flex-col gap-2">
+                      <span className="text-xs font-bold text-theme-text text-center">Confirm Resignation?</span>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          fullWidth
+                          onClick={() => setShowResignPopover(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          fullWidth
+                          onClick={() => {
+                            setShowResignPopover(false);
+                            setGameOver({ winner: 'coach', reason: 'by resignation' });
+                          }}
+                        >
+                          Resign
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Move List */}
+              <Card className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-theme-muted">Game Notation</span>
+                  <span className="text-[11px] text-theme-muted">Live Tracking</span>
+                </div>
+                <MoveList
+                  moves={moves}
+                  currentMoveIndex={moves.length - 1}
+                  onSelectMove={() => {}}
+                />
+              </Card>
+            </>
+          )}
         </div>
       </div>
     </div>

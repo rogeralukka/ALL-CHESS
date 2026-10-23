@@ -38,22 +38,12 @@ export const Profile: React.FC = () => {
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
       {/* Header Profile Card */}
-      <Card className="p-6">
+      <Card className="p-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <CoachAvatar expression="thumbsup" mode="bust" size={72} />
-              <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded-full border border-black/20">
-                PRO
-              </div>
-            </div>
+            <CoachAvatar expression="thumbsup" mode="bust" size={72} />
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black font-display text-theme-text">You</h1>
-                <span className="text-xs bg-emerald-500/20 text-emerald-500 font-bold px-2 py-0.5 rounded-full">
-                  Online
-                </span>
-              </div>
+              <h1 className="text-2xl font-black font-display text-theme-text">You</h1>
               <p className="text-sm text-theme-muted mt-0.5 flex items-center gap-1.5">
                 <Calendar size={14} /> Member since October 2026 • 105 games played
               </p>
@@ -63,30 +53,30 @@ export const Profile: React.FC = () => {
           <div className="flex gap-2">
             <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
               <div className="text-[10px] uppercase font-bold text-theme-muted">Rapid</div>
-              <div className="text-lg font-black font-mono text-amber-500">905</div>
+              <div className="text-lg font-black font-mono tabular-nums text-amber-500">905</div>
             </div>
             <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
               <div className="text-[10px] uppercase font-bold text-theme-muted">Blitz</div>
-              <div className="text-lg font-black font-mono text-theme-text">870</div>
+              <div className="text-lg font-black font-mono tabular-nums text-theme-text">870</div>
             </div>
             <div className="px-4 py-2 rounded-lg bg-theme-raised border border-theme-border text-center">
               <div className="text-[10px] uppercase font-bold text-theme-muted">Bullet</div>
-              <div className="text-lg font-black font-mono text-theme-text">880</div>
+              <div className="text-lg font-black font-mono tabular-nums text-theme-text">880</div>
             </div>
           </div>
         </div>
       </Card>
 
       {/* Rating History Graph */}
-      <Card className="p-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-theme-border pb-4">
+      <Card className="p-4 space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-theme-border pb-3">
           <div>
             <div className="flex items-center gap-2">
               <TrendingUp size={20} className="text-amber-500" />
               <h2 className="text-lg font-bold font-display text-theme-text">Rating Trajectory</h2>
             </div>
             <p className="text-xs text-theme-muted mt-0.5">
-              Current: <strong className="text-amber-500 font-mono text-sm">{currentRating}</strong>{' '}
+              Current: <strong className="text-amber-500 font-mono tabular-nums text-sm">{currentRating}</strong>{' '}
               ({ratingDelta >= 0 ? `+${ratingDelta}` : ratingDelta} pts over period)
             </p>
           </div>

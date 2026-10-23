@@ -103,3 +103,65 @@ All screenshots captured in Google Chrome across mobile (390px), tablet (820px),
 #### 8. Tactical Puzzle Reward Overlay
 - **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/fixes/puzzle-reward-dusk-390.png) | [820px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/fixes/puzzle-reward-dusk-820.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/fixes/puzzle-reward-dusk-1440.png)
 - **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/fixes/puzzle-reward-dawn-390.png) | [820px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/fixes/puzzle-reward-dawn-820.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1/fixes/puzzle-reward-dawn-1440.png)
+
+---
+
+## 6. Phase 1.5 "Feels Like Chess.com" Polish Pass
+
+Phase 1.5 executed a comprehensive polish pass across four sequential commits, resolving critical browser-level rendering issues, upgrading the tactile motion and audio engine, achieving visual and structural parity with Chess.com on Game Review, and polishing all primary application screens.
+
+### 6.1 Honest Accounting of Deliverables
+
+| Requirement / Item | Status | Implementation Details & Architectural Decisions |
+|---|---|---|
+| **1. Empty Board Fix (P0)** | **Done** | Module-level `EMPTY = []` constant default for array props (`arrows`, `badges`, `highlights`, `legalTargets`) in `Board.tsx`. Added array equality guard in `setComputedLegalTargets` effect, and memoized array literals across callers. Eliminated infinite re-render loop and "Maximum update depth exceeded" errors. |
+| **2. Browser Smoke Tests (P0)** | **Done** | Implemented `frontend/scripts/run-smoke-tests.mjs` executed via `npm run test:e2e`. Visits 9 routes across 4 viewports/motion matrix (`desktop-no-pref`, `desktop-reduced`, `mobile-no-pref`, `mobile-reduced`). Enforces **zero console errors/warnings**, asserts board piece counts ($\ge 2$), and verifies the `??` blunder badge on f7 at move 6. |
+| **3. Motion System Revamp** | **Done** | Implemented unified `useMotion()` hook with Full / Reduced / Off settings. Reduced mode keeps progressive coach text typing, subtle 120-150ms cross-fades, badge fades, and 80ms piece slides, removing only large bounces/rays/confetti. Tied `data-motion` attribute to `<html>` for global CSS token alignment. |
+| **4. Tactile Sound & Buttons** | **Done** | Built zero-latency procedural Web Audio engine in `sound.ts` with custom synthesis for move, capture, check, castle, promote, illegal, game-end, and puzzle-correct/wrong events (CC0 licensed in `docs/PHASE1_DECISIONS.md`). Upgraded `Button.tsx` with beveled gradients, 1px inset highlights/shadows, and active pushdown transforms. Added board piece lift, grab cursor, and Full-mode illegal snapback shake. |
+| **5. Review Screen Parity** | **Done** | **Summary Layout:** Unified to the same two-column layout as Review Board (board + eval on left/top; summary on right/bottom).<br>**Move-Quality Table:** Full width with White/Black player circular avatars as column headers, hiding zero rows behind expander.<br>**Coach Summary Line:** Dynamically generated from data (biggest swing move, phase grades, and match result).<br>**Bubble Header:** Unclipped avatar portrait, move SAN rendered with chess figurine piece icon via `toFigurineSan`.<br>**Buttons:** Single row of 3 equal-width buttons (Explain, Best, Next).<br>**Board on Blunder:** Checked king glows red (`bg-red-600/50 ring-2 ring-red-500`), destination square amber, source tinted, refutation arrow `e8 -> f7`, and `??` badge on f7.<br>**Eval Bar & Numbers:** Absolute value printed at leading side's end (`3.5` at top when Black leads); realistic blunder drop from `+0.3` to `-3.54` for a lost bishop.<br>**Move List:** Compact 27px rows, full width, classification badge directly before SAN, SAN colored for bad moves.<br>**Graph:** Thin graph pinned above transport controls with colored dots on key moves, quality-colored cursor, and hover tooltips.<br>**Header & Tally:** Back arrow, "Game Review", sound toggle; opening name moved above move list; material tally (`+N` badge and captured piece figurines) beside player names. |
+| **6. Screen Polish** | **Done** | **Learn Path:** Round nodes with titles underneath, dashed path drawn behind nodes, current node pulses in Full mode, descriptions contained strictly in detail card.<br>**Home:** Streak chips with filled done state and amber outline for today; 3 entry cards (Lessons, Puzzles, Play Coach) with interactive-off mini board previews, icons, progress bars, and primary actions.<br>**Profile:** Removed "PRO" badge and "Online" chip from user card; transformed Win/Draw/Loss into a segmented bar with labels under each segment; fixed-width numerical slots (`w-12 text-right`) for Strengths and Weaknesses deltas.<br>**Play Coach Lobby:** Selected level cards display accent outline (`border-amber-500 ring-2 ring-amber-500/40`) and checkmark badge; board remains visible next to the lobby on desktop (and top on mobile) during match setup.<br>**Typography & Spacing:** Strict tabular numbers (`font-mono tabular-nums`) applied to ratings, evals, and counts; consistent 12px uppercase tracking labels; standardized 16px padding (`p-4`) and 12px gaps (`gap-3` / `space-y-3`) across all cards. |
+| **7. Honest Reporting & Evidence** | **Done** | Captured 32 high-resolution screenshots across all required screens, viewports (390px, 1440px), and themes (Dusk, Dawn), along with 5-second WebM screen recordings of stepping moves 1-8 and solving the first puzzle. |
+
+---
+
+### 6.2 Screen Recordings (`docs/recordings/`)
+
+- **Stepping Moves 1 to 8 in Game Review:** [review-stepping-moves1-8.webm](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/recordings/review-stepping-moves1-8.webm)
+- **Solving Tactical Puzzle #1 (Back-Rank Mate-in-1):** [puzzle-solve-animation.webm](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/recordings/puzzle-solve-animation.webm)
+
+---
+
+### 6.3 Phase 1.5 Screenshot Gallery (`docs/screenshots/phase1_5/`)
+
+#### 1. Game Review at Move 6 Blunder (`6. Bxf7+`)
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-move6-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-move6-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-move6-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-move6-dawn-1440.png)
+
+#### 2. Review Board: Show Best Move (`c3`)
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-showbest-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-showbest-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-showbest-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-showbest-dawn-1440.png)
+
+#### 3. Review Board: Explain Move (Refutation Stepper)
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-explain-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-explain-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-explain-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-explain-dawn-1440.png)
+
+#### 4. Game Summary (Two-Column Layout with Dynamic Coach Summary)
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-summary-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-summary-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-summary-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/review-summary-dawn-1440.png)
+
+#### 5. Play Coach Match in Progress (e2 to e4)
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/play-ingame-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/play-ingame-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/play-ingame-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/play-ingame-dawn-1440.png)
+
+#### 6. Tactical Puzzle Solved State (`Rd8#`)
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/puzzle-solved-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/puzzle-solved-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/puzzle-solved-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/puzzle-solved-dawn-1440.png)
+
+#### 7. Learn Roadmap Path (Round Nodes, Dashed Path Behind)
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-path-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-path-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-path-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-path-dawn-1440.png)
+
+#### 8. Learn Lesson Interactive Player
+- **Dusk:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-lesson-dusk-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-lesson-dusk-1440.png)
+- **Dawn:** [390px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-lesson-dawn-390.png) | [1440px](file:///C:/Users/Roger/Documents/AA%20PROJECTS/CHESS%20GUIDE/docs/screenshots/phase1_5/learn-lesson-dawn-1440.png)
+
