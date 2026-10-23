@@ -340,7 +340,7 @@ export const MOCK_GAMES: Game[] = [
         "fen": "r1bqk2r/ppp2Bpp/2np1n2/2b1p3/4P3/3P1N2/PPP2PPP/RNBQ1RK1 b kq - 0 6",
         "moveNumber": 6,
         "classification": "blunder",
-        "coachComment": "Bxf7+ is a blunder. You sacrificed a bishop for just one pawn, but Black simply takes with the king and remains completely safe.",
+        "coachComment": "This gives away a free bishop.",
         "variation": [
           "Kxf7",
           "Ng5+",
@@ -350,7 +350,7 @@ export const MOCK_GAMES: Game[] = [
           "eval": -3.54,
           "mate": null,
           "bestMove": "c3",
-          "why": "Bxf7+ sacrifices a bishop for just one pawn with no follow-up attack, leaving White down material.",
+          "why": "Gives away a free bishop with no follow-up attack, leaving White down material.",
           "lines": [
             {
               "move": "c3",

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Move, MoveClassification } from '@/data/types';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
 
@@ -23,6 +23,26 @@ export const MoveList: React.FC<MoveListProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeMoveRef = useRef<HTMLButtonElement>(null);
+
+  // Find the index of the last book move in the game
+  const lastBookIndex = useMemo(() => {
+    let lastIdx = -1;
+    for (let i = 0; i < moves.length; i++) {
+      if (moves[i].classification === 'book') {
+        lastIdx = i;
+      }
+    }
+    return lastIdx;
+  }, [moves]);
+
+  // Notable move filter: never badge 'good', and only badge 'book' for the last book move
+  const shouldShowBadge = (move?: Move, idx?: number) => {
+    if (!move || !move.classification || idx === undefined) return false;
+    const cls = move.classification;
+    if (cls === 'good') return false;
+    if (cls === 'book') return idx === lastBookIndex;
+    return true;
+  };
 
   // Group moves into pairs: [ { moveNum: 1, white?: Move, whiteIdx?: number, black?: Move, blackIdx?: number } ]
   const groupedMoves: Array<{
@@ -134,10 +154,10 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isWhiteActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.whiteIdx!)}
-                  className="flex-1 h-[28px] flex items-center gap-1.5 px-1 py-0.5 rounded text-left transition-colors duration-100"
+                  className="flex-1 h-[28px] flex items-center gap-1.5 px-1 py-0.5 rounded text-left transition-colors duration-100 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                 >
-                  {group.white.classification && (
-                    <ClassificationBadge classification={group.white.classification} size="xs" showLabel={false} />
+                  {shouldShowBadge(group.white, group.whiteIdx) && (
+                    <ClassificationBadge classification={group.white.classification!} size="xs" showLabel={false} />
                   )}
                   <span
                     className={`px-1.5 py-0.5 rounded-[2px] font-mono text-[13px] font-bold transition-all ${
@@ -158,10 +178,10 @@ export const MoveList: React.FC<MoveListProps> = ({
                   type="button"
                   ref={isBlackActive ? activeMoveRef : null}
                   onClick={() => onSelectMove(group.blackIdx!)}
-                  className="flex-1 h-[28px] flex items-center gap-1.5 px-1 py-0.5 rounded text-left ml-1 transition-colors duration-100"
+                  className="flex-1 h-[28px] flex items-center gap-1.5 px-1 py-0.5 rounded text-left ml-1 transition-colors duration-100 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                 >
-                  {group.black.classification && (
-                    <ClassificationBadge classification={group.black.classification} size="xs" showLabel={false} />
+                  {shouldShowBadge(group.black, group.blackIdx) && (
+                    <ClassificationBadge classification={group.black.classification!} size="xs" showLabel={false} />
                   )}
                   <span
                     className={`px-1.5 py-0.5 rounded-[2px] font-mono text-[13px] font-bold transition-all ${

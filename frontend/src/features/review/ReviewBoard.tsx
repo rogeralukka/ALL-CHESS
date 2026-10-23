@@ -380,6 +380,22 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
       coachExpression = 'thinking';
       coachText = `Can you find a better move in this position? Look closely at the board!`;
     }
+  } else {
+    // Body never repeats the header "<move> is a <label>" and is capped at 90 characters
+    if (currentMove?.san && currentMove?.classification) {
+      const prefixRegex = new RegExp(`^${currentMove.san}\\s+(is\\s+(a\\s+)?${currentMove.classification}[.:!\\s]*)+`, 'i');
+      coachText = coachText.replace(prefixRegex, '').trim();
+      if (coachText.length > 0) {
+        coachText = coachText[0].toUpperCase() + coachText.slice(1);
+      }
+    }
+  }
+
+  // Cap body text at 90 characters (two lines)
+  if (coachText.length > 90) {
+    const trimmed = coachText.slice(0, 87);
+    const lastSpace = trimmed.lastIndexOf(' ');
+    coachText = (lastSpace > 50 ? trimmed.slice(0, lastSpace) : trimmed) + '...';
   }
 
   const bubbleMessages: BubbleMessage[] = useMemo(
@@ -645,64 +661,84 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           ) : (
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center gap-2 w-full">
-                {/* 1. EXPLAIN BUTTON (Shown for Mistake/Blunder and Book; hidden on Best/Excellent) */}
-                {(isMistakeOrBlunder || isBookMove) && (
-                  explaining ? (
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      className="!h-12 flex-1"
-                      onClick={resetModes}
-                    >
-                      Got it!
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      className="!h-12 flex-1"
-                      icon={<HelpCircle size={18} />}
-                      onClick={() => {
-                        setExplaining(true);
-                        setShowingBest(false);
-                        setRetryMode(false);
-                        setVariationStep(0);
-                      }}
-                    >
-                      Explain
-                    </Button>
-                  )
+                {/* In explain or show-best modes: return actions */}
+                {explaining ? (
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    className="!h-12 flex-1"
+                    onClick={resetModes}
+                  >
+                    Got it!
+                  </Button>
+                ) : showingBest ? (
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    className="!h-12 flex-1"
+                    onClick={resetModes}
+                  >
+                    Resume
+                  </Button>
+                ) : (
+                  <>
+                    {/* 1. EXPLAIN BUTTON (Shown for Mistake/Blunder and Book; replaced by Retry on Miss; hidden on Best/Excellent) */}
+                    {(isMistakeOrBlunder || isBookMove) && classification !== 'miss' && (
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        className="!h-12 flex-1"
+                        icon={<HelpCircle size={18} />}
+                        onClick={() => {
+                          setExplaining(true);
+                          setShowingBest(false);
+                          setRetryMode(false);
+                          setVariationStep(0);
+                        }}
+                      >
+                        Explain
+                      </Button>
+                    )}
+
+                    {/* 2. BEST BUTTON (Shown for Mistake/Blunder/Inaccuracy/Miss; hidden on Best/Excellent/Book) */}
+                    {isMistakeOrBlunder && !isBestMove && !isBookMove && (
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        className="!h-12 flex-1"
+                        icon={<Sparkles size={18} />}
+                        onClick={() => {
+                          setShowingBest(true);
+                          setExplaining(false);
+                          setRetryMode(false);
+                        }}
+                      >
+                        Best
+                      </Button>
+                    )}
+
+                    {/* 3. RETRY BUTTON (Secondary 48px button in the row for mistakes, or replacing Explain on Miss) */}
+                    {isMistakeOrBlunder && (
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        className="!h-12 flex-1"
+                        icon={<RotateCcw size={18} />}
+                        onClick={() => {
+                          setRetryMode(true);
+                          setShowingBest(false);
+                          setExplaining(false);
+                          setRetrySuccess(null);
+                          setRetryFen(null);
+                        }}
+                      >
+                        Retry
+                      </Button>
+                    )}
+                  </>
                 )}
 
-                {/* 2. BEST BUTTON (Shown for Mistake/Blunder; hidden on Best/Excellent/Book) */}
-                {isMistakeOrBlunder && !isBestMove && !isBookMove && (
-                  showingBest ? (
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      className="!h-12 flex-1"
-                      onClick={resetModes}
-                    >
-                      Resume
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      className="!h-12 flex-1"
-                      icon={<Sparkles size={18} />}
-                      onClick={() => {
-                        setShowingBest(true);
-                        setExplaining(false);
-                        setRetryMode(false);
-                      }}
-                    >
-                      Best
-                    </Button>
-                  )
-                )}
-
-                {/* 3. NEXT BUTTON (PRIMARY - Full width if sole button) */}
+                {/* NEXT BUTTON (PRIMARY - Full width if sole button on Best moves) */}
                 <Button
                   variant="primary"
                   size="md"
@@ -737,26 +773,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                   >
                     Next
                   </Button>
-                </div>
-              )}
-
-              {/* Retry Mistake Link/Prompt if Mistake/Blunder */}
-              {isMistakeOrBlunder && !showingBest && !explaining && (
-                <div className="text-center pt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRetryMode(true);
-                      setShowingBest(false);
-                      setExplaining(false);
-                      setRetrySuccess(null);
-                      setRetryFen(null);
-                    }}
-                    className="text-xs text-amber-500 font-bold hover:underline inline-flex items-center gap-1"
-                  >
-                    <RotateCcw size={12} />
-                    <span>Retry this position yourself</span>
-                  </button>
                 </div>
               )}
             </div>

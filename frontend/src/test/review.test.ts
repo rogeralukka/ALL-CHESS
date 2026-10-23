@@ -23,7 +23,7 @@ describe('ALL-CHESS Step 1B: Review Suite', () => {
     expect(blunderMove?.eval?.lines?.[0]?.move).toBe('c3');
     expect(blunderMove?.eval?.lines?.[0]?.eval).toBe(0.3);
     expect(blunderMove?.variation).toEqual(['Kxf7', 'Ng5+', 'Kg8']);
-    expect(blunderMove?.coachComment).toContain('Bxf7+ is a blunder');
+    expect(blunderMove?.coachComment).toContain('This gives away a free bishop');
 
     // Check checkmate ending and result
     const lastMove = game?.moves[game.moves.length - 1];
