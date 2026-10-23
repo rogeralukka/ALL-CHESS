@@ -7,10 +7,8 @@ import { Button } from '@/components/Button';
 import { Segmented } from '@/components/Segmented';
 import { ProgressBar } from '@/components/ProgressBar';
 import { toast } from '@/components/Toast';
-import { useMotion } from '@/lib/useMotion';
+import { IsoLevelMap } from '@/features/map/IsoLevelMap';
 import {
-  CheckCircle2,
-  Lock,
   Play,
   Flame,
   Award,
@@ -22,7 +20,6 @@ import {
 } from 'lucide-react';
 
 export const LearnPath: React.FC = () => {
-  const { isFull } = useMotion();
   const [activeCategory, setActiveCategory] = useState<'endgame' | 'openings' | 'middlegame'>('endgame');
   const stages = MOCK_LEARN_STAGES.filter((s) => s.category === activeCategory);
 
@@ -31,8 +28,12 @@ export const LearnPath: React.FC = () => {
   const [activeLessonStage, setActiveLessonStage] = useState<LessonStage | null>(null);
 
   const completedStages = stages.filter((s) => s.status === 'done').length;
-  const stepSpacing = stages.length > 5 ? 85 : 110;
-  const pathHeight = stages.length * stepSpacing + 40;
+  const currentIdxRaw = stages.findIndex((s) => s.status === 'current');
+  const currentIndex = currentIdxRaw >= 0 ? currentIdxRaw : completedStages;
+  const lastOpen = stages.reduce((acc, s, i) => (s.status !== 'locked' ? i : acc), currentIndex);
+  const unlockedUpTo = Math.max(currentIndex, lastOpen);
+  const selectedIndex = selectedStage ? stages.findIndex((s) => s.id === selectedStage.id) : null;
+  const isPhone = typeof window !== 'undefined' && window.innerWidth < 640;
 
   const handleLessonComplete = () => {
     toast.achievement('Stage Completed!', `+${activeLessonStage?.xp || 50} XP earned`);
@@ -112,197 +113,30 @@ export const LearnPath: React.FC = () => {
 
       {/* Main 2-Column Section: Winding Path on Left, Detail & Suggested on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Illustrated Winding Path with Sunset Background */}
-        <div className="lg:col-span-7 xl:col-span-8 rounded-2xl bg-gradient-to-b from-amber-600/20 via-orange-500/10 to-rose-950/25 border border-amber-500/30 p-5 md:p-8 relative overflow-hidden shadow-xl min-h-[560px]">
-          {/* Sunset Atmosphere glow */}
-          <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-gradient-to-br from-amber-400/20 to-orange-500/10 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-rose-600/15 blur-3xl pointer-events-none" />
-
-          {/* Path Header info */}
-          <div className="flex items-center justify-between mb-8 relative z-10">
+        {/* Left Column: the stage map */}
+        <div className="lg:col-span-7 xl:col-span-8 rounded-2xl overflow-hidden border border-theme-border shadow-xl relative bg-[#5f9f45]">
+          <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-5 py-3 bg-gradient-to-b from-black/60 via-black/25 to-transparent pointer-events-none">
             <div className="flex items-center gap-2">
-              <Compass size={18} className="text-amber-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
-                Endgame Adventure Track
+              <Compass size={18} className="text-amber-300" />
+              <span className="text-xs font-bold uppercase tracking-wider text-white drop-shadow">
+                {activeCategory} adventure
               </span>
             </div>
-            <span className="text-xs font-mono font-bold text-neutral-400">
-              8 Stages Total
-            </span>
+            <span className="text-xs font-bold text-white/85 drop-shadow">{stages.length} stages</span>
           </div>
-
-          {/* Desktop Serpentine Path (hidden on phones) */}
-          <div className="hidden sm:block relative w-full" style={{ height: `${pathHeight}px` }}>
-            {/* SVG Connecting Path behind nodes */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-0"
-              viewBox={`0 0 500 ${pathHeight}`}
-              preserveAspectRatio="none"
-            >
-              <path
-                d={stages
-                  .map((_, i) => {
-                    const x = i % 2 === 0 ? 160 : 340;
-                    const y = i * stepSpacing + Math.round(stepSpacing / 2);
-                    if (i === 0) return `M ${x} ${y}`;
-                    const prevX = (i - 1) % 2 === 0 ? 160 : 340;
-                    const prevY = (i - 1) * stepSpacing + Math.round(stepSpacing / 2);
-                    const midY = (prevY + y) / 2;
-                    return `C ${prevX} ${midY}, ${x} ${midY}, ${x} ${y}`;
-                  })
-                  .join(' ')}
-                fill="none"
-                stroke="rgba(245, 158, 11, 0.45)"
-                strokeWidth="4"
-                strokeDasharray="8 8"
-              />
-            </svg>
-
-            {/* Nodes on Desktop */}
-            {stages.map((stg, index) => {
-              const isDone = stg.status === 'done';
-              const isCurrent = stg.status === 'current';
-              const isUnlocked = stg.status === 'unlocked';
-              const isLocked = stg.status === 'locked';
-              const isSelected = selectedStage?.id === stg.id;
-              const isLeftNode = index % 2 === 0;
-              const nodeX = isLeftNode ? 160 : 340;
-              const nodeY = index * stepSpacing + Math.round(stepSpacing / 2);
-
-              return (
-                <div
-                  key={`desktop-${stg.id}`}
-                  style={{ top: `${nodeY}px`, left: `${nodeX}px` }}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
-                >
-                  {/* "You are here" Pin */}
-                  {isCurrent && (
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-500 text-black shadow-lg flex items-center gap-1 z-20 pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-amber-500">
-                      <span>You are here</span>
-                    </div>
-                  )}
-
-                  {/* Node Button */}
-                  <button
-                    type="button"
-                    onClick={() => !isLocked && setSelectedStage(stg)}
-                    className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm shadow-xl transition-transform ${
-                      isSelected
-                        ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-theme-page scale-110'
-                        : ''
-                    } ${
-                      isDone
-                        ? 'bg-emerald-500 text-black border-2 border-emerald-400 hover:scale-105'
-                        : isCurrent
-                        ? `bg-amber-500 text-black shadow-amber-500/50 hover:scale-105 ${
-                            isFull ? 'animate-pulse' : ''
-                          }`
-                        : isUnlocked
-                        ? 'bg-theme-card text-amber-500 border-2 border-amber-500/60 hover:scale-105 hover:bg-theme-raised'
-                        : 'bg-theme-raised/60 text-theme-muted border border-theme-border/40 opacity-50 cursor-not-allowed'
-                    }`}
-                    aria-label={`${stg.title} (${stg.status})`}
-                  >
-                    {isDone ? (
-                      <CheckCircle2 size={24} />
-                    ) : isCurrent ? (
-                      <Play size={22} className="fill-black ml-0.5" />
-                    ) : isUnlocked ? (
-                      <Sparkles size={20} />
-                    ) : (
-                      <Lock size={18} />
-                    )}
-                  </button>
-
-                  {/* Labels offset opposite the path direction */}
-                  <div
-                    onClick={() => !isLocked && setSelectedStage(stg)}
-                    className={`absolute top-1/2 -translate-y-1/2 cursor-pointer w-44 select-none ${
-                      isLeftNode
-                        ? 'right-full mr-6 text-right'
-                        : 'left-full ml-6 text-left'
-                    }`}
-                  >
-                    <span className="text-xs font-bold text-theme-text block leading-snug hover:text-amber-500 transition-colors">
-                      #{index + 1} {stg.title}
-                    </span>
-                    <span className="text-xs font-mono text-amber-500 font-semibold block mt-0.5">
-                      +{stg.xp} XP
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Phone Single Column Path (visible only on phones) */}
-          <div className="block sm:hidden relative pl-12 space-y-6">
-            {/* Straight vertical dashed line behind nodes */}
-            <div className="absolute left-6 top-6 bottom-6 w-0.5 border-l-2 border-dashed border-amber-500/40 pointer-events-none" />
-
-            {stages.map((stg, index) => {
-              const isDone = stg.status === 'done';
-              const isCurrent = stg.status === 'current';
-              const isUnlocked = stg.status === 'unlocked';
-              const isLocked = stg.status === 'locked';
-              const isSelected = selectedStage?.id === stg.id;
-
-              return (
-                <div
-                  key={`mobile-${stg.id}`}
-                  className="flex items-center gap-4 relative z-10 py-2.5"
-                >
-                  <div className="relative flex-shrink-0 -ml-12 w-12 flex justify-center">
-                    {isCurrent && (
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-black uppercase bg-amber-500 text-black shadow-md flex items-center gap-1 z-20 pointer-events-none">
-                        <span>Here</span>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => !isLocked && setSelectedStage(stg)}
-                      className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xs shadow-md transition-transform ${
-                        isSelected
-                          ? 'ring-3 ring-amber-500 ring-offset-1 ring-offset-theme-page scale-105'
-                          : ''
-                      } ${
-                        isDone
-                          ? 'bg-emerald-500 text-black border-2 border-emerald-400'
-                          : isCurrent
-                          ? 'bg-amber-500 text-black'
-                          : isUnlocked
-                          ? 'bg-theme-card text-amber-500 border border-amber-500/60'
-                          : 'bg-theme-raised text-theme-muted border border-theme-border/40 opacity-50'
-                      }`}
-                    >
-                      {isDone ? (
-                        <CheckCircle2 size={20} />
-                      ) : isCurrent ? (
-                        <Play size={18} className="fill-black ml-0.5" />
-                      ) : isUnlocked ? (
-                        <Sparkles size={16} />
-                      ) : (
-                        <Lock size={15} />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Title to the right of node */}
-                  <div
-                    onClick={() => !isLocked && setSelectedStage(stg)}
-                    className="flex-1 min-w-0 cursor-pointer"
-                  >
-                    <span className="text-xs font-bold text-theme-text block leading-snug truncate">
-                      #{index + 1} {stg.title}
-                    </span>
-                    <span className="text-xs font-mono text-amber-500 font-semibold block mt-0.5">
-                      +{stg.xp} XP
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <IsoLevelMap
+            key={activeCategory}
+            levelCount={stages.length}
+            currentIndex={currentIndex}
+            unlockedUpTo={unlockedUpTo}
+            showLockIcons
+            labels={stages.map((s, i) => `${i + 1}. ${s.title}  +${s.xp} XP`)}
+            selectedIndex={selectedIndex}
+            onSelect={(i) => setSelectedStage(stages[i])}
+            tileWidth={isPhone ? 84 : 104}
+            seed={activeCategory === 'endgame' ? 7 : activeCategory === 'openings' ? 19 : 31}
+            className="h-[520px] lg:h-[640px]"
+          />
         </div>
 
         {/* Right Column: Stage Detail Card + Also Suggested Card */}

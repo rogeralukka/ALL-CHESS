@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { LessonStage, LessonStep, CoachExpression } from '@/data/types';
 import { Board } from '@/features/board/Board';
-import { CoachAvatar } from '@/features/coach/CoachAvatar';
-import { CoachBubble } from '@/features/coach/CoachBubble';
+import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { useSettingsStore } from '@/data/settingsStore';
@@ -156,18 +155,11 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
       {/* Mode Panel */}
       <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border shadow-xl p-5 justify-between">
         <div className="space-y-5">
-          <div className="flex items-start gap-3">
-            <CoachAvatar
-              expression={stepSolved ? 'brilliant' : coachExp !== 'neutral' ? coachExp : 'thinking'}
-              mode="bust"
-              size={68}
-            />
-            <div className="flex-1 min-w-0">
-              <CoachBubble
-                messages={lessonMessages}
-              />
-            </div>
-          </div>
+          <CoachSpeech
+            expression={stepSolved ? 'brilliant' : coachExp !== 'neutral' ? coachExp : 'thinking'}
+            messages={lessonMessages}
+            size={80}
+          />
 
           <Card className="p-4 space-y-2 bg-theme-raised/40">
             <div className="flex items-center justify-between">
