@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { ProgressBar } from '@/components/ProgressBar';
-import { CoachAvatar } from '@/features/coach/CoachAvatar';
-import { CoachBubble } from '@/features/coach/CoachBubble';
+import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { Board } from '@/features/board/Board';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
@@ -138,17 +137,15 @@ export const Home: React.FC = () => {
       {/* Coach Daily Drill Hero Card */}
       {!coachDismissed && (
         <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-theme-raised to-theme-card border border-amber-500/30 shadow-md min-w-0 w-full">
-          <div className="relative flex-shrink-0">
-            <CoachAvatar expression="thumbsup" mode="bust" size={84} />
-            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-xs font-black px-1.5 py-0.5 rounded-full">
-              DRILL
-            </div>
-          </div>
-          <div className="flex-1 space-y-2 text-center md:text-left min-w-0 w-full">
+          <div className="flex-1 space-y-2 min-w-0 w-full">
             <div className="text-xs uppercase font-black tracking-wider text-amber-500">
               Daily Training Mission
             </div>
-            <CoachBubble text="Welcome back! Today we're mastering King & Pawn opposition. 5 minutes of practice will solidify your endgame technique!" />
+            <CoachSpeech
+              expression="thumbsup"
+              size={80}
+              text="Welcome back! Today we're mastering king and pawn opposition. Five minutes of practice will lock in your endgame technique."
+            />
           </div>
           <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-auto flex-shrink-0">
             <Button
