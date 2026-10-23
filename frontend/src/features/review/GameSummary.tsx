@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Game, Move, CoachExpression, BoardBadge, Arrow } from '@/data/types';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
-import { CoachAvatar } from '@/features/coach/CoachAvatar';
-import { CoachBubble } from '@/features/coach/CoachBubble';
+import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { MoveQualityTable } from './MoveQualityTable';
 import { PhaseGradesCard } from './PhaseGradesCard';
 import { Board } from '@/features/board/Board';
@@ -207,17 +206,13 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
         {/* Panel Content (Scrollable, in exact Chess.com order) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
           {/* 1. Coach Line */}
-          <div className="flex items-start gap-3 flex-shrink-0">
-            <div className="w-[84px] flex-shrink-0">
-              <CoachAvatar expression={coachExp} mode="bust" size={84} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <CoachBubble
-                messages={summaryMessages}
-                voiceEnabled={coachVoiceEnabled}
-              />
-            </div>
-          </div>
+          <CoachSpeech
+            expression={coachExp}
+            messages={summaryMessages}
+            voiceEnabled={coachVoiceEnabled}
+            size={80}
+            className="flex-shrink-0"
+          />
 
           {/* 2. Evaluation Graph */}
           <Card className="p-3">

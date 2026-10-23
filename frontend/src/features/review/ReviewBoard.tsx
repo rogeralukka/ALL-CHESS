@@ -5,8 +5,8 @@ import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
 import { EvalGraph } from '@/features/board/EvalGraph';
 import { MoveList } from '@/features/board/MoveList';
-import { CoachAvatar } from '@/features/coach/CoachAvatar';
-import { CoachBubble, BubbleMessage } from '@/features/coach/CoachBubble';
+import { CoachSpeech } from '@/features/coach/CoachSpeech';
+import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { useSettingsStore } from '@/data/settingsStore';
@@ -617,17 +617,13 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
         {/* Panel Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
           {/* Coach Portrait + Speech Bubble (Unclipped, bubble fills panel width minus 96px portrait + 12px gap) */}
-          <div className="flex items-start gap-3 flex-shrink-0 pt-0.5">
-            <div className="w-[96px] flex-shrink-0">
-              <CoachAvatar expression={coachExpression} mode="bust" size={96} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <CoachBubble
-                messages={bubbleMessages}
-                voiceEnabled={coachVoiceEnabled}
-              />
-            </div>
-          </div>
+          <CoachSpeech
+            expression={coachExpression}
+            messages={bubbleMessages}
+            voiceEnabled={coachVoiceEnabled}
+            size={80}
+            className="flex-shrink-0 pt-0.5"
+          />
 
           {/* --- ACTION ROW: 3 EQUAL-WIDTH BUTTONS IN ONE ROW --- */}
           {retryMode ? (
