@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { motion } from 'framer-motion';
 
 export interface SegmentOption<T extends string = string> {
@@ -22,9 +22,11 @@ export const Segmented = <T extends string>({
   className = '',
   size = 'md',
 }: SegmentedProps<T>) => {
+  // each group needs its own indicator id, or the highlight jumps between groups
+  const groupId = useId();
   return (
     <div
-      className={`relative flex items-center p-1 bg-theme-raised/80 rounded-md border border-theme-border/60 ${className}`}
+      className={`relative flex items-center p-1 bg-black/[0.04] dark:bg-black/25 rounded-[10px] border border-theme-border ${className}`}
       role="tablist"
     >
       {options.map((opt) => {
@@ -36,16 +38,16 @@ export const Segmented = <T extends string>({
             role="tab"
             aria-selected={isSelected}
             onClick={() => onChange(opt.value)}
-            className={`relative flex-1 flex items-center justify-center font-medium rounded transition-colors select-none z-10 min-h-[44px] ${
-              size === 'sm' ? 'px-2.5 text-xs' : 'px-3 text-xs md:text-sm'
+            className={`relative flex-1 flex items-center justify-center font-semibold rounded-lg transition-colors select-none z-10 ${
+              size === 'sm' ? 'min-h-[36px] px-3 text-[13px]' : 'min-h-[42px] px-3.5 text-[14px]'
             } ${
               isSelected ? 'text-theme-text font-bold' : 'text-theme-muted hover:text-theme-text'
             }`}
           >
             {isSelected && (
               <motion.div
-                layoutId="segmented-indicator"
-                className="absolute inset-0 bg-theme-card rounded shadow-sm border border-theme-border/50 -z-10"
+                layoutId={`segmented-indicator-${groupId}`}
+                className="absolute inset-0 rounded-lg -z-10 bg-white dark:bg-white/[0.1] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_1px_2px_rgba(0,0,0,.25)]"
                 transition={{ type: 'spring', stiffness: 450, damping: 35 }}
               />
             )}
