@@ -39,16 +39,31 @@ async function optimizeCoach() {
     const bustPng = `coach_${exp.key}.png`;
     const fullPng = `coach_${exp.key}_full.png`;
 
-    const metadata = await sharp(srcPath).metadata();
-    const cropHeight = Math.round(metadata.height * 0.42);
-    const cropWidth = Math.min(metadata.width, cropHeight);
-    const cropLeft = Math.round((metadata.width - cropWidth) / 2);
-    const cropTop = 0;
+    // Face-centred head-and-shoulders crop: find the figure's top from the alpha channel,
+    // centre on the head (mean x of opaque pixels in the top 20% of the figure), and take a
+    // square of 44% of the figure height starting just above the hair.
+    const { data, info } = await sharp(srcPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const W = info.width;
+    const Hh = info.height;
+    const alphaAt = (x, y) => data[(y * W + x) * info.channels + 3];
+    let top = -1;
+    let bottom = -1;
+    for (let y = 0; y < Hh && top < 0; y++) for (let x = 0; x < W; x += 2) if (alphaAt(x, y) > 40) { top = y; break; }
+    for (let y = Hh - 1; y >= 0 && bottom < 0; y--) for (let x = 0; x < W; x += 2) if (alphaAt(x, y) > 40) { bottom = y; break; }
+    const figH = bottom - top;
+    let sumX = 0;
+    let n = 0;
+    for (let y = top; y < top + figH * 0.2; y++) for (let x = 0; x < W; x += 2) if (alphaAt(x, y) > 40) { sumX += x; n++; }
+    const headCx = Math.round(sumX / Math.max(1, n));
+    const side = Math.round(figH * 0.44);
+    const cropTop = Math.max(0, top - Math.round(figH * 0.03));
+    const cropLeft = Math.max(0, Math.min(W - side, headCx - Math.round(side / 2)));
+    const bustCrop = { top: cropTop, left: cropLeft, width: Math.min(side, W - cropLeft), height: Math.min(side, Hh - cropTop) };
 
-    // 1. Bust WebP (256x256 head-and-shoulders crop, centred on face)
+    // 1. Bust WebP (320x320 head-and-shoulders crop; shown at 64-96px, sharp on 2x/3x screens)
     await sharp(srcPath)
-      .extract({ top: cropTop, left: cropLeft, width: cropWidth, height: cropHeight })
-      .resize(256, 256, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .extract(bustCrop)
+      .resize(320, 320, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .webp({ quality: 90 })
       .toFile(path.join(coachOutDir, bustWebp));
 
@@ -58,10 +73,10 @@ async function optimizeCoach() {
       .webp({ quality: 85 })
       .toFile(path.join(coachOutDir, fullWebp));
 
-    // 3. Resized Bust PNG fallback (256x256, compressed)
+    // 3. Bust PNG fallback (same crop)
     await sharp(srcPath)
-      .extract({ top: cropTop, left: cropLeft, width: cropWidth, height: cropHeight })
-      .resize(256, 256, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .extract(bustCrop)
+      .resize(320, 320, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png({ compressionLevel: 9, effort: 8 })
       .toFile(path.join(coachOutDir, bustPng));
 

@@ -86,7 +86,8 @@ async function run() {
     const bubbleContainer = page.locator('[data-testid="coach-bubble-text"]');
     const count = await bubbleContainer.count();
     if (count > 0) {
-      const visibleSpan = bubbleContainer.first().locator('span[aria-hidden="true"]');
+      // first aria-hidden span = typed text; a second, invisible one reserves the rest of the line
+      const visibleSpan = bubbleContainer.first().locator('span[aria-hidden="true"]').first();
       let text = '';
       if (await visibleSpan.count() > 0) {
         text = (await visibleSpan.innerText()).trim();
