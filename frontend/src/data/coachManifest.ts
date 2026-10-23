@@ -1,4 +1,4 @@
-import rawManifest from '../../public/assets/coach/manifest.json';
+import rawManifest from './coachManifestData.json';
 import { CoachExpression } from './types';
 
 export interface ManifestExpression {

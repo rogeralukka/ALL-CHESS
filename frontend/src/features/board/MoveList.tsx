@@ -115,7 +115,7 @@ export const MoveList: React.FC<MoveListProps> = ({
             activeVariation.parentMoveIndex === group.blackIdx);
 
         return (
-          <div key={`row-${group.moveNum}`} className="flex flex-col w-full">
+          <div key={`row-${group.moveNum}`} data-move-row="true" className="flex flex-col w-full">
             <div className="h-[27px] flex items-center px-1.5 rounded hover:bg-theme-raised/40 transition-colors w-full">
               {/* Move number */}
               <span className="w-8 font-mono text-[11px] font-semibold text-theme-muted flex-shrink-0">

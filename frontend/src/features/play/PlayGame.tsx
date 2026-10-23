@@ -199,7 +199,7 @@ export const PlayGame: React.FC = () => {
 
       // Trigger coach reply if game isn't over
       if (!chess.isGameOver()) {
-        setTimeout(() => makeCoachMove(), 600);
+        setTimeout(() => makeCoachMove(), 150);
       } else {
         checkGameStatus();
       }

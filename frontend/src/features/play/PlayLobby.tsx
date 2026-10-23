@@ -81,14 +81,7 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
       <Card className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gradient-to-r from-theme-raised via-theme-card to-theme-card border-amber-500/20 shadow-md">
         <CoachAvatar expression="wave" mode="bust" size={68} />
         <div className="flex-1 min-w-0">
-          <CoachBubble
-            messages={[
-              {
-                id: 'lobby-welcome',
-                text: "Hey! Ready for a coaching game? I'll observe your moves, point out tactical tricks, and help you improve as we play.",
-              },
-            ]}
-          />
+          <CoachBubble text="Hey! Ready for a coaching game? I'll observe your moves, point out tactical tricks, and help you improve as we play." />
         </div>
       </Card>
 

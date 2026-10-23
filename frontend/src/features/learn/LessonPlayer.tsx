@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { LessonStage, LessonStep, CoachExpression } from '@/data/types';
 import { Board } from '@/features/board/Board';
@@ -101,6 +101,20 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
 
   const isAdvanceAllowed = !isInteractive || stepSolved;
 
+  const lessonMessages = useMemo(
+    () => [
+      {
+        id: `lesson-${currentStep.id}-${stepSolved ? 'solved' : attemptError ? 'err' : 'inst'}`,
+        text: stepSolved
+          ? currentStep.explanation || 'Great job! Moving forward.'
+          : attemptError
+          ? attemptError
+          : currentStep.instruction,
+      },
+    ],
+    [currentStep.id, currentStep.explanation, currentStep.instruction, stepSolved, attemptError]
+  );
+
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
       {/* Board Zone */}
@@ -146,16 +160,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
             />
             <div className="flex-1 min-w-0">
               <CoachBubble
-                messages={[
-                  {
-                    id: `lesson-${currentStep.id}`,
-                    text: stepSolved
-                      ? currentStep.explanation || 'Great job! Moving forward.'
-                      : attemptError
-                      ? attemptError
-                      : currentStep.instruction,
-                  },
-                ]}
+                messages={lessonMessages}
               />
             </div>
           </div>

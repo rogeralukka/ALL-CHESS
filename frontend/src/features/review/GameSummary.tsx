@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Game, Move, CoachExpression, BoardBadge, Arrow } from '@/data/types';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -104,6 +104,17 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
   const isWhiteWin = game.result === '1-0';
   const isBlackWin = game.result === '0-1';
 
+  const summaryMessages = useMemo(
+    () => [
+      {
+        id: 'summary-line',
+        text: coachText,
+        evalText: isWhiteWin ? '1-0' : isBlackWin ? '0-1' : '½-½',
+      },
+    ],
+    [coachText, isWhiteWin, isBlackWin]
+  );
+
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
       {/* --- LEFT ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile, desktop flex-1) --- */}
@@ -197,13 +208,7 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
             <CoachAvatar expression={coachExp} mode="bust" size={68} />
             <div className="flex-1 min-w-0">
               <CoachBubble
-                messages={[
-                  {
-                    id: 'summary-line',
-                    text: coachText,
-                    evalText: isWhiteWin ? '1-0' : isBlackWin ? '0-1' : '½-½',
-                  },
-                ]}
+                messages={summaryMessages}
                 voiceEnabled={coachVoiceEnabled}
               />
             </div>

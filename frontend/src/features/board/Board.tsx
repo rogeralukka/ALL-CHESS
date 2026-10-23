@@ -173,13 +173,15 @@ export const Board: React.FC<BoardProps> = ({
     }
 
     setBoardPieces((prev) => {
+      // Build a fresh clone of items inside the updater so it is 100% pure under React StrictMode (dev)
+      const items = newItems.map((item) => ({ ...item, matched: false }));
       const result: PieceOnBoard[] = [];
       const usedPrevIds = new Set<string>();
 
       // 1. If lastMove, match the piece that moved
       if (lastFrom && lastTo) {
         const movedPrev = prev.find((p) => p.square === lastFrom && !usedPrevIds.has(p.id));
-        const targetItem = newItems.find((p) => p.square === lastTo && !p.matched);
+        const targetItem = items.find((p) => p.square === lastTo && !p.matched);
         if (movedPrev && targetItem) {
           targetItem.matched = true;
           usedPrevIds.add(movedPrev.id);
@@ -197,7 +199,7 @@ export const Board: React.FC<BoardProps> = ({
 
           if (rookFrom && rookTo) {
             const rookPrev = prev.find((p) => p.square === rookFrom && !usedPrevIds.has(p.id));
-            const rookTarget = newItems.find((p) => p.square === rookTo && !p.matched);
+            const rookTarget = items.find((p) => p.square === rookTo && !p.matched);
             if (rookPrev && rookTarget) {
               rookTarget.matched = true;
               usedPrevIds.add(rookPrev.id);
@@ -208,7 +210,7 @@ export const Board: React.FC<BoardProps> = ({
       }
 
       // 2. Match unmoved pieces on same square
-      for (const item of newItems) {
+      for (const item of items) {
         if (item.matched) continue;
         const sameSq = prev.find(
           (p) => p.square === item.square && p.type === item.type && p.color === item.color && !usedPrevIds.has(p.id)
@@ -221,7 +223,7 @@ export const Board: React.FC<BoardProps> = ({
       }
 
       // 3. Match any piece of same type and color or assign new ID
-      for (const item of newItems) {
+      for (const item of items) {
         if (item.matched) continue;
         const sameType = prev.find(
           (p) => p.type === item.type && p.color === item.color && !usedPrevIds.has(p.id)
@@ -571,6 +573,7 @@ export const Board: React.FC<BoardProps> = ({
                 key={p.id}
                 data-piece="true"
                 data-piece-id={p.id}
+                data-piece-color={p.color}
                 data-square={p.square}
                 onPointerDown={(e) => handlePiecePointerDown(e, p.square)}
                 onPointerMove={handlePiecePointerMove}

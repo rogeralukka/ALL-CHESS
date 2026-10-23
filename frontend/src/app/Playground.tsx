@@ -65,24 +65,27 @@ export const Playground: React.FC = () => {
       : [];
   }, [currentMove?.to, currentMove?.classification]);
 
-  const bubbleMessages: BubbleMessage[] = [
-    {
-      id: 'm1',
-      text: 'Welcome to the ALL-CHESS Design System & Component Studio!',
-      classification: 'book',
-      moveSan: '1. e4',
-      evalText: '+0.2',
-      evalScore: 0.2,
-    },
-    {
-      id: 'm2',
-      text: 'Every component, token, and coach expression is fully responsive across Dusk and Dawn themes.',
-      classification: 'brilliant',
-      moveSan: '6. Bxf7+?!',
-      evalText: '-1.4',
-      evalScore: -1.4,
-    },
-  ];
+  const bubbleMessages: BubbleMessage[] = useMemo(
+    () => [
+      {
+        id: 'm1',
+        text: 'Welcome to the ALL-CHESS Design System & Component Studio!',
+        classification: 'book',
+        moveSan: '1. e4',
+        evalText: '+0.2',
+        evalScore: 0.2,
+      },
+      {
+        id: 'm2',
+        text: 'Every component, token, and coach expression is fully responsive across Dusk and Dawn themes.',
+        classification: 'brilliant',
+        moveSan: '6. Bxf7+?!',
+        evalText: '-1.4',
+        evalScore: -1.4,
+      },
+    ],
+    []
+  );
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10">

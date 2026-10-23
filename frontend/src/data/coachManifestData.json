@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "expressions": {
+    "neutral": {
+      "name": "Aloof / Observant",
+      "bust": "/assets/coach/coach_neutral.webp",
+      "full": "/assets/coach/coach_neutral_full.webp",
+      "fallbackBust": "/assets/coach/coach_neutral.png",
+      "fallbackFull": "/assets/coach/coach_neutral_full.png"
+    },
+    "thinking": {
+      "name": "Thoughtful",
+      "bust": "/assets/coach/coach_thinking.webp",
+      "full": "/assets/coach/coach_thinking_full.webp",
+      "fallbackBust": "/assets/coach/coach_thinking.png",
+      "fallbackFull": "/assets/coach/coach_thinking_full.png"
+    },
+    "thumbsup": {
+      "name": "Cheerful Thumbs-Up",
+      "bust": "/assets/coach/coach_thumbsup.webp",
+      "full": "/assets/coach/coach_thumbsup_full.webp",
+      "fallbackBust": "/assets/coach/coach_thumbsup.png",
+      "fallbackFull": "/assets/coach/coach_thumbsup_full.png"
+    },
+    "brilliant": {
+      "name": "Cheeky Finger-Gun",
+      "bust": "/assets/coach/coach_brilliant.webp",
+      "full": "/assets/coach/coach_brilliant_full.webp",
+      "fallbackBust": "/assets/coach/coach_brilliant.png",
+      "fallbackFull": "/assets/coach/coach_brilliant_full.png"
+    },
+    "embarrassed": {
+      "name": "Embarrassed",
+      "bust": "/assets/coach/coach_embarrassed.webp",
+      "full": "/assets/coach/coach_embarrassed_full.webp",
+      "fallbackBust": "/assets/coach/coach_embarrassed.png",
+      "fallbackFull": "/assets/coach/coach_embarrassed_full.png"
+    },
+    "wave": {
+      "name": "Friendly Waving",
+      "bust": "/assets/coach/coach_wave.webp",
+      "full": "/assets/coach/coach_wave_full.webp",
+      "fallbackBust": "/assets/coach/coach_wave.png",
+      "fallbackFull": "/assets/coach/coach_wave_full.png"
+    }
+  }
+}

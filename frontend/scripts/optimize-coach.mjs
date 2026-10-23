@@ -90,6 +90,10 @@ async function optimizeCoach() {
   const manifestPath = path.join(coachOutDir, 'manifest.json');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
   console.log('Generated manifest.json at', manifestPath);
+
+  const srcDataManifest = path.resolve(__dirname, '../src/data/coachManifestData.json');
+  fs.writeFileSync(srcDataManifest, JSON.stringify(manifest, null, 2), 'utf-8');
+  console.log('Generated coachManifestData.json at', srcDataManifest);
 }
 
 optimizeCoach().catch((err) => {

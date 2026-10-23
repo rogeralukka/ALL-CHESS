@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
 import { Board } from '@/features/board/Board';
@@ -12,7 +12,7 @@ import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { storage } from '@/lib/storage';
 import { formatTime } from '@/lib/formatters';
-import { CoachExpression } from '@/data/types';
+import { CoachExpression, BoardBadge } from '@/data/types';
 import { sound } from '@/lib/sound';
 import {
   Lightbulb,
@@ -42,6 +42,7 @@ export const PuzzleScreen: React.FC = () => {
   const [puzzleRating, setPuzzleRating] = useState<number>(() =>
     storage.get('all_chess_puzzle_rating', 1200)
   );
+  const [lastSolvedSquare, setLastSolvedSquare] = useState<string | null>(null);
 
   const [coachExp, setCoachExp] = useState<CoachExpression>('thinking');
   const [bubbleText, setBubbleText] = useState<string>(currentPuzzle.goal);
@@ -93,6 +94,7 @@ export const PuzzleScreen: React.FC = () => {
         const nextStep = solutionStep + 1;
         if (nextStep >= currentPuzzle.solution.length) {
           // --- BEAT 1: Immediate solve state ---
+          setLastSolvedSquare(_to);
           setStatus('solved');
           setCoachExp('brilliant');
           setBubbleText('Bingo! You got it. Outstanding tactical foresight!');
@@ -134,6 +136,7 @@ export const PuzzleScreen: React.FC = () => {
     chess.load(currentPuzzle.fen);
     setFen(currentPuzzle.fen);
     setStatus('solving');
+    setLastSolvedSquare(null);
     setSolutionStep(0);
     setCoachExp('thinking');
     setBubbleText(currentPuzzle.goal);
@@ -141,23 +144,36 @@ export const PuzzleScreen: React.FC = () => {
 
   const handleNext = () => {
     setShowRewardCascade(false);
+    setLastSolvedSquare(null);
     setPuzzleIndex((prev) => (prev + 1) % MOCK_PUZZLES.length);
   };
 
   const handlePrev = () => {
     setShowRewardCascade(false);
+    setLastSolvedSquare(null);
     setPuzzleIndex((prev) => (prev - 1 + MOCK_PUZZLES.length) % MOCK_PUZZLES.length);
   };
 
   const isWhiteToMove = currentPuzzle.fen.includes(' w ');
 
-  const bubbleMessages: BubbleMessage[] = [
-    {
-      id: `puz-msg-${puzzleIndex}-${status}`,
-      text: bubbleText,
-      evalText: `${isWhiteToMove ? 'White' : 'Black'} to move`,
-    },
-  ];
+  const bubbleMessages: BubbleMessage[] = useMemo(
+    () => [
+      {
+        id: `puz-msg-${puzzleIndex}-${status}`,
+        text: bubbleText,
+        evalText: `${isWhiteToMove ? 'White' : 'Black'} to move`,
+      },
+    ],
+    [puzzleIndex, status, bubbleText, isWhiteToMove]
+  );
+
+  const puzzleBadges: BoardBadge[] = useMemo(
+    () =>
+      status === 'solved' && lastSolvedSquare
+        ? [{ square: lastSolvedSquare, label: 'best' }]
+        : [],
+    [status, lastSolvedSquare]
+  );
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden relative">
@@ -191,6 +207,7 @@ export const PuzzleScreen: React.FC = () => {
               pieceSet={currentPieceSet}
               animationSpeed={animationSpeed}
               interactive={status === 'solving'}
+              badges={puzzleBadges}
               onMove={handleMove}
             />
 

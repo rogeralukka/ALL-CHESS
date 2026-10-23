@@ -375,16 +375,31 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
   }
 
-  const bubbleMessages: BubbleMessage[] = [
-    {
-      id: `move-${currentMoveIndex}-${showingBest ? 'best' : explaining ? `exp-${variationStep}` : retryMode ? `retry-${retrySuccess}` : 'norm'}`,
-      text: coachText,
-      classification: bubbleClassification,
-      moveSan: bubbleMoveSan,
-      evalText: bubbleEvalText,
-      evalScore: bubbleEvalScore,
-    },
-  ];
+  const bubbleMessages: BubbleMessage[] = useMemo(
+    () => [
+      {
+        id: `move-${currentMoveIndex}-${showingBest ? 'best' : explaining ? `exp-${variationStep}` : retryMode ? `retry-${retrySuccess}` : 'norm'}`,
+        text: coachText,
+        classification: bubbleClassification,
+        moveSan: bubbleMoveSan,
+        evalText: bubbleEvalText,
+        evalScore: bubbleEvalScore,
+      },
+    ],
+    [
+      currentMoveIndex,
+      showingBest,
+      explaining,
+      variationStep,
+      retryMode,
+      retrySuccess,
+      coachText,
+      bubbleClassification,
+      bubbleMoveSan,
+      bubbleEvalText,
+      bubbleEvalScore,
+    ]
+  );
 
   // Active variation to show in MoveList
   const activeVariation = explaining || showingBest
