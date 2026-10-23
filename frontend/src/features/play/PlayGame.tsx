@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
 import { MoveList } from '@/features/board/MoveList';
-import { CoachAvatar } from '@/features/coach/CoachAvatar';
-import { CoachBubble, BubbleMessage } from '@/features/coach/CoachBubble';
+import { CoachSpeech } from '@/features/coach/CoachSpeech';
+import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { badgeBox } from '@/features/board/BadgeLayer';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -683,6 +683,7 @@ export const PlayGame: React.FC = () => {
                 onMove={handleUserMove}
                 onIllegalMove={handleIllegalMove}
                 tippingPieceSquare={tippingSquare}
+                autoMateEffects={false}
               />
 
               {/* King Badges on Game Over (Crown on winner's king, flag on loser's, 1/2 on draw) */}
@@ -843,17 +844,12 @@ export const PlayGame: React.FC = () => {
                 className="space-y-4"
               >
                 {/* Coach Portrait + Stacked Speech Bubbles (Max 2 bubbles, newest next to portrait) */}
-                <div className="flex items-start gap-3">
-                  <div className="w-[96px] flex-shrink-0">
-                    <CoachAvatar expression={coachExpression} mode="bust" size={96} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <CoachBubble
-                      messages={stackedMessages}
-                      voiceEnabled={coachVoiceEnabled}
-                    />
-                  </div>
-                </div>
+                <CoachSpeech
+                  expression={coachExpression}
+                  messages={stackedMessages}
+                  voiceEnabled={coachVoiceEnabled}
+                  size={80}
+                />
 
                 {/* Live Action Controls: Resign, Hint, Takeback (Equal width 48px buttons) */}
                 <div className="relative pt-1 w-full space-y-2">

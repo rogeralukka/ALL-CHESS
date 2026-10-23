@@ -3,8 +3,7 @@ import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Toggle } from '@/components/Toggle';
 import { Segmented } from '@/components/Segmented';
-import { CoachAvatar } from '@/features/coach/CoachAvatar';
-import { CoachBubble } from '@/features/coach/CoachBubble';
+import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { Swords, ChevronDown, ChevronUp, Zap, Shield, Sparkles, CheckCircle2, SlidersHorizontal } from 'lucide-react';
 
 export interface PlayConfig {
@@ -79,12 +78,11 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
   return (
     <div className="w-full space-y-4">
       {/* Top Banner with Coach Portrait + Welcome Bubble */}
-      <Card className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gradient-to-r from-theme-raised via-theme-card to-theme-card border-amber-500/20 shadow-md">
-        <CoachAvatar expression="wave" mode="bust" size={68} />
-        <div className="flex-1 min-w-0">
-          <CoachBubble text="Hey! Ready for a coaching game? I'll observe your moves, point out tactical tricks, and help you improve as we play." />
-        </div>
-      </Card>
+      <CoachSpeech
+        expression="wave"
+        size={80}
+        text="Hey! Ready for a coaching game? I'll watch your moves, point out tactics, and help you improve as we play."
+      />
 
       {/* Level Selection Cards */}
       <div className="space-y-2.5">
