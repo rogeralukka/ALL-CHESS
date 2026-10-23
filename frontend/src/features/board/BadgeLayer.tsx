@@ -34,6 +34,8 @@ export const BadgeLayer: React.FC<BadgeLayerProps> = ({ badges, orientation }) =
           return (
             <motion.div
               key={`${b.square}-${b.label}`}
+              data-testid={`badge-${b.square}`}
+              data-square={b.square}
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}

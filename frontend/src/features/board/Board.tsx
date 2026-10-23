@@ -52,14 +52,45 @@ interface DraggedPieceState {
 const BOARD_FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const BOARD_RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
+const EMPTY_ARRAY: never[] = [];
+
+function areArraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function arePiecesEqual(a: readonly PieceOnBoard[], b: readonly PieceOnBoard[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const pa = a[i];
+    const pb = b[i];
+    if (
+      pa.id !== pb.id ||
+      pa.square !== pb.square ||
+      pa.type !== pb.type ||
+      pa.color !== pb.color ||
+      pa.col !== pb.col ||
+      pa.row !== pb.row
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export const Board: React.FC<BoardProps> = ({
   fen,
   orientation = 'white',
   lastMove = null,
-  arrows = [],
-  badges = [],
-  highlights = [],
-  legalTargets = [],
+  arrows = EMPTY_ARRAY,
+  badges = EMPTY_ARRAY,
+  highlights = EMPTY_ARRAY,
+  legalTargets = EMPTY_ARRAY,
   interactive = true,
   onMove,
   onIllegalMove,
@@ -120,6 +151,8 @@ export const Board: React.FC<BoardProps> = ({
 
   // --- STABLE PIECE POSITION TRACKING FOR ANIMATIONS ---
   const [boardPieces, setBoardPieces] = useState<PieceOnBoard[]>([]);
+  const lastFrom = lastMove?.from;
+  const lastTo = lastMove?.to;
 
   useEffect(() => {
     let chess: Chess;
@@ -149,9 +182,9 @@ export const Board: React.FC<BoardProps> = ({
       const usedPrevIds = new Set<string>();
 
       // 1. If lastMove, match the piece that moved
-      if (lastMove) {
-        const movedPrev = prev.find((p) => p.square === lastMove.from && !usedPrevIds.has(p.id));
-        const targetItem = newItems.find((p) => p.square === lastMove.to && !p.matched);
+      if (lastFrom && lastTo) {
+        const movedPrev = prev.find((p) => p.square === lastFrom && !usedPrevIds.has(p.id));
+        const targetItem = newItems.find((p) => p.square === lastTo && !p.matched);
         if (movedPrev && targetItem) {
           targetItem.matched = true;
           usedPrevIds.add(movedPrev.id);
@@ -162,10 +195,10 @@ export const Board: React.FC<BoardProps> = ({
         if (movedPrev && movedPrev.type === 'k') {
           let rookFrom: string | null = null;
           let rookTo: string | null = null;
-          if (lastMove.from === 'e1' && lastMove.to === 'g1') { rookFrom = 'h1'; rookTo = 'f1'; }
-          else if (lastMove.from === 'e1' && lastMove.to === 'c1') { rookFrom = 'a1'; rookTo = 'd1'; }
-          else if (lastMove.from === 'e8' && lastMove.to === 'g8') { rookFrom = 'h8'; rookTo = 'f8'; }
-          else if (lastMove.from === 'e8' && lastMove.to === 'c8') { rookFrom = 'a8'; rookTo = 'd8'; }
+          if (lastFrom === 'e1' && lastTo === 'g1') { rookFrom = 'h1'; rookTo = 'f1'; }
+          else if (lastFrom === 'e1' && lastTo === 'c1') { rookFrom = 'a1'; rookTo = 'd1'; }
+          else if (lastFrom === 'e8' && lastTo === 'g8') { rookFrom = 'h8'; rookTo = 'f8'; }
+          else if (lastFrom === 'e8' && lastTo === 'c8') { rookFrom = 'a8'; rookTo = 'd8'; }
 
           if (rookFrom && rookTo) {
             const rookPrev = prev.find((p) => p.square === rookFrom && !usedPrevIds.has(p.id));
@@ -209,9 +242,9 @@ export const Board: React.FC<BoardProps> = ({
         }
       }
 
-      return result;
+      return arePiecesEqual(prev, result) ? prev : result;
     });
-  }, [fen, orientation, lastMove, idPrefix, displayFiles, displayRanks]);
+  }, [fen, orientation, lastFrom, lastTo, idPrefix, displayFiles, displayRanks]);
 
   // Helper to get legal moves for a square
   const getMovesForSquare = useCallback((sq: string): string[] => {
@@ -226,11 +259,12 @@ export const Board: React.FC<BoardProps> = ({
   // Update legal targets when selected square changes
   useEffect(() => {
     if (!interactive || !selectedSquare) {
-      setComputedLegalTargets(legalTargets);
+      setComputedLegalTargets((prev) => (areArraysEqual(prev, legalTargets) ? prev : legalTargets));
       return;
     }
     const moves = getMovesForSquare(selectedSquare);
-    setComputedLegalTargets(Array.from(new Set([...moves, ...legalTargets])));
+    const combined = Array.from(new Set([...moves, ...legalTargets]));
+    setComputedLegalTargets((prev) => (areArraysEqual(prev, combined) ? prev : combined));
   }, [selectedSquare, interactive, legalTargets, getMovesForSquare]);
 
   const executeMoveAttempt = (from: string, to: string) => {
@@ -402,6 +436,7 @@ export const Board: React.FC<BoardProps> = ({
       {/* Board square container */}
       <div
         ref={boardRef}
+        data-board="true"
         className="relative aspect-square w-full max-w-[min(88vh,720px)] rounded-sm overflow-hidden shadow-2xl border border-black/20 touch-none"
         style={{
           boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.5)',
@@ -484,6 +519,7 @@ export const Board: React.FC<BoardProps> = ({
             return (
               <div
                 key={p.id}
+                data-piece="true"
                 data-piece-id={p.id}
                 data-square={p.square}
                 onPointerDown={(e) => handlePiecePointerDown(e, p.square)}

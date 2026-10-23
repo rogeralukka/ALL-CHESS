@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Chess, Square } from 'chess.js';
 import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
@@ -269,11 +269,16 @@ export const PlayGame: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const lastMoveObj = moves[moves.length - 1];
+  const lastMoveFrom = lastMoveObj?.from;
+  const lastMoveTo = lastMoveObj?.to;
+  const boardLastMove = useMemo(() => {
+    return lastMoveFrom && lastMoveTo ? { from: lastMoveFrom, to: lastMoveTo } : null;
+  }, [lastMoveFrom, lastMoveTo]);
+
   if (!activeConfig) {
     return <PlayLobby onStartGame={handleStartGame} />;
   }
-
-  const lastMoveObj = moves[moves.length - 1];
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
@@ -311,11 +316,7 @@ export const PlayGame: React.FC = () => {
                 coordinates={coordinates}
                 arrows={arrows}
                 highlights={highlights}
-                lastMove={
-                  lastMoveObj
-                    ? { from: lastMoveObj.from, to: lastMoveObj.to }
-                    : null
-                }
+                lastMove={boardLastMove}
                 interactive={!gameOver}
                 onMove={handleUserMove}
                 onIllegalMove={handleIllegalMove}

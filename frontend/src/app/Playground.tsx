@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Toggle } from '@/components/Toggle';
@@ -52,6 +52,18 @@ export const Playground: React.FC = () => {
 
   const sampleGame = MOCK_GAMES[0];
   const currentMove = sampleGame.moves[currentMoveIdx] || sampleGame.moves[0];
+
+  const playgroundLastMove = useMemo(() => ({
+    from: currentMove?.from || 'e2',
+    to: currentMove?.to || 'e4',
+    classification: currentMove?.classification,
+  }), [currentMove?.from, currentMove?.to, currentMove?.classification]);
+
+  const playgroundBadges = useMemo(() => {
+    return currentMove?.classification
+      ? [{ square: currentMove.to, label: currentMove.classification }]
+      : [];
+  }, [currentMove?.to, currentMove?.classification]);
 
   const bubbleMessages: BubbleMessage[] = [
     {
@@ -204,16 +216,8 @@ export const Playground: React.FC = () => {
                 fen={currentMove?.fen || sampleGame.moves[0].fen}
                 boardTheme={BOARD_THEMES[boardThemeIdx]}
                 pieceSet={PIECE_SETS[0]}
-                lastMove={{
-                  from: currentMove?.from || 'e2',
-                  to: currentMove?.to || 'e4',
-                  classification: currentMove?.classification,
-                }}
-                badges={
-                  currentMove?.classification
-                    ? [{ square: currentMove.to, label: currentMove.classification }]
-                    : []
-                }
+                lastMove={playgroundLastMove}
+                badges={playgroundBadges}
                 interactive={true}
               />
             </div>

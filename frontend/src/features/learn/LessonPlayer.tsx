@@ -10,6 +10,9 @@ import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { ArrowLeft, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
 
+const EMPTY_ARROWS: never[] = [];
+const EMPTY_HIGHLIGHTS: never[] = [];
+
 interface LessonPlayerProps {
   stage: LessonStage;
   onComplete: () => void;
@@ -123,8 +126,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
               boardTheme={currentBoardTheme}
               pieceSet={currentPieceSet}
               animationSpeed={animationSpeed}
-              arrows={currentStep.arrows || []}
-              highlights={currentStep.highlightSquares || []}
+              arrows={currentStep.arrows || EMPTY_ARROWS}
+              highlights={currentStep.highlightSquares || EMPTY_HIGHLIGHTS}
               interactive={isInteractive && !stepSolved}
               onMove={handleMove}
             />

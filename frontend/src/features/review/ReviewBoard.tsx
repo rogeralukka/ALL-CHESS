@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Chess } from 'chess.js';
-import { Game, Move, CoachExpression, Arrow } from '@/data/types';
+import { Game, Move, CoachExpression, Arrow, BoardBadge, MoveClassification } from '@/data/types';
 import { Board } from '@/features/board/Board';
 import { EvalBar } from '@/features/board/EvalBar';
 import { EvalGraph } from '@/features/board/EvalGraph';
@@ -152,69 +152,100 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const isMistakeOrBlunder = ['inaccuracy', 'mistake', 'miss', 'blunder'].includes(classification);
   const targetBestMove = currentMove?.eval?.bestMove || currentMove?.eval?.lines?.[0]?.move || '';
 
-  // Determine active board FEN and arrows
-  let displayFen = currentMove?.fen || START_FEN;
-  let arrows: Arrow[] = [];
-  let badges = currentMove?.classification
-    ? [{ square: currentMove.to, label: currentMove.classification }]
-    : [];
+  // Determine active board FEN, arrows, badges, and lastMove (memoized)
+  const { displayFen, arrows, badges, boardLastMove } = useMemo(() => {
+    let fen = currentMove?.fen || START_FEN;
+    let arrs: Arrow[] = [];
+    let bdgs: BoardBadge[] = currentMove?.classification
+      ? [{ square: currentMove.to, label: currentMove.classification }]
+      : [];
+    let lastM: { from: string; to: string; classification?: MoveClassification } | null = currentMove
+      ? {
+          from: currentMove.from,
+          to: currentMove.to,
+          classification: currentMove.classification,
+        }
+      : null;
 
-  // 1. SHOW BEST MODE
-  if (showingBest) {
-    badges = [];
-    if (targetBestMove) {
+    // 1. SHOW BEST MODE
+    if (showingBest) {
+      bdgs = [];
+      lastM = null;
+      if (targetBestMove) {
+        try {
+          const c = new Chess(fenBeforeMove);
+          c.move(targetBestMove);
+          fen = c.fen();
+          const sqs = getMoveSquares(fenBeforeMove, targetBestMove);
+          if (sqs) {
+            arrs = [{ from: sqs.from, to: sqs.to, color: 'green' }];
+          }
+        } catch {
+          fen = fenBeforeMove;
+        }
+      }
+    }
+    // 2. EXPLAIN VARIATION STEPPER MODE
+    else if (explaining) {
+      bdgs = [];
+      lastM = null;
       try {
-        const c = new Chess(fenBeforeMove);
-        c.move(targetBestMove);
-        displayFen = c.fen();
-        const sqs = getMoveSquares(fenBeforeMove, targetBestMove);
-        if (sqs) {
-          arrows = [{ from: sqs.from, to: sqs.to, color: 'green' }];
+        const c = new Chess(currentMove?.fen || START_FEN);
+        for (let s = 0; s < variationStep; s++) {
+          c.move(refutationMoves[s]);
+        }
+        fen = c.fen();
+
+        if (variationStep < refutationMoves.length) {
+          const nextSq = getMoveSquares(fen, refutationMoves[variationStep]);
+          if (nextSq) {
+            arrs = [{ from: nextSq.from, to: nextSq.to, color: 'red' }];
+          }
         }
       } catch {
-        displayFen = fenBeforeMove;
+        fen = currentMove?.fen || START_FEN;
       }
     }
-  }
-  // 2. EXPLAIN VARIATION STEPPER MODE
-  else if (explaining) {
-    badges = [];
-    try {
-      const c = new Chess(currentMove?.fen || START_FEN);
-      for (let s = 0; s < variationStep; s++) {
-        c.move(refutationMoves[s]);
+    // 3. RETRY MODE
+    else if (retryMode) {
+      bdgs = [];
+      lastM = null;
+      fen = retryFen || fenBeforeMove;
+      if (retrySuccess && targetBestMove) {
+        const sqs = getMoveSquares(fenBeforeMove, targetBestMove);
+        if (sqs) arrs = [{ from: sqs.from, to: sqs.to, color: 'green' }];
       }
-      displayFen = c.fen();
-
-      if (variationStep < refutationMoves.length) {
-        const nextSq = getMoveSquares(displayFen, refutationMoves[variationStep]);
-        if (nextSq) {
-          arrows = [{ from: nextSq.from, to: nextSq.to, color: 'red' }];
+    }
+    // 4. NORMAL VIEW
+    else {
+      // Red refutation arrow on mistakes/blunders pointing out opponent's tactical strike
+      if (isMistakeOrBlunder && currentMove?.variation?.[0]) {
+        const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
+        if (refutSq) {
+          arrs = [{ from: refutSq.from, to: refutSq.to, color: 'red' }];
         }
       }
-    } catch {
-      displayFen = currentMove?.fen || START_FEN;
     }
-  }
-  // 3. RETRY MODE
-  else if (retryMode) {
-    badges = [];
-    displayFen = retryFen || fenBeforeMove;
-    if (retrySuccess && targetBestMove) {
-      const sqs = getMoveSquares(fenBeforeMove, targetBestMove);
-      if (sqs) arrows = [{ from: sqs.from, to: sqs.to, color: 'green' }];
-    }
-  }
-  // 4. NORMAL VIEW
-  else {
-    // Red refutation arrow on mistakes/blunders pointing out opponent's tactical strike
-    if (isMistakeOrBlunder && currentMove?.variation?.[0]) {
-      const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
-      if (refutSq) {
-        arrows = [{ from: refutSq.from, to: refutSq.to, color: 'red' }];
-      }
-    }
-  }
+
+    return {
+      displayFen: fen,
+      arrows: arrs,
+      badges: bdgs,
+      boardLastMove: lastM,
+    };
+  }, [
+    currentMove,
+    showingBest,
+    targetBestMove,
+    fenBeforeMove,
+    explaining,
+    variationStep,
+    refutationMoves,
+    retryMode,
+    retryFen,
+    retrySuccess,
+    isMistakeOrBlunder,
+  ]);
 
   // --- COACH EXPRESSION & DIALOGUE ---
   let coachExpression: CoachExpression = getExpressionForEvent(classification);
@@ -336,17 +367,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 pieceSet={currentPieceSet}
                 animationSpeed={animationSpeed}
                 coordinates={coordinates}
-                lastMove={
-                  showingBest || retryMode
-                    ? null
-                    : currentMove
-                    ? {
-                        from: currentMove.from,
-                        to: currentMove.to,
-                        classification: currentMove.classification,
-                      }
-                    : null
-                }
+                lastMove={boardLastMove}
                 badges={badges}
                 arrows={arrows}
                 interactive={retryMode}
