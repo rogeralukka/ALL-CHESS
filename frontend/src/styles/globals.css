@@ -6,6 +6,7 @@
 @import '@fontsource/inter/700.css';
 @import '@fontsource/nunito/700.css';
 @import '@fontsource/nunito/800.css';
+@import '@fontsource/nunito/900.css';
 
 @tailwind base;
 @tailwind components;
@@ -194,3 +195,17 @@ select:focus-visible,
   }
 }
 
+
+/* King falls over within its own square (rotates about its centre and settles slightly low) */
+@keyframes kingFallOver {
+  0% { transform: translateY(0) rotate(0deg); }
+  55% { transform: translateY(10%) rotate(100deg); }
+  75% { transform: translateY(10%) rotate(84deg); }
+  100% { transform: translateY(10%) rotate(90deg); }
+}
+
+/* Level map: soft breathing glow under the current tile */
+@keyframes mapGlow {
+  0%, 100% { opacity: 0.65; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
