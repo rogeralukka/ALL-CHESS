@@ -1,5 +1,35 @@
 [
   {
+    "eco": "B00",
+    "name": "King's Pawn Opening: Barnes Defense",
+    "moves": ["e4", "f6", "d4", "c6"],
+    "idea": "Black builds a defensive pawn barrier on the queenside, preparing to develop pieces behind solid pawn shields."
+  },
+  {
+    "eco": "B00",
+    "name": "King's Pawn Opening: Barnes Defense",
+    "moves": ["e4", "f6"],
+    "idea": "An unorthodox response preparing ...c6 or ...d5 while blunting White's minor pieces."
+  },
+  {
+    "eco": "B00",
+    "name": "King's Pawn Opening",
+    "moves": ["e4"],
+    "idea": "Controls central squares and frees the queen and light-squared bishop."
+  },
+  {
+    "eco": "A40",
+    "name": "Queen's Pawn Opening",
+    "moves": ["d4"],
+    "idea": "Directly claims central territory and frees the queen and dark-squared bishop."
+  },
+  {
+    "eco": "A04",
+    "name": "Zukertort Opening",
+    "moves": ["Nf3"],
+    "idea": "Flexible first move developing a knight and controlling key central squares."
+  },
+  {
     "eco": "C60",
     "name": "Ruy Lopez",
     "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5"],

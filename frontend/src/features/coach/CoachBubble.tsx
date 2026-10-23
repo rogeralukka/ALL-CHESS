@@ -126,7 +126,7 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
       className={`p-3.5 rounded-md cursor-pointer select-none transition-shadow ${
         isLatest
           ? 'bg-[var(--coach-bubble-bg)] text-[var(--coach-bubble-text)] shadow-md border border-[var(--coach-bubble-border)]'
-          : 'bg-[var(--coach-bubble-bg)]/80 text-[var(--coach-bubble-text)]/75 text-sm scale-[0.98]'
+          : 'bg-[var(--coach-bubble-bg)] text-[var(--coach-bubble-text)] opacity-60 border border-[var(--coach-bubble-border)] text-sm scale-[0.98]'
       }`}
     >
       {/* Header row: classification badge + move notation with label + right-aligned eval chip */}

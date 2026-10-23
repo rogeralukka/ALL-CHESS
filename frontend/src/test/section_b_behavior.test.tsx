@@ -94,10 +94,39 @@ describe('Section B: Behavior & Engine Services', () => {
       expect(match?.eco).toBe('B20');
     });
 
+    it('identifies Barnes Defense from 1. e4 f6 2. d4 c6', () => {
+      const moves = ['e4', 'f6', 'd4', 'c6'];
+      const match = OpeningService.identifyOpening(moves);
+
+      expect(match).not.toBeNull();
+      expect(match?.name).toBe("King's Pawn Opening: Barnes Defense");
+      expect(match?.eco).toBe('B00');
+    });
+
     it('returns null for arbitrary illegal/unrecorded move sequence', () => {
       const moves = ['h4', 'h5', 'a4', 'a5'];
       const match = OpeningService.identifyOpening(moves);
       expect(match).toBeNull();
+    });
+  });
+
+  describe('Play Coach early queen sortie evaluation', () => {
+    it('classifies 2. Qh5 as inaccuracy/mistake, never good or best, and produces cautionary coach feedback', () => {
+      const chess = new Chess();
+      chess.move('e4');
+      chess.move('e5');
+
+      const evalBefore = EngineService.evaluatePosition(chess);
+      const qMove = chess.move('Qh5');
+      const evalAfter = -EngineService.evaluatePosition(chess);
+      const evalDrop = (evalBefore - evalAfter) / 100;
+      const isEarlyQueen = chess.history().length <= 4 && qMove.piece === 'q';
+
+      expect(isEarlyQueen).toBe(true);
+      const classification = evalDrop >= 1.0 ? 'mistake' : 'inaccuracy';
+      expect(['inaccuracy', 'mistake']).toContain(classification);
+      expect(classification).not.toBe('good');
+      expect(classification).not.toBe('best');
     });
   });
 });

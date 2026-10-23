@@ -39,21 +39,29 @@ async function optimizeCoach() {
     const bustPng = `coach_${exp.key}.png`;
     const fullPng = `coach_${exp.key}_full.png`;
 
-    // 1. Bust WebP (256px)
+    const metadata = await sharp(srcPath).metadata();
+    const cropHeight = Math.round(metadata.height * 0.42);
+    const cropWidth = Math.min(metadata.width, cropHeight);
+    const cropLeft = Math.round((metadata.width - cropWidth) / 2);
+    const cropTop = 0;
+
+    // 1. Bust WebP (256x256 head-and-shoulders crop, centred on face)
     await sharp(srcPath)
-      .resize({ width: 256, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 85 })
+      .extract({ top: cropTop, left: cropLeft, width: cropWidth, height: cropHeight })
+      .resize(256, 256, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 90 })
       .toFile(path.join(coachOutDir, bustWebp));
 
-    // 2. Full WebP (768px)
+    // 2. Full WebP (768px, keeping full-body for hero and empty states)
     await sharp(srcPath)
       .resize({ width: 768, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 85 })
       .toFile(path.join(coachOutDir, fullWebp));
 
-    // 3. Resized Bust PNG fallback (256px, compressed)
+    // 3. Resized Bust PNG fallback (256x256, compressed)
     await sharp(srcPath)
-      .resize({ width: 256, fit: 'inside', withoutEnlargement: true })
+      .extract({ top: cropTop, left: cropLeft, width: cropWidth, height: cropHeight })
+      .resize(256, 256, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png({ compressionLevel: 9, effort: 8 })
       .toFile(path.join(coachOutDir, bustPng));
 

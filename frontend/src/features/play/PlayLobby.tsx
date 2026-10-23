@@ -5,7 +5,7 @@ import { Toggle } from '@/components/Toggle';
 import { Segmented } from '@/components/Segmented';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { CoachBubble } from '@/features/coach/CoachBubble';
-import { Swords, ChevronDown, ChevronUp, Zap, Shield, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Swords, ChevronDown, ChevronUp, Zap, Shield, Sparkles, CheckCircle2, SlidersHorizontal } from 'lucide-react';
 
 export interface PlayConfig {
   levelRating: number;
@@ -40,6 +40,7 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
 
   const [userColor, setUserColor] = useState<'white' | 'random' | 'black'>('white');
   const [showAllLevels, setShowAllLevels] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
 
   // Coaching Assistance Toggles
   const [coachComments, setCoachComments] = useState(true);
@@ -174,63 +175,82 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
         />
       </Card>
 
-      {/* Assistant & Coaching Toggles */}
-      <Card className="p-4 space-y-3">
-        <h3 className="text-xs font-bold font-display uppercase tracking-wider text-theme-muted mb-1">
-          Coaching Assistance
-        </h3>
-        <div className="grid grid-cols-1 gap-3">
-          <Toggle
-            checked={coachComments}
-            onChange={setCoachComments}
-            label="Coach Speech Feedback"
-            description="Real-time speech bubbles reacting to moves"
-          />
-          <Toggle
-            checked={showHints}
-            onChange={setShowHints}
-            label="Allow In-Game Hints"
-            description="Visual hint button when guidance is needed"
-          />
-          <Toggle
-            checked={allowTakebacks}
-            onChange={setAllowTakebacks}
-            label="Allow Take-backs"
-            description="Rewind accidental slips or blunders"
-          />
-          <Toggle
-            checked={evalBar}
-            onChange={setEvalBar}
-            label="Evaluation Bar"
-            description="Display live advantage balance"
-          />
-          <Toggle
-            checked={threatArrows}
-            onChange={setThreatArrows}
-            label="Threat Arrows"
-            description="Highlight dangerous opponent skewers & checks"
-          />
-          <Toggle
-            checked={suggestionArrows}
-            onChange={setSuggestionArrows}
-            label="Suggestion Arrows"
-            description="Visual tactical guide arrows"
-          />
-          <Toggle
-            checked={moveFeedback}
-            onChange={setMoveFeedback}
-            label="Move Classification Badges"
-            description="Show Best, Great, or Mistake badges"
-          />
-        </div>
-      </Card>
+      {/* Collapsed Options Section (Chess.com Play Bots style) */}
+      <div className="rounded-lg border border-theme-border bg-theme-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowOptions(!showOptions)}
+          className="w-full flex items-center justify-between p-3.5 hover:bg-theme-raised/60 text-theme-text transition-colors text-left"
+        >
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={15} className="text-amber-500" />
+            <span className="text-xs font-bold font-display uppercase tracking-wider">
+              Options & Assistance
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-theme-muted font-medium">
+            <span>{showOptions ? 'Hide' : 'Customise'}</span>
+            {showOptions ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          </div>
+        </button>
 
-      {/* Primary Play Button */}
-      <div className="pt-1">
+        {showOptions && (
+          <div className="p-4 pt-1 space-y-3 border-t border-theme-border/50">
+            <div className="grid grid-cols-1 gap-3">
+              <Toggle
+                checked={coachComments}
+                onChange={setCoachComments}
+                label="Coach Speech Feedback"
+                description="Real-time speech bubbles reacting to moves"
+              />
+              <Toggle
+                checked={showHints}
+                onChange={setShowHints}
+                label="Allow In-Game Hints"
+                description="Visual hint button when guidance is needed"
+              />
+              <Toggle
+                checked={allowTakebacks}
+                onChange={setAllowTakebacks}
+                label="Allow Take-backs"
+                description="Rewind accidental slips or blunders"
+              />
+              <Toggle
+                checked={evalBar}
+                onChange={setEvalBar}
+                label="Evaluation Bar"
+                description="Display live advantage balance"
+              />
+              <Toggle
+                checked={threatArrows}
+                onChange={setThreatArrows}
+                label="Threat Arrows"
+                description="Highlight dangerous opponent skewers & checks"
+              />
+              <Toggle
+                checked={suggestionArrows}
+                onChange={setSuggestionArrows}
+                label="Suggestion Arrows"
+                description="Visual tactical guide arrows"
+              />
+              <Toggle
+                checked={moveFeedback}
+                onChange={setMoveFeedback}
+                label="Move Classification Badges"
+                description="Show Best, Great, or Mistake badges"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Primary Play Button - Pinned at the bottom of the panel (48px tall) */}
+      <div className="sticky bottom-0 bg-theme-card/95 backdrop-blur-sm pt-2 pb-1 border-t border-theme-border/50 z-10">
         <Button
           variant="primary"
           size="lg"
           fullWidth
+          className="!h-12 text-sm font-bold shadow-lg"
           icon={<Swords size={20} />}
           onClick={handleStart}
         >

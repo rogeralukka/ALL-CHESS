@@ -6,20 +6,90 @@ import { EvalBar } from '@/features/board/EvalBar';
 import { MoveList } from '@/features/board/MoveList';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { CoachBubble, BubbleMessage } from '@/features/coach/CoachBubble';
+import { badgeBox } from '@/features/board/BadgeLayer';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { GameOverModal } from './GameOverModal';
 import { PlayConfig, PlayLobby } from './PlayLobby';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
-import { Move, CoachExpression, Arrow } from '@/data/types';
-import { getExpressionForEvent } from '@/features/coach/expressionMap';
+import { Move, CoachExpression, Arrow, MoveClassification } from '@/data/types';
 import { ILLEGAL_MOVE_TEACHING_LINES } from '@/features/coach/coachLines';
 import { sound } from '@/lib/sound';
 import { EngineService } from '@/services/engineService';
 import { OpeningService, OpeningMatch } from '@/services/openingService';
-import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft } from 'lucide-react';
+import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const PIECE_FIGURINES: Record<string, string> = {
+  p: '♟',
+  n: '♞',
+  b: '♝',
+  r: '♜',
+  q: '♛',
+};
+
+function calculateMaterialTally(chess: Chess) {
+  const board = chess.board();
+  const counts: Record<string, { w: number; b: number }> = {
+    p: { w: 0, b: 0 },
+    n: { w: 0, b: 0 },
+    b: { w: 0, b: 0 },
+    r: { w: 0, b: 0 },
+    q: { w: 0, b: 0 },
+  };
+  const starting: Record<string, number> = { p: 8, n: 2, b: 2, r: 2, q: 1 };
+  const values: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p && p.type !== 'k') {
+        counts[p.type][p.color]++;
+      }
+    }
+  }
+
+  const capturedByWhite: string[] = [];
+  const capturedByBlack: string[] = [];
+  let whiteScore = 0;
+  let blackScore = 0;
+
+  for (const t of ['p', 'n', 'b', 'r', 'q']) {
+    const missingBlack = starting[t] - counts[t].b;
+    for (let i = 0; i < missingBlack; i++) capturedByWhite.push(t);
+
+    const missingWhite = starting[t] - counts[t].w;
+    for (let i = 0; i < missingWhite; i++) capturedByBlack.push(t);
+
+    whiteScore += counts[t].w * values[t];
+    blackScore += counts[t].b * values[t];
+  }
+
+  return {
+    whiteAdvantage: Math.max(0, whiteScore - blackScore),
+    blackAdvantage: Math.max(0, blackScore - whiteScore),
+    capturedByWhite,
+    capturedByBlack,
+  };
+}
+
+function findKingSquares(chess: Chess) {
+  const b = chess.board();
+  let whiteKing = 'e1';
+  let blackKing = 'e8';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = b[r][c];
+      if (p && p.type === 'k') {
+        const sq = `${String.fromCharCode(97 + c)}${8 - r}`;
+        if (p.color === 'w') whiteKing = sq;
+        else blackKing = sq;
+      }
+    }
+  }
+  return { whiteKing, blackKing };
+}
 
 export const PlayGame: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +112,8 @@ export const PlayGame: React.FC = () => {
     winner: 'user' | 'coach' | 'draw';
     reason: string;
   } | null>(null);
+  const [kingBadges, setKingBadges] = useState<Array<{ square: string; type: 'crown' | 'flag' | 'draw' }>>([]);
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
 
   const [coachExpression, setCoachExpression] = useState<CoachExpression>('wave');
   const [stackedMessages, setStackedMessages] = useState<BubbleMessage[]>([
@@ -50,6 +122,24 @@ export const PlayGame: React.FC = () => {
       text: "Good luck! I'll be watching your piece development and tactical opportunities.",
     },
   ]);
+
+  const recentLinesRef = useRef<string[]>([]);
+  const pickCoachLine = useCallback((candidates: string[]): string => {
+    const available = candidates.filter((c) => !recentLinesRef.current.includes(c));
+    const pool = available.length > 0 ? available : candidates;
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    recentLinesRef.current = [...recentLinesRef.current.slice(-9), chosen];
+    return chosen;
+  }, []);
+
+  const pushCoachMessage = useCallback((text: string) => {
+    const msg: BubbleMessage = {
+      id: `coach-${Date.now()}-${Math.random()}`,
+      text,
+    };
+    // Max 2 bubbles visible; newest next to portrait, older faded
+    setStackedMessages((prev) => [...prev.slice(-1), msg]);
+  }, []);
 
   const coachThinking = useRef(false);
 
@@ -88,9 +178,13 @@ export const PlayGame: React.FC = () => {
     setFen(chess.fen());
     updateMoves(() => []);
     setArrows([]);
+    setHighlights([]);
     setCurrentOpening(null);
     setGameOver(null);
+    setKingBadges([]);
+    setShowGameOverModal(false);
     setShowResignPopover(false);
+    recentLinesRef.current = [];
 
     let chosenColor: 'white' | 'black' = 'white';
     if (cfg.userColor === 'random') {
@@ -98,8 +192,16 @@ export const PlayGame: React.FC = () => {
     } else {
       chosenColor = cfg.userColor;
     }
+
     setOrientation(chosenColor);
     setActiveConfig(cfg);
+    setCoachExpression('wave');
+    setStackedMessages([
+      {
+        id: 'start-msg',
+        text: "Game started! Focus on central control, piece harmony, and king safety.",
+      },
+    ]);
 
     // If user is Black, coach (White) plays first move
     if (chosenColor === 'black') {
@@ -109,38 +211,55 @@ export const PlayGame: React.FC = () => {
     }
   };
 
+  const triggerGameOver = useCallback((winner: 'user' | 'coach' | 'draw', reason: string) => {
+    sound.gameEnd();
+    setGameOver({ winner, reason });
+
+    const { whiteKing, blackKing } = findKingSquares(chess);
+    const userIsWhite = orientation === 'white';
+
+    if (winner === 'draw') {
+      setKingBadges([
+        { square: whiteKing, type: 'draw' },
+        { square: blackKing, type: 'draw' },
+      ]);
+      setCoachExpression('neutral');
+      pushCoachMessage("It's a draw! Both sides defended solidly. A very balanced game.");
+    } else if (winner === 'user') {
+      const winnerKing = userIsWhite ? whiteKing : blackKing;
+      const loserKing = userIsWhite ? blackKing : whiteKing;
+      setKingBadges([
+        { square: winnerKing, type: 'crown' },
+        { square: loserKing, type: 'flag' },
+      ]);
+      setCoachExpression('brilliant');
+      pushCoachMessage("Outstanding victory! Decisive tactical execution.");
+    } else {
+      const winnerKing = userIsWhite ? blackKing : whiteKing;
+      const loserKing = userIsWhite ? whiteKing : blackKing;
+      setKingBadges([
+        { square: winnerKing, type: 'crown' },
+        { square: loserKing, type: 'flag' },
+      ]);
+      setCoachExpression('thumbsup');
+      pushCoachMessage("Well played! A great game for both of us. Review the match to uncover key moments.");
+    }
+
+    // 300ms pop of the king badges before showing modal
+    setTimeout(() => {
+      setShowGameOverModal(true);
+    }, 300);
+  }, [chess, orientation, pushCoachMessage]);
+
   const checkGameStatus = useCallback(() => {
     if (chess.isCheckmate()) {
-      sound.gameEnd();
       const turn = chess.turn();
       const userWon = (orientation === 'white' && turn === 'b') || (orientation === 'black' && turn === 'w');
-      setGameOver({
-        winner: userWon ? 'user' : 'coach',
-        reason: 'by checkmate',
-      });
-      setCoachExpression(userWon ? 'brilliant' : 'embarrassed');
-      const closingMsg: BubbleMessage = {
-        id: `gameover-${Date.now()}`,
-        text: userWon
-          ? "Outstanding performance! You delivered a decisive checkmate. Great tactical vision!"
-          : "Checkmate! Well played. Review the game to analyze where the initiative slipped.",
-        classification: userWon ? 'brilliant' : 'mistake',
-      };
-      setStackedMessages((prev) => [...prev.slice(-2), closingMsg]);
+      triggerGameOver(userWon ? 'user' : 'coach', 'by checkmate');
     } else if (chess.isDraw()) {
-      sound.gameEnd();
-      setGameOver({
-        winner: 'draw',
-        reason: 'by draw / stalemate',
-      });
-      setCoachExpression('neutral');
-      const closingMsg: BubbleMessage = {
-        id: `gameover-${Date.now()}`,
-        text: "It's a draw! Both sides defended solidly. A very balanced game.",
-      };
-      setStackedMessages((prev) => [...prev.slice(-2), closingMsg]);
+      triggerGameOver('draw', 'by draw / stalemate');
     }
-  }, [chess, orientation]);
+  }, [chess, orientation, triggerGameOver]);
 
   // Coach Move Execution via search engine
   const makeCoachMove = useCallback(async () => {
@@ -181,6 +300,12 @@ export const PlayGame: React.FC = () => {
       setFen(newFen);
 
       const currentHistory = movesRef.current;
+      const coachBadge = Boolean(
+        activeConfig?.moveFeedback &&
+        isNotable &&
+        (notableReason === 'check' || notableReason === 'capture')
+      );
+
       const newMoveObj: Move = {
         san: result.san,
         from: result.from,
@@ -188,7 +313,7 @@ export const PlayGame: React.FC = () => {
         color: result.color,
         fen: newFen,
         moveNumber: Math.floor(currentHistory.length / 2) + 1,
-        classification: 'good',
+        classification: coachBadge ? 'best' : undefined,
         eval: { eval: evalScore },
       };
 
@@ -197,47 +322,49 @@ export const PlayGame: React.FC = () => {
 
       // Check opening name
       const opening = OpeningService.identifyOpening(updatedMoves.map((m) => m.san));
-      if (opening && (!currentOpening || currentOpening.name !== opening.name)) {
+      if (opening) {
         setCurrentOpening(opening);
-        if (activeConfig?.coachComments) {
-          const msg: BubbleMessage = {
-            id: `coach-op-${Date.now()}`,
-            text: `We are playing the ${opening.name}. ${opening.idea}`,
-            moveSan: `${newMoveObj.moveNumber}. ${result.san}`,
-            evalText: evalScore >= 0 ? `+${evalScore}` : `${evalScore}`,
-            evalScore,
-          };
-          setStackedMessages((prev) => [...prev.slice(-2), msg]);
-          setCoachExpression('thumbsup');
-        }
-      } else if (isNotable && activeConfig?.coachComments) {
-        let noteText = `I play ${result.san}.`;
-        if (notableReason === 'capture') {
-          noteText = `I capture on ${result.to} to contest the position.`;
-        } else if (notableReason === 'check') {
-          noteText = `Check! Forcing your king to respond immediately.`;
-        } else if (notableReason === 'castle') {
-          noteText = `I castle to tuck my king safely away and connect my rooks.`;
-        } else if (notableReason === 'development') {
-          noteText = `Developing my ${result.san[0] === 'N' ? 'knight' : 'bishop'} toward active central diagonals.`;
-        }
-
-        const msg: BubbleMessage = {
-          id: `coach-${Date.now()}`,
-          text: noteText,
-          moveSan: `${newMoveObj.moveNumber}. ${result.san}`,
-          evalText: evalScore >= 0 ? `+${evalScore}` : `${evalScore}`,
-          evalScore,
-        };
-        setStackedMessages((prev) => [...prev.slice(-2), msg]);
-        setCoachExpression('thumbsup');
       }
-      // On non-notable moves, coach remains silent
+
+      if (activeConfig?.coachComments) {
+        if (opening && (!currentOpening || currentOpening.name !== opening.name)) {
+          setCoachExpression('thumbsup');
+          pushCoachMessage(`We are playing the ${opening.name}.`);
+        } else if (isNotable) {
+          let noteText: string | null = null;
+          if (notableReason === 'capture') {
+            noteText = pickCoachLine([
+              `I capture on ${result.to} to contest the position.`,
+              `Trading on ${result.to} to reshape the pawn structure.`,
+            ]);
+          } else if (notableReason === 'check') {
+            noteText = pickCoachLine([
+              "Check! Forcing your king to respond immediately.",
+              "Active check to disrupt your king's coordination.",
+            ]);
+          } else if (notableReason === 'castle') {
+            noteText = pickCoachLine([
+              "I castle to tuck my king safely away and connect my rooks.",
+              "Securing my king before opening up the center.",
+            ]);
+          } else if (notableReason === 'development') {
+            noteText = pickCoachLine([
+              `Developing my ${result.san[0] === 'N' ? 'knight' : 'bishop'} toward active central diagonals.`,
+              "Mobilizing another piece into the fight.",
+            ]);
+          }
+
+          if (noteText) {
+            setCoachExpression('thumbsup');
+            pushCoachMessage(noteText);
+          }
+        }
+      }
     }
 
     coachThinking.current = false;
     checkGameStatus();
-  }, [chess, activeConfig, currentOpening, checkGameStatus, updateMoves]);
+  }, [chess, activeConfig, currentOpening, checkGameStatus, updateMoves, pickCoachLine, pushCoachMessage]);
 
   // User Move Handler
   const handleUserMove = (from: string, to: string, promotion?: string) => {
@@ -249,6 +376,9 @@ export const PlayGame: React.FC = () => {
     if (!isUserTurn) return false;
 
     try {
+      const evalBefore = EngineService.evaluatePosition(chess);
+      const plyCount = movesRef.current.length;
+
       const result = chess.move({
         from: from as Square,
         to: to as Square,
@@ -257,10 +387,102 @@ export const PlayGame: React.FC = () => {
 
       if (!result) return false;
 
+      // Sound
+      if (result.captured) {
+        sound.capture();
+      } else if (chess.isCheck()) {
+        sound.check();
+      } else if (result.san.includes('O-O')) {
+        sound.castle();
+      } else {
+        sound.move();
+      }
+
       const newFen = chess.fen();
       setFen(newFen);
-      setArrows([]); // clear hint arrows on move
-      setHighlights([]); // clear illegal highlights on legal move
+      setArrows([]);
+      setHighlights([]);
+
+      const evalAfter = -EngineService.evaluatePosition(chess);
+      const evalDrop = (evalBefore - evalAfter) / 100;
+      const isEarlyQueen = plyCount <= 4 && result.piece === 'q';
+
+      let classification: MoveClassification = 'good';
+      let coachExp: CoachExpression = 'thumbsup';
+      let comment: string | null = null;
+
+      if (isEarlyQueen) {
+        classification = evalDrop >= 1.0 ? 'mistake' : 'inaccuracy';
+        coachExp = 'thinking';
+        comment = pickCoachLine([
+          "Careful with early queen sorties—it gives the opponent easy developing moves with tempo.",
+          "Bringing your queen out this early makes her an easy target for enemy minor pieces.",
+          "Risky to activate the queen so early! Developing minor pieces first keeps your king safe.",
+        ]);
+      } else if (evalDrop >= 2.0) {
+        classification = 'blunder';
+        coachExp = 'embarrassed';
+        comment = pickCoachLine([
+          "Ouch, that drops decisive material. Look closely at what is attacked before moving!",
+          "That leaves a piece vulnerable. Keep all pieces guarded before advancing.",
+          "A painful slip. Double-check your landing squares for opponent threats.",
+        ]);
+      } else if (evalDrop >= 0.9) {
+        classification = 'mistake';
+        coachExp = 'thinking';
+        comment = pickCoachLine([
+          "That gives your opponent a clear tactical opening. Look for defensive resources.",
+          "A tricky move that lets the opponent counter-attack. Stay alert!",
+          "Careful there—that conceded control of key central squares.",
+        ]);
+      } else if (evalDrop >= 0.35) {
+        classification = 'inaccuracy';
+        coachExp = 'thinking';
+        comment = pickCoachLine([
+          "A slightly passive move. Developing toward the center was more pressing.",
+          "A bit slow. Try to challenge central squares or activate your minor pieces.",
+          "Not the sharpest continuation, but your position remains playable.",
+        ]);
+      } else if (result.captured) {
+        classification = 'best';
+        coachExp = 'thumbsup';
+        comment = pickCoachLine([
+          `Good capture on ${result.to}! Fighting for initiative.`,
+          `Solid trade on ${result.to}, keeping the pressure on.`,
+        ]);
+      } else if (chess.isCheck()) {
+        classification = 'best';
+        coachExp = 'brilliant';
+        comment = pickCoachLine([
+          "Active check! Putting direct pressure on my king.",
+          "Sharp check, forcing an immediate defensive response.",
+        ]);
+      } else if (result.san.includes('O-O')) {
+        classification = 'best';
+        coachExp = 'thumbsup';
+        comment = pickCoachLine([
+          "Castling early is textbook! King tucked away and rooks connected.",
+          "Great timing on castling! King safety is secured.",
+        ]);
+      } else if (plyCount < 8 && ['n', 'b'].includes(result.piece)) {
+        classification = 'good';
+        coachExp = 'thumbsup';
+        if (Math.random() < 0.6) {
+          comment = pickCoachLine([
+            `Nice development with ${result.san}. Controlling key central squares.`,
+            `Smooth development. Bringing another piece into the fight.`,
+          ]);
+        }
+      } else {
+        classification = 'good';
+        coachExp = 'thumbsup';
+      }
+
+      // Show badges only when Move Feedback is ON, and NEVER for 'good' or 'book' in Play mode:
+      const showBadge = Boolean(
+        activeConfig?.moveFeedback &&
+        ['brilliant', 'great', 'best', 'inaccuracy', 'mistake', 'miss', 'blunder'].includes(classification)
+      );
 
       const currentHistory = movesRef.current;
       const newMoveObj: Move = {
@@ -270,23 +492,24 @@ export const PlayGame: React.FC = () => {
         color: result.color,
         fen: newFen,
         moveNumber: Math.floor(currentHistory.length / 2) + 1,
-        classification: 'best',
-        eval: { eval: 0.2 },
+        classification: showBadge ? classification : undefined,
+        eval: { eval: Number((evalAfter / 100).toFixed(1)) },
       };
 
-      updateMoves((prev) => [...prev, newMoveObj]);
+      const updatedMoves = [...currentHistory, newMoveObj];
+      updateMoves(() => updatedMoves);
 
-      // Reaction
-      const exp = getExpressionForEvent('best');
-      setCoachExpression(exp);
-      const userMsg: BubbleMessage = {
-        id: `user-${Date.now()}`,
-        text: `Solid move with ${result.san}! You're maintaining active piece play.`,
-        moveSan: `${newMoveObj.moveNumber}. ${result.san}`,
-        evalText: '+0.2',
-        evalScore: 0.2,
-      };
-      setStackedMessages((prev) => [...prev.slice(-2), userMsg]);
+      // Check opening name
+      const opening = OpeningService.identifyOpening(updatedMoves.map((m) => m.san));
+      if (opening) {
+        setCurrentOpening(opening);
+      }
+
+      // Coach comment
+      if (activeConfig?.coachComments && comment) {
+        setCoachExpression(coachExp);
+        pushCoachMessage(comment);
+      }
 
       // Trigger coach reply if game isn't over
       if (!chess.isGameOver()) {
@@ -303,7 +526,7 @@ export const PlayGame: React.FC = () => {
     }
   };
 
-  // Illegal Move Handler (Item 8)
+  // Illegal Move Handler
   const handleIllegalMove = (from: string, _attemptedTo: string) => {
     try {
       const legalMoves = chess.moves({ square: from as Square, verbose: true });
@@ -314,17 +537,9 @@ export const PlayGame: React.FC = () => {
     }
 
     setCoachExpression('thinking');
-
-    const line =
-      ILLEGAL_MOVE_TEACHING_LINES[Math.floor(Math.random() * ILLEGAL_MOVE_TEACHING_LINES.length)];
-
-    const illegalMsg: BubbleMessage = {
-      id: `illegal-${Date.now()}`,
-      text: line,
-      classification: 'mistake',
-      moveSan: 'Illegal Move',
-    };
-    setStackedMessages((prev) => [...prev.slice(-2), illegalMsg]);
+    const line = ILLEGAL_MOVE_TEACHING_LINES[Math.floor(Math.random() * ILLEGAL_MOVE_TEACHING_LINES.length)];
+    // No classification header or moveSan for illegal moves in Play mode:
+    pushCoachMessage(line);
 
     setTimeout(() => {
       setHighlights([]);
@@ -338,12 +553,8 @@ export const PlayGame: React.FC = () => {
     const bestCandidate = legalMoves[0];
     setArrows([{ from: bestCandidate.from, to: bestCandidate.to, color: 'orange' }]);
 
-    const hintMsg: BubbleMessage = {
-      id: `hint-${Date.now()}`,
-      text: `Hint: Consider moving from ${bestCandidate.from} to ${bestCandidate.to} to maximize piece activity.`,
-    };
-    setStackedMessages((prev) => [...prev.slice(-2), hintMsg]);
     setCoachExpression('thinking');
+    pushCoachMessage(`Hint: Consider moving from ${bestCandidate.from} to ${bestCandidate.to} to maximize piece activity.`);
   };
 
   // Takeback Handler
@@ -354,26 +565,16 @@ export const PlayGame: React.FC = () => {
     setFen(chess.fen());
     updateMoves((prev) => prev.slice(0, -2));
     setArrows([]);
+    setHighlights([]);
 
-    const tbMsg: BubbleMessage = {
-      id: `tb-${Date.now()}`,
-      text: 'Takeback allowed! Take your time to re-evaluate the position.',
-    };
-    setStackedMessages((prev) => [...prev.slice(-2), tbMsg]);
     setCoachExpression('wave');
+    pushCoachMessage('Takeback allowed! Take your time to re-evaluate the position.');
   };
 
-  // Download PGN
+  // Resign Handler
   const handleResign = () => {
     setShowResignPopover(false);
-    setGameOver({ winner: 'coach', reason: 'by resignation' });
-    sound.gameEnd();
-    setCoachExpression('thumbsup');
-    const resignMsg: BubbleMessage = {
-      id: `resign-${Date.now()}`,
-      text: "Game concluded by resignation. Good game! Analyzing this match will help you spot key tactical resources.",
-    };
-    setStackedMessages((prev) => [...prev.slice(-2), resignMsg]);
+    triggerGameOver('coach', 'by resignation');
   };
 
   const handleDownloadPgn = () => {
@@ -396,20 +597,45 @@ export const PlayGame: React.FC = () => {
     return lastMoveFrom && lastMoveTo ? { from: lastMoveFrom, to: lastMoveTo } : null;
   }, [lastMoveFrom, lastMoveTo]);
 
+  const { whiteAdvantage, blackAdvantage, capturedByWhite, capturedByBlack } = useMemo(
+    () => calculateMaterialTally(chess),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fen]
+  );
+
+  const userIsWhite = orientation === 'white';
+  const userCaptured = userIsWhite ? capturedByWhite : capturedByBlack;
+  const userAdvantage = userIsWhite ? whiteAdvantage : blackAdvantage;
+  const coachCaptured = userIsWhite ? capturedByBlack : capturedByWhite;
+  const coachAdvantage = userIsWhite ? blackAdvantage : whiteAdvantage;
+
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
-      {/* Center Zone: Board & Eval Bar (Visible both in Lobby and in Game, matching Chess.com) */}
+      {/* Center Zone: Board & Eval Bar */}
       <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0 relative">
         <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
           {/* Top Player (Coach) */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 font-bold flex items-center justify-center text-xs border border-amber-500/40">
-                🤖
-              </span>
-              <span className="font-bold text-theme-text">Coach All-Chess</span>
-              <span className="font-mono tabular-nums">
-                ({activeConfig ? activeConfig.levelRating : lobbyLevel})
+              <div className="w-7 h-7 rounded-full overflow-hidden border border-amber-500/40 bg-theme-raised flex-shrink-0">
+                <img src="/assets/coach/coach_neutral.webp" alt="Coach Bust" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm text-theme-text">Coach All-Chess</span>
+                <span className="font-mono text-xs tabular-nums text-theme-muted">
+                  ({activeConfig ? activeConfig.levelRating : lobbyLevel})
+                </span>
+                <span className="text-xs" title="International">🌐</span>
+              </div>
+              {coachAdvantage > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded text-[11px] font-mono font-bold bg-white/10 text-theme-text">
+                  +{coachAdvantage}
+                </span>
+              )}
+              <span className="text-xs tracking-tight text-theme-muted select-none ml-0.5">
+                {coachCaptured.map((p, idx) => (
+                  <span key={idx} className="opacity-75">{PIECE_FIGURINES[p]}</span>
+                ))}
               </span>
             </div>
             <span className="font-mono font-semibold">
@@ -442,8 +668,44 @@ export const PlayGame: React.FC = () => {
                 onIllegalMove={handleIllegalMove}
               />
 
-              {/* Game Over Modal Over Board */}
-              {gameOver && (
+              {/* King Badges on Game Over (Crown on winner's king, flag on loser's, 1/2 on draw) */}
+              {kingBadges.map((kb) => {
+                const box = badgeBox(kb.square, orientation);
+                return (
+                  <motion.div
+                    key={`king-badge-${kb.square}`}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: [0, 1.25, 1], opacity: 1 }}
+                    transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+                    className="absolute pointer-events-none z-30 flex items-center justify-center"
+                    style={{
+                      left: `${box.left}%`,
+                      top: `${box.top}%`,
+                      width: `${box.size * 1.1}%`,
+                      height: `${box.size * 1.1}%`,
+                    }}
+                  >
+                    {kb.type === 'crown' && (
+                      <span className="w-full h-full rounded-full bg-amber-400 text-black flex items-center justify-center shadow-lg border border-amber-300 text-sm select-none">
+                        👑
+                      </span>
+                    )}
+                    {kb.type === 'flag' && (
+                      <span className="w-full h-full rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg border border-red-400 text-xs font-bold select-none">
+                        🏳️
+                      </span>
+                    )}
+                    {kb.type === 'draw' && (
+                      <span className="w-full h-full rounded-full bg-gray-500 text-white flex items-center justify-center shadow-lg border border-gray-400 text-xs font-bold font-mono select-none">
+                        ½
+                      </span>
+                    )}
+                  </motion.div>
+                );
+              })}
+
+              {/* Game Over Modal Over Board (Appears 300ms after king badges pop) */}
+              {gameOver && showGameOverModal && (
                 <GameOverModal
                   isOpen={true}
                   winner={gameOver.winner}
@@ -456,6 +718,8 @@ export const PlayGame: React.FC = () => {
                     setArrows([]);
                     setHighlights([]);
                     setGameOver(null);
+                    setKingBadges([]);
+                    setShowGameOverModal(false);
                   }}
                   onGameReview={() => navigate('/review/game-01')}
                 />
@@ -466,11 +730,24 @@ export const PlayGame: React.FC = () => {
           {/* Bottom Player (User) */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-theme-raised text-theme-text font-bold flex items-center justify-center text-[10px] border border-theme-border">
-                You
+              <div className="w-7 h-7 rounded-full bg-theme-raised text-theme-text font-bold flex items-center justify-center text-xs border border-theme-border flex-shrink-0">
+                YO
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm text-theme-text">You</span>
+                <span className="font-mono text-xs tabular-nums text-theme-muted">(905)</span>
+                <span className="text-xs" title="Player">🌐</span>
+              </div>
+              {userAdvantage > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded text-[11px] font-mono font-bold bg-white/10 text-theme-text">
+                  +{userAdvantage}
+                </span>
+              )}
+              <span className="text-xs tracking-tight text-theme-muted select-none ml-0.5">
+                {userCaptured.map((p, idx) => (
+                  <span key={idx} className="opacity-75">{PIECE_FIGURINES[p]}</span>
+                ))}
               </span>
-              <span className="font-bold text-theme-text">You</span>
-              <span className="font-mono tabular-nums">(905)</span>
             </div>
             {activeConfig && (
               <button
@@ -483,6 +760,8 @@ export const PlayGame: React.FC = () => {
                   setArrows([]);
                   setHighlights([]);
                   setGameOver(null);
+                  setKingBadges([]);
+                  setShowGameOverModal(false);
                 }}
                 className="text-xs font-semibold text-theme-muted hover:text-theme-text flex items-center gap-1 transition-colors"
               >
@@ -544,38 +823,26 @@ export const PlayGame: React.FC = () => {
                 transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
-              {/* Coach Portrait + Stacked Speech Bubbles */}
-              <div className="flex items-start gap-3">
-                <div className="w-[84px] flex-shrink-0">
-                  <CoachAvatar expression={coachExpression} mode="bust" size={84} />
+                {/* Coach Portrait + Stacked Speech Bubbles (Max 2 bubbles, newest next to portrait) */}
+                <div className="flex items-start gap-3">
+                  <div className="w-[96px] flex-shrink-0">
+                    <CoachAvatar expression={coachExpression} mode="bust" size={96} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <CoachBubble
+                      messages={stackedMessages}
+                      voiceEnabled={coachVoiceEnabled}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <CoachBubble
-                    messages={stackedMessages}
-                    voiceEnabled={coachVoiceEnabled}
-                  />
-                </div>
-              </div>
 
-              {/* Live Action Controls: Resign, Hint, Takeback, PGN - 48px tall */}
-              <div className="flex items-center gap-2 pt-1 w-full">
-                {/* Resign with Confirmation Popover */}
-                <div className="relative flex-1">
-                  <Button
-                    variant="danger"
-                    size="md"
-                    className="!h-12 w-full"
-                    icon={<Flag size={18} />}
-                    onClick={() => setShowResignPopover((v) => !v)}
-                    disabled={Boolean(gameOver)}
-                  >
-                    Resign
-                  </Button>
-
+                {/* Live Action Controls: Resign, Hint, Takeback (Equal width 48px buttons) */}
+                <div className="relative pt-1 w-full space-y-2">
+                  {/* Resign Popover: Anchored directly above flag button with arrow, never covering bubbles */}
                   {showResignPopover && (
                     <div
                       ref={resignPopoverRef}
-                      className="absolute left-0 bottom-full mb-3 w-56 p-3 rounded-lg bg-theme-raised border border-theme-border shadow-2xl z-40 flex flex-col gap-2 after:content-[''] after:absolute after:top-full after:left-8 after:border-[6px] after:border-transparent after:border-t-theme-border after:-mb-1.5"
+                      className="absolute left-0 bottom-full mb-2 w-56 p-3 rounded-lg bg-theme-raised border border-theme-border shadow-2xl z-40 flex flex-col gap-2 after:content-[''] after:absolute after:top-full after:left-8 after:border-[6px] after:border-transparent after:border-t-theme-border after:-mb-1.5"
                     >
                       <span className="text-xs font-bold text-theme-text text-center">Confirm Resignation?</span>
                       <div className="flex gap-2">
@@ -598,72 +865,100 @@ export const PlayGame: React.FC = () => {
                       </div>
                     </div>
                   )}
+
+                  <div className="flex items-center gap-2 w-full">
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="!h-12 flex-1"
+                      icon={<Flag size={20} />}
+                      onClick={() => setShowResignPopover((v) => !v)}
+                      disabled={Boolean(gameOver)}
+                      title="Resign"
+                    />
+
+                    {activeConfig.showHints && (
+                      <Button
+                        variant="primary"
+                        size="md"
+                        className="!h-12 flex-1"
+                        icon={<Lightbulb size={20} />}
+                        onClick={handleHint}
+                        disabled={Boolean(gameOver)}
+                        title="Get Hint"
+                      />
+                    )}
+
+                    {activeConfig.allowTakebacks && (
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        className="!h-12 flex-1"
+                        icon={<RotateCcw size={20} />}
+                        onClick={handleTakeback}
+                        disabled={moves.length < 2 || Boolean(gameOver)}
+                        title="Take Back Move"
+                      />
+                    )}
+                  </div>
+
+                  {/* Sub-action row underneath */}
+                  <div className="flex items-center justify-between px-1 text-xs text-theme-muted">
+                    <button
+                      type="button"
+                      onClick={handleDownloadPgn}
+                      className="flex items-center gap-1 hover:text-theme-text transition-colors p-1"
+                      title="Download PGN"
+                    >
+                      <Download size={14} />
+                      <span>Download PGN</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveConfig(null);
+                        chess.reset();
+                        setFen(chess.fen());
+                        setMoves([]);
+                        setArrows([]);
+                        setHighlights([]);
+                        setGameOver(null);
+                        setKingBadges([]);
+                        setShowGameOverModal(false);
+                      }}
+                      className="flex items-center gap-1 hover:text-theme-text transition-colors p-1"
+                    >
+                      <ArrowLeft size={14} />
+                      <span>Exit Match</span>
+                    </button>
+                  </div>
                 </div>
 
-                {activeConfig.showHints && (
-                  <Button
-                    variant="primary"
-                    size="md"
-                    className="!h-12 flex-1"
-                    icon={<Lightbulb size={18} />}
-                    onClick={handleHint}
-                    disabled={Boolean(gameOver)}
-                  >
-                    Hint
-                  </Button>
-                )}
-
-                {activeConfig.allowTakebacks && (
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    className="!h-12 flex-1"
-                    icon={<RotateCcw size={18} />}
-                    onClick={handleTakeback}
-                    disabled={moves.length < 2 || Boolean(gameOver)}
-                    title="Take Back Move"
-                  >
-                    Takeback
-                  </Button>
-                )}
-
-                <Button
-                  variant="secondary"
-                  size="md"
-                  className="!h-12 px-3 flex-shrink-0"
-                  icon={<Download size={18} />}
-                  onClick={handleDownloadPgn}
-                  title="Download PGN"
-                >
-                  PGN
-                </Button>
-              </div>
-
-              {/* Live Move List */}
-              <Card className="p-3">
-                <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-theme-border/40">
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-theme-text truncate">
-                      {currentOpening ? currentOpening.name : 'Game Notation'}
-                    </span>
+                {/* Live Move List */}
+                <Card className="p-3">
+                  <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-theme-border/40">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <BookOpen size={15} className="text-amber-500 flex-shrink-0" />
+                      <span className="text-xs font-bold text-theme-text truncate" title={currentOpening ? currentOpening.name : 'Starting Position'}>
+                        {currentOpening ? currentOpening.name : 'Starting Position'}
+                      </span>
+                    </div>
                     {currentOpening && (
-                      <span className="text-xs font-semibold text-amber-500 font-mono">
+                      <span className="text-xs font-bold text-amber-500 font-mono flex-shrink-0 bg-amber-500/10 px-1.5 py-0.5 rounded">
                         {currentOpening.eco}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-theme-muted font-mono">{moves.length} plies</span>
-                </div>
-                <MoveList
-                  moves={moves}
-                  currentMoveIndex={moves.length - 1}
-                  onSelectMove={() => {}}
-                />
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+                  <MoveList
+                    moves={moves}
+                    currentMoveIndex={moves.length - 1}
+                    onSelectMove={() => {}}
+                  />
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

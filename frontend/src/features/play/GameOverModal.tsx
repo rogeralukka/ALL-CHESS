@@ -17,7 +17,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   isOpen,
   winner,
   reason,
-  userAccuracy = 84,
+  userAccuracy,
   onNewGame,
   onGameReview,
 }) => {
@@ -61,11 +61,13 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             </p>
           </div>
 
-          {/* Performance snippet */}
-          <div className="w-full py-2.5 px-3 rounded-md bg-theme-raised/60 border border-theme-border/60 flex justify-between items-center text-xs">
-            <span className="text-theme-muted">Estimated Accuracy</span>
-            <span className="font-bold font-mono text-emerald-500">{userAccuracy}%</span>
-          </div>
+          {/* Performance snippet (only shown when real accuracy is available) */}
+          {typeof userAccuracy === 'number' && (
+            <div className="w-full py-2.5 px-3 rounded-md bg-theme-raised/60 border border-theme-border/60 flex justify-between items-center text-xs">
+              <span className="text-theme-muted">Estimated Accuracy</span>
+              <span className="font-bold font-mono text-emerald-500">{userAccuracy}%</span>
+            </div>
+          )}
 
           {/* Actions: Primary Game Review, Secondary New Game */}
           <div className="flex flex-col gap-2 w-full pt-1">
