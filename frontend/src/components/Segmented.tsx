@@ -36,8 +36,8 @@ export const Segmented = <T extends string>({
             role="tab"
             aria-selected={isSelected}
             onClick={() => onChange(opt.value)}
-            className={`relative flex-1 flex items-center justify-center font-medium rounded transition-colors select-none z-10 ${
-              size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-xs md:text-sm'
+            className={`relative flex-1 flex items-center justify-center font-medium rounded transition-colors select-none z-10 min-h-[44px] ${
+              size === 'sm' ? 'px-2.5 text-xs' : 'px-3 text-xs md:text-sm'
             } ${
               isSelected ? 'text-theme-text font-bold' : 'text-theme-muted hover:text-theme-text'
             }`}

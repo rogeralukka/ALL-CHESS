@@ -31,6 +31,8 @@ export const LearnPath: React.FC = () => {
   const [activeLessonStage, setActiveLessonStage] = useState<LessonStage | null>(null);
 
   const completedStages = stages.filter((s) => s.status === 'done').length;
+  const stepSpacing = stages.length > 5 ? 85 : 110;
+  const pathHeight = stages.length * stepSpacing + 40;
 
   const handleLessonComplete = () => {
     toast.achievement('Stage Completed!', `+${activeLessonStage?.xp || 50} XP earned`);
@@ -130,21 +132,21 @@ export const LearnPath: React.FC = () => {
           </div>
 
           {/* Desktop Serpentine Path (hidden on phones) */}
-          <div className="hidden sm:block relative w-full" style={{ height: `${stages.length * 130 + 40}px` }}>
+          <div className="hidden sm:block relative w-full" style={{ height: `${pathHeight}px` }}>
             {/* SVG Connecting Path behind nodes */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none z-0"
-              viewBox={`0 0 500 ${stages.length * 130 + 40}`}
+              viewBox={`0 0 500 ${pathHeight}`}
               preserveAspectRatio="none"
             >
               <path
                 d={stages
                   .map((_, i) => {
                     const x = i % 2 === 0 ? 160 : 340;
-                    const y = i * 130 + 65;
+                    const y = i * stepSpacing + Math.round(stepSpacing / 2);
                     if (i === 0) return `M ${x} ${y}`;
                     const prevX = (i - 1) % 2 === 0 ? 160 : 340;
-                    const prevY = (i - 1) * 130 + 65;
+                    const prevY = (i - 1) * stepSpacing + Math.round(stepSpacing / 2);
                     const midY = (prevY + y) / 2;
                     return `C ${prevX} ${midY}, ${x} ${midY}, ${x} ${y}`;
                   })
@@ -165,7 +167,7 @@ export const LearnPath: React.FC = () => {
               const isSelected = selectedStage?.id === stg.id;
               const isLeftNode = index % 2 === 0;
               const nodeX = isLeftNode ? 160 : 340;
-              const nodeY = index * 130 + 65;
+              const nodeY = index * stepSpacing + Math.round(stepSpacing / 2);
 
               return (
                 <div
@@ -175,7 +177,7 @@ export const LearnPath: React.FC = () => {
                 >
                   {/* "You are here" Pin */}
                   {isCurrent && (
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-500 text-black shadow-lg flex items-center gap-1 z-20 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-amber-500">
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-500 text-black shadow-lg flex items-center gap-1 z-20 pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-amber-500">
                       <span>You are here</span>
                     </div>
                   )}
@@ -217,8 +219,8 @@ export const LearnPath: React.FC = () => {
                     onClick={() => !isLocked && setSelectedStage(stg)}
                     className={`absolute top-1/2 -translate-y-1/2 cursor-pointer w-44 select-none ${
                       isLeftNode
-                        ? 'right-full mr-5 text-right'
-                        : 'left-full ml-5 text-left'
+                        ? 'right-full mr-6 text-right'
+                        : 'left-full ml-6 text-left'
                     }`}
                   >
                     <span className="text-xs font-bold text-theme-text block leading-snug hover:text-amber-500 transition-colors">
@@ -248,11 +250,11 @@ export const LearnPath: React.FC = () => {
               return (
                 <div
                   key={`mobile-${stg.id}`}
-                  className="flex items-center gap-4 relative z-10 py-1"
+                  className="flex items-center gap-4 relative z-10 py-2.5"
                 >
                   <div className="relative flex-shrink-0 -ml-12 w-12 flex justify-center">
                     {isCurrent && (
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-black uppercase bg-amber-500 text-black shadow-md flex items-center gap-1 z-20">
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-black uppercase bg-amber-500 text-black shadow-md flex items-center gap-1 z-20 pointer-events-none">
                         <span>Here</span>
                       </div>
                     )}

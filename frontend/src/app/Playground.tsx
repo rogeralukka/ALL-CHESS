@@ -138,7 +138,7 @@ export const Playground: React.FC = () => {
               <ClassificationBadge classification={cls} size="md" />
               <div className="flex flex-col">
                 <span className="text-xs font-bold capitalize text-theme-text">{cls}</span>
-                <span className="text-[10px] text-theme-muted">Custom SVG badge</span>
+                <span className="text-xs text-theme-muted">Custom SVG badge</span>
               </div>
             </div>
           ))}

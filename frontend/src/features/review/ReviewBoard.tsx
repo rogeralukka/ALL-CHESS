@@ -506,7 +506,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           </div>
 
           {/* Board + Eval Bar Container */}
-          <div className="flex items-center justify-center gap-2.5 w-full">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 w-full">
             <EvalBar
               evalScore={showingBest ? currentMove?.eval?.lines?.[0]?.eval ?? currentMove?.eval?.eval : currentMove?.eval?.eval}
               orientation={orientation}

@@ -182,7 +182,7 @@ export const Home: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/settings')}
-            className="min-h-[44px] md:min-h-[32px] inline-flex items-center gap-1 text-xs font-semibold text-amber-500 hover:text-amber-400 transition-colors"
+            className="min-h-[44px] min-w-[44px] px-2 py-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-500 hover:text-amber-400 transition-colors"
           >
             <SlidersHorizontal size={13} />
             <span>Adjust</span>
@@ -378,7 +378,7 @@ export const Home: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/review')}
-            className="min-h-[44px] md:min-h-[32px] inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors"
+            className="min-h-[44px] min-w-[44px] px-2 py-2 inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors"
           >
             View All ({recentGames.length > 0 ? '12' : '0'}) →
           </button>
@@ -402,7 +402,7 @@ export const Home: React.FC = () => {
                 className="p-3.5 rounded-xl bg-theme-raised border border-theme-border/60 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0 w-full"
               >
                 {/* Left: Result Chip + Game Info */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="flex items-center gap-3 min-w-0 w-full flex-1">
                   {/* Result Chip */}
                   <span
                     className={`font-mono tabular-nums text-xs font-bold px-2.5 py-1 rounded border flex-shrink-0 ${
@@ -429,8 +429,8 @@ export const Home: React.FC = () => {
                       )}
                       <span className="text-xs text-theme-muted font-mono tabular-nums">({opponent.rating})</span>
                     </div>
-                    <p className="text-xs text-theme-muted truncate mt-0.5" title={`${game.opening.name} • ${game.timeControl} • ${fullMoves} moves`}>
-                      <span className="line-clamp-1">{game.opening.name} • {game.timeControl} • {fullMoves} moves</span>
+                    <p className="text-xs text-theme-muted mt-0.5" title={`${game.opening.name} • ${game.timeControl} • ${fullMoves} moves`}>
+                      <span className="line-clamp-2">{game.opening.name} • {game.timeControl} • {fullMoves} moves</span>
                     </p>
                   </div>
                 </div>
@@ -525,7 +525,7 @@ export const Home: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/profile')}
-              className="text-xs text-amber-500 font-bold hover:underline"
+              className="min-h-[44px] min-w-[44px] px-2 py-2 inline-flex items-center justify-center text-xs text-amber-500 font-bold hover:underline"
             >
               Full Profile
             </button>

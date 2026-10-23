@@ -61,7 +61,7 @@ export const ScoutSearch: React.FC = () => {
               key={p.username}
               type="button"
               onClick={() => setSelectedOpponent(p)}
-              className="min-h-[44px] md:min-h-[32px] px-3 py-1.5 rounded-full bg-theme-raised hover:bg-theme-card border border-theme-border text-theme-text font-medium flex items-center gap-1.5 transition-colors"
+              className="min-h-[44px] min-w-[44px] px-3 py-2 rounded-full bg-theme-raised hover:bg-theme-card border border-theme-border text-theme-text font-medium flex items-center gap-1.5 transition-colors"
             >
               <UserCheck size={14} className="text-amber-500" />
               <span>{p.username}</span>

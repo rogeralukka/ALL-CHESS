@@ -59,7 +59,7 @@ export const FriendsCompare: React.FC = () => {
                     />
                     <span>{item.username}</span>
                     {item.isUser && (
-                      <span className="text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">
+                      <span className="text-xs bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">
                         You
                       </span>
                     )}

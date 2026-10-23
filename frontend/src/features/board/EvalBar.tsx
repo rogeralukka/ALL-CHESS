@@ -37,7 +37,7 @@ export const EvalBar: React.FC<EvalBarProps> = ({
 
   return (
     <div
-      className={`relative w-7 rounded-sm overflow-hidden flex flex-col justify-between border border-neutral-700/60 shadow-md select-none ${className}`}
+      className={`relative w-5 sm:w-7 rounded-sm overflow-hidden flex flex-col justify-between border border-neutral-700/60 shadow-md select-none ${className}`}
       style={{ height, minHeight: '280px' }}
       aria-label={`Evaluation bar: ${formatEval(evalScore, mate)}`}
       role="progressbar"

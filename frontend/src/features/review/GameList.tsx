@@ -186,7 +186,7 @@ export const GameList: React.FC<GameListProps> = ({ onSelectGame }) => {
                       {g.speed} • {g.timeControl}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${resultBadgeColor}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${resultBadgeColor}`}>
                         {resultText}
                       </span>
                       <span className="font-mono text-theme-muted font-bold">{g.result}</span>
@@ -222,7 +222,7 @@ export const GameList: React.FC<GameListProps> = ({ onSelectGame }) => {
                     <span className="truncate max-w-[200px]" title={g.opening.name}>
                       {g.opening.name}
                     </span>
-                    <span className="flex items-center gap-1 font-mono text-[11px]">
+                    <span className="flex items-center gap-1 font-mono text-xs">
                       <Calendar size={12} />
                       {formatDate(g.date)}
                     </span>

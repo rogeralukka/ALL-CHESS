@@ -628,7 +628,7 @@ export const PlayGame: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden">
       {/* Center Zone: Board & Eval Bar */}
-      <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0 relative">
+      <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page min-w-0 relative">
         <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
           {/* Top Player (Coach) */}
           <div className="flex items-center justify-between text-xs px-2 py-1 text-theme-muted">
@@ -644,7 +644,7 @@ export const PlayGame: React.FC = () => {
                 <span className="text-xs" title="International">🌐</span>
               </div>
               {coachAdvantage > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded text-[11px] font-mono font-bold bg-white/10 text-theme-text">
+                <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-mono font-bold bg-white/10 text-theme-text">
                   +{coachAdvantage}
                 </span>
               )}
@@ -660,7 +660,7 @@ export const PlayGame: React.FC = () => {
           </div>
 
           {/* Board + Eval Bar */}
-          <div className="flex items-center justify-center gap-2.5 w-full">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 w-full">
             {activeConfig?.evalBar && (
               <EvalBar
                 evalScore={lastMoveObj?.eval?.eval || 0}
@@ -757,7 +757,7 @@ export const PlayGame: React.FC = () => {
                 <span className="text-xs" title="Player">🌐</span>
               </div>
               {userAdvantage > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded text-[11px] font-mono font-bold bg-white/10 text-theme-text">
+                <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-mono font-bold bg-white/10 text-theme-text">
                   +{userAdvantage}
                 </span>
               )}

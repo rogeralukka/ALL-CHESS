@@ -63,7 +63,7 @@ export const RewardCascade: React.FC<RewardCascadeProps> = ({
           </motion.div>
 
           <div>
-            <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-500">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-amber-500">
               Tactical Mastery
             </span>
             <h2 className="text-2xl font-black font-display text-theme-text mt-0.5">

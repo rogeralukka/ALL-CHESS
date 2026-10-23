@@ -22,6 +22,7 @@ export interface BoardProps {
   arrows?: Arrow[];
   badges?: BoardBadge[];
   highlights?: string[];
+  successSquares?: string[];
   legalTargets?: string[];
   interactive?: boolean;
   onMove?: (from: string, to: string, promotion?: string) => boolean | void;
@@ -95,6 +96,7 @@ export const Board: React.FC<BoardProps> = ({
   arrows = EMPTY_ARRAY,
   badges = EMPTY_ARRAY,
   highlights = EMPTY_ARRAY,
+  successSquares = EMPTY_ARRAY,
   legalTargets = EMPTY_ARRAY,
   interactive = true,
   onMove,
@@ -534,8 +536,11 @@ export const Board: React.FC<BoardProps> = ({
       }
     }
 
+    if (successSquares.includes(sq)) {
+      return 'bg-emerald-500/40 ring-2 ring-emerald-500';
+    }
     if (highlights.includes(sq)) {
-      return 'bg-emerald-400/45 ring-2 ring-emerald-400';
+      return 'bg-amber-400/35 ring-2 ring-amber-400/60';
     }
 
     return '';

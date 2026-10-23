@@ -29,6 +29,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
   const [boardFen, setBoardFen] = useState<string | null>(null);
   const [attemptError, setAttemptError] = useState<string | null>(null);
   const [coachExp, setCoachExp] = useState<CoachExpression>('neutral');
+  const [solvedSquare, setSolvedSquare] = useState<string | null>(null);
 
   const steps =
     stage.steps.length > 0
@@ -56,6 +57,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex((prev) => prev + 1);
       setStepSolved(false);
+      setSolvedSquare(null);
       setBoardFen(null);
       setAttemptError(null);
       setCoachExp('neutral');
@@ -86,6 +88,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
 
       if (isMatch) {
         setBoardFen(chess.fen());
+        setSolvedSquare(to);
         setStepSolved(true);
         setAttemptError(null);
         setCoachExp('brilliant');
@@ -141,7 +144,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
               pieceSet={currentPieceSet}
               animationSpeed={animationSpeed}
               arrows={currentStep.arrows || EMPTY_ARROWS}
-              highlights={currentStep.highlightSquares || EMPTY_HIGHLIGHTS}
+              highlights={stepSolved ? EMPTY_HIGHLIGHTS : (currentStep.highlightSquares || EMPTY_HIGHLIGHTS)}
+              successSquares={solvedSquare ? [solvedSquare] : EMPTY_HIGHLIGHTS}
               interactive={isInteractive && !stepSolved}
               onMove={handleMove}
             />

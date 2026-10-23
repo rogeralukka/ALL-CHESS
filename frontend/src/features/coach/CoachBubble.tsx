@@ -172,7 +172,12 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
       )}
 
       {/* Message text with typewriter / accessible live region */}
-      <div className="text-[15px] leading-relaxed font-normal" aria-live="polite">
+      <div
+        data-testid="coach-bubble-text"
+        className="text-[15px] leading-relaxed font-normal line-clamp-2"
+        aria-live="polite"
+        title={msg.text}
+      >
         <span className="sr-only">{msg.text}</span>
         <span aria-hidden="true">{currentText}</span>
         {!isComplete && !isOff && (

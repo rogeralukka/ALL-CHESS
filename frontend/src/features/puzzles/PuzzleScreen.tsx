@@ -449,7 +449,7 @@ export const PuzzleScreen: React.FC = () => {
                               <Lock size={16} />
                             )}
                           </div>
-                          <span className="text-[10px] font-bold text-theme-muted mt-1 whitespace-nowrap">
+                          <span className="text-xs font-bold text-theme-muted mt-1 whitespace-nowrap">
                             Tile {tile.idx + 1}
                           </span>
                         </div>

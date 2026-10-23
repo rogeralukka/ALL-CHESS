@@ -376,7 +376,7 @@ export const SettingsShell: React.FC = () => {
                           />
                           <div>
                             <div className="text-sm font-bold text-theme-text">{piece.name}</div>
-                            <div className="text-[11px] text-theme-muted">{piece.license}</div>
+                            <div className="text-xs text-theme-muted">{piece.license}</div>
                           </div>
                         </div>
                         {isSelected && (
@@ -414,7 +414,7 @@ export const SettingsShell: React.FC = () => {
                         <div className="text-xs font-bold uppercase tracking-wider text-theme-text capitalize">
                           {bg}
                         </div>
-                        <div className="text-[10px] text-theme-muted mt-0.5">
+                        <div className="text-xs text-theme-muted mt-0.5">
                           {bg === 'standard' ? 'Pure Canvas' : bg === 'felt' ? 'Textured Felt' : 'Warm Grain'}
                         </div>
                       </button>
@@ -452,7 +452,7 @@ export const SettingsShell: React.FC = () => {
                           </div>
                         )}
                         <div className="text-xs font-bold text-theme-text truncate">{p.name}</div>
-                        <div className="text-[10px] text-theme-muted mt-0.5 capitalize">
+                        <div className="text-xs text-theme-muted mt-0.5 capitalize">
                           {p.boardId} • {p.background}
                         </div>
                       </button>
@@ -596,7 +596,7 @@ export const SettingsShell: React.FC = () => {
                 onChange={(e) => settings.updateSettings({ engineDepth: Number(e.target.value) })}
                 className="w-full accent-amber-500 cursor-pointer"
               />
-              <div className="flex justify-between text-[10px] text-theme-muted font-mono">
+              <div className="flex justify-between text-xs text-theme-muted font-mono">
                 <span>Fast (10)</span>
                 <span>Balanced (18)</span>
                 <span>Deep Search (30)</span>

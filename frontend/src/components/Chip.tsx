@@ -35,7 +35,7 @@ export const Chip: React.FC<ChipProps> = ({
     <span
       onClick={onClick}
       className={`inline-flex items-center rounded-pill font-medium select-none ${
-        onClick ? 'cursor-pointer hover:opacity-80 active:scale-95' : ''
+        onClick ? 'cursor-pointer hover:opacity-80 active:scale-95 min-h-[44px]' : ''
       } ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
     >
       {icon && <span className="flex-shrink-0">{icon}</span>}
