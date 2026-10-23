@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
+import { PageContainer, SectionTitle } from '@/components/PageHeader';
+import { PlayerAvatar, WDLBar, Pill, StatTile, Reveal } from '@/components/Bits';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { ScoutProfile as ScoutProfileType } from '@/data/types';
-import { ArrowLeft, Swords, ShieldAlert, BookOpen, History, Trophy } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Swords, ShieldAlert, BookOpen, History, Trophy, Target, ChevronRight } from 'lucide-react';
 
 interface ScoutProfileProps {
   profile: ScoutProfileType;
@@ -14,179 +16,136 @@ interface ScoutProfileProps {
 export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) => {
   const navigate = useNavigate();
 
-  // Custom coach advice generated per scout profile
   const coachNotes =
     profile.winRate > 60
-      ? `${profile.username} is dangerous with high opening preparation (${profile.winRate}% win rate). Try deviating early into sidelines to force them into independent calculation!`
-      : `${profile.username} maintains a steady ${profile.winRate}% win rate. Their opening repertoire is predictable—target their lower accuracy in middlegame pawn transitions.`;
+      ? `${profile.username} is well prepared (${profile.winRate}% wins). Leave the main lines early and make them think for themselves.`
+      : `${profile.username} wins ${profile.winRate}% of games with a predictable repertoire. Aim for the middlegame, where their accuracy drops.`;
+
+  const games = profile.mostPlayed.reduce((n, o) => n + o.games, 0);
+  const acc = profile.mostPlayed.length ? profile.mostPlayed.reduce((n, o) => n + o.avgAccuracy * o.games, 0) / Math.max(1, games) : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Back button & Title */}
+    <PageContainer>
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<ArrowLeft size={16} />}
-          onClick={onBack}
-        >
-          Back to Scout Search
+        <Button variant="ghost" size="sm" icon={<ArrowLeft size={16} />} onClick={onBack}>
+          All opponents
         </Button>
-        <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-          Scout Report
-        </span>
+        <Pill tone="amber">Scout report</Pill>
       </div>
 
-      {/* Opponent Header Banner */}
-      <Card className="p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-theme-raised border-2 border-amber-500 flex items-center justify-center font-display font-black text-xl text-amber-500 shadow-inner">
-              {profile.username.slice(0, 2).toUpperCase()}
+      {/* Header */}
+      <section className="panel relative overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(480px 240px at 90% 50%, rgba(255,107,74,0.16), transparent 70%)' }}
+        />
+        <img
+          src="/assets/ui/hero_scout.webp"
+          alt=""
+          aria-hidden="true"
+          className="hidden md:block absolute -right-6 -bottom-6 h-[125%] opacity-90 pointer-events-none"
+          style={{ filter: 'drop-shadow(0 18px 24px rgba(0,0,0,.45))' }}
+        />
+        <div className="relative p-5 md:p-7 flex flex-col sm:flex-row sm:items-center gap-5 md:max-w-[64%]">
+          <PlayerAvatar name={profile.username} size={84} />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex items-center gap-2">
+              <h1 className="text-[28px] font-black font-display text-theme-text truncate">{profile.username}</h1>
+              {profile.title && <Pill tone="red">{profile.title}</Pill>}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-black font-display text-theme-text">{profile.username}</h2>
-                {profile.title && (
-                  <span className="text-xs bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded font-black">
-                    {profile.title}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-theme-muted mt-0.5">
-                Rapid Rating <strong className="font-mono text-amber-500">{profile.rating}</strong> • Overall Win Rate{' '}
-                <strong className="text-emerald-500">{profile.winRate}%</strong>
-              </p>
+            <div className="max-w-sm">
+              <WDLBar win={profile.winRate} draw={profile.mostPlayed[0]?.drawRate ?? 10} loss={Math.max(0, 100 - profile.winRate - (profile.mostPlayed[0]?.drawRate ?? 10))} height={10} showLabels />
+            </div>
+            <div className="pt-1">
+              <Button variant="primary" size="lg" icon={<Swords size={18} />} onClick={() => navigate('/play')}>
+                Practise against this style
+              </Button>
             </div>
           </div>
-
-          <Button
-            variant="primary"
-            icon={<Swords size={18} />}
-            onClick={() => navigate('/play')}
-          >
-            Prep Against Playstyle
-          </Button>
         </div>
-      </Card>
+      </section>
 
-      {/* Coach Prep Assessment */}
-      <div className="p-5 rounded-xl bg-theme-card border border-theme-border shadow-sm space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500">Coach Repertoire Assessment</h4>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatTile label="Rapid rating" value={profile.rating} accent="#f5a524" />
+        <StatTile label="Win rate" value={`${profile.winRate}%`} accent="var(--class-best)" />
+        <StatTile label="Games studied" value={games} />
+        <StatTile label="Avg accuracy" value={`${acc.toFixed(1)}%`} />
+      </div>
+
+      <Card>
+        <SectionTitle icon={<Target size={18} className="text-amber-500" />}>Coach's game plan</SectionTitle>
         <CoachSpeech expression="thinking" size={80} text={coachNotes} />
-      </div>
-
-      {/* Opening Repertoire Breakdown */}
-      <Card className="p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <BookOpen size={18} className="text-amber-500" />
-          <h3 className="font-bold font-display text-theme-text text-base">
-            Primary Opening Repertoire
-          </h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-theme-border text-xs text-theme-muted uppercase tracking-wider">
-                <th className="py-2.5 px-3">ECO</th>
-                <th className="py-2.5 px-3">Opening</th>
-                <th className="py-2.5 px-3 text-right">Games</th>
-                <th className="py-2.5 px-3 text-right">Win / Draw / Loss</th>
-                <th className="py-2.5 px-3 text-right">Accuracy</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-theme-border/40">
-              {profile.mostPlayed.map((op) => (
-                <tr key={op.eco} className="hover:bg-theme-raised/50 transition-colors">
-                  <td className="py-3 px-3 font-mono text-xs text-amber-500 font-bold">
-                    {op.eco}
-                  </td>
-                  <td className="py-3 px-3 font-semibold text-theme-text">
-                    {op.name}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-theme-muted">
-                    {op.games}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-xs tabular-nums">
-                    <span className="text-emerald-500 font-bold">{op.winRate}%</span> /{' '}
-                    <span className="text-neutral-400">{op.drawRate}%</span> /{' '}
-                    <span className="text-red-500">{op.lossRate}%</span>
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums font-semibold text-theme-text">
-                    {op.avgAccuracy}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </Card>
 
-      {/* Exploitable Tendencies */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <Trophy size={18} className="text-emerald-500" />
-            <h4 className="font-bold font-display text-theme-text text-sm">Targeted Strengths</h4>
-          </div>
-          <ul className="text-xs text-theme-muted space-y-2 list-disc list-inside">
-            <li>Executes well-known book lines deeply without burning clock time.</li>
-            <li>Maintains high tactical accuracy in open king positions.</li>
-            <li>Disciplined pawn structure throughout the opening phase.</li>
-          </ul>
-        </Card>
-
-        <Card className="p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <ShieldAlert size={18} className="text-red-500" />
-            <h4 className="font-bold font-display text-theme-text text-sm">Exploitable Weaknesses</h4>
-          </div>
-          <ul className="text-xs text-theme-muted space-y-2 list-disc list-inside">
-            <li>Lower win rate when facing closed centers and slow maneuvering lines.</li>
-            <li>Prone to time trouble in complex minor piece endgames.</li>
-            <li>Higher blunder frequency when defending back-rank threats.</li>
-          </ul>
-        </Card>
-      </div>
-
-      {/* Recent Games */}
-      <Card className="p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <History size={18} className="text-amber-500" />
-          <h3 className="font-bold font-display text-theme-text text-base">Recent Games Analyzed</h3>
-        </div>
+      <Card>
+        <SectionTitle icon={<BookOpen size={18} className="text-amber-500" />}>Opening repertoire</SectionTitle>
         <div className="space-y-2">
-          {profile.recentGames.map((g) => (
-            <div
-              key={g.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-theme-raised border border-theme-border hover:border-amber-500/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono font-bold uppercase px-2 py-0.5 rounded bg-theme-card border border-theme-border text-theme-muted">
-                  {g.speed}
-                </span>
-                <div>
-                  <div className="text-sm font-semibold text-theme-text">
-                    {g.white.username} ({g.white.rating}) vs {g.black.username} ({g.black.rating})
-                  </div>
-                  <div className="text-xs text-theme-muted">{g.opening.name}</div>
+          {profile.mostPlayed.map((op, i) => (
+            <Reveal key={op.eco} i={i}>
+              <div className="grid grid-cols-[48px_1fr] sm:grid-cols-[56px_1fr_220px_70px] items-center gap-3 p-3 rounded-xl bg-black/[0.04] dark:bg-black/20 border border-theme-border hover:border-amber-500/40 transition-colors">
+                <span className="font-mono text-[12px] font-black text-amber-500 text-center rounded-md bg-amber-500/10 py-1">{op.eco}</span>
+                <div className="min-w-0">
+                  <div className="font-bold text-[15px] text-theme-text truncate">{op.name}</div>
+                  <div className="text-xs text-theme-muted">{op.games} games</div>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <WDLBar win={op.winRate} draw={op.drawRate} loss={op.lossRate} />
+                </div>
+                <div className="hidden sm:block text-right">
+                  <div className="text-[15px] font-black tabular-nums text-theme-text">{op.avgAccuracy}%</div>
+                  <div className="text-[12px] text-theme-muted">accuracy</div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-mono font-bold text-amber-500">{g.result}</span>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => navigate(`/review/${g.id}`)}
-                >
-                  Review Game
-                </Button>
-              </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </Card>
-    </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="space-y-3 border-l-4 !border-l-[var(--class-best)]">
+          <SectionTitle icon={<Trophy size={18} className="text-[var(--class-best)]" />}>Where they're strong</SectionTitle>
+          <ul className="space-y-2 text-[14px] text-theme-text/85">
+            <li>Plays known book lines deep and fast.</li>
+            <li>Sharp in open positions around an exposed king.</li>
+            <li>Keeps a tidy pawn structure out of the opening.</li>
+          </ul>
+        </Card>
+        <Card className="space-y-3 border-l-4 !border-l-[var(--class-blunder)]">
+          <SectionTitle icon={<ShieldAlert size={18} className="text-[var(--class-blunder)]" />}>Where they crack</SectionTitle>
+          <ul className="space-y-2 text-[14px] text-theme-text/85">
+            <li>Scores worse against closed centres and slow manoeuvring.</li>
+            <li>Gets into time trouble in minor-piece endgames.</li>
+            <li>Misses back-rank threats when defending.</li>
+          </ul>
+        </Card>
+      </div>
+
+      <Card>
+        <SectionTitle icon={<History size={18} className="text-amber-500" />}>Recent games</SectionTitle>
+        <div className="divide-y divide-theme-border">
+          {profile.recentGames.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => navigate(`/review/${g.id}`)}
+              className="group w-full flex items-center gap-3 py-3 px-2 -mx-2 rounded-lg text-left hover:bg-black/[0.05] dark:hover:bg-white/[0.04] transition-colors"
+            >
+              <Pill>{g.speed}</Pill>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-bold text-theme-text truncate">
+                  {g.white.username} <span className="text-theme-muted font-medium">({g.white.rating})</span> vs {g.black.username}{' '}
+                  <span className="text-theme-muted font-medium">({g.black.rating})</span>
+                </div>
+                <div className="text-xs text-theme-muted truncate">{g.opening.name}</div>
+              </div>
+              <span className="font-mono text-[13px] font-black text-theme-text">{g.result}</span>
+              <span className="hidden sm:inline text-[13px] font-bold text-amber-500 group-hover:underline">Review</span>
+              <ChevronRight size={18} className="text-theme-muted" />
+            </button>
+          ))}
+        </div>
+      </Card>
+    </PageContainer>
   );
 };
