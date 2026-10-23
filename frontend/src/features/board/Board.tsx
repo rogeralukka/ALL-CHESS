@@ -843,7 +843,8 @@ export const Board: React.FC<BoardProps> = ({
                       className="absolute pointer-events-none z-10 rounded-full"
                       style={
                         piece
-                          ? { inset: 0, background: 'radial-gradient(circle, transparent 0 79%, rgba(0, 0, 0, 0.14) 80%)' }
+                          ? // capture: a ring that fills the square's inscribed circle, thick enough to show around the piece
+                            { inset: 0, boxShadow: 'inset 0 0 0 1.35cqw rgba(0, 0, 0, 0.16)' }
                           : { width: '33%', height: '33%', background: 'rgba(0, 0, 0, 0.14)' }
                       }
                     />

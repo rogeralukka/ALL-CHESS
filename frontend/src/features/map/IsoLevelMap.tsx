@@ -44,6 +44,8 @@ export interface IsoLevelMapProps {
   tileWidth?: number;
   /** Changes the scenery layout. */
   seed?: number;
+  /** When set, the map is as tall as its content up to this many px (then it scrolls). */
+  maxHeight?: number;
   className?: string;
 }
 
@@ -105,6 +107,7 @@ export const IsoLevelMap: React.FC<IsoLevelMapProps> = ({
   showLockIcons = false,
   tileWidth = 82,
   seed = 7,
+  maxHeight,
   className = '',
 }) => {
   const { isFull, isOff } = useMotion();
@@ -239,7 +242,7 @@ export const IsoLevelMap: React.FC<IsoLevelMapProps> = ({
       // no `relative` here: callers position the map (e.g. `absolute inset-0`), and Tailwind's
       // `relative` would override their `absolute`, letting the map grow instead of scrolling
       className={`overflow-y-auto overflow-x-hidden select-none ${className}`}
-      style={{ scrollbarWidth: 'thin' }}
+      style={{ scrollbarWidth: 'thin', height: maxHeight ? Math.min(layout.height, maxHeight) : undefined }}
       data-testid="level-map"
     >
       <div
