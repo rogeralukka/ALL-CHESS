@@ -23,7 +23,8 @@ import bmesh
 from mathutils import Vector, Matrix
 
 OUT = sys.argv[-1] if len(sys.argv) > 1 and not sys.argv[-1].endswith('.py') else 'out'
-os.makedirs(OUT, exist_ok=True)
+if __name__ == '__main__':
+    os.makedirs(OUT, exist_ok=True)
 
 RES = 640          # render size (square)
 ORTHO = 4.0        # world units across the frame
@@ -242,7 +243,7 @@ def box(size, loc, material, bevel=0.0, segments=3):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
     o = bpy.context.active_object
     o.scale = size
-    bpy.ops.object.transform_apply(scale=True)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     if bevel > 0:
         b = o.modifiers.new('bevel', 'BEVEL')
         b.width = bevel
@@ -586,4 +587,5 @@ def main():
     json.dump(manifest, open(manifest_path, 'w'), indent=1)
 
 
-main()
+if __name__ == '__main__':
+    main()
