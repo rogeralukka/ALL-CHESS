@@ -41,12 +41,15 @@ def db_session():
         Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture
-def client(db_session):
+def client(db_session, monkeypatch):
+    monkeypatch.setattr("app.database.SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr("app.routers.sync.SessionLocal", TestingSessionLocal)
+
     def override_get_db():
         try:
             yield db_session
         finally:
-            pass
+            db_session.expire_all()
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:

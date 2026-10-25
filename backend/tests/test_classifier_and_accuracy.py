@@ -1,6 +1,10 @@
 from app.services.win_pct import win_pct, eval_to_win_pct
 from app.services.classifier import classify_move
-from app.services.accuracy import move_accuracy, calculate_game_accuracy
+from app.services.accuracy import (
+    move_accuracy,
+    calculate_game_accuracy,
+    estimate_performance_ratings
+)
 
 def test_win_pct_formula():
     # 0 centipawns should equal 50%
@@ -41,3 +45,20 @@ def test_classify_move():
 def test_move_accuracy():
     assert move_accuracy(0.0) == 100.0
     assert move_accuracy(50.0) < 20.0
+
+def test_estimate_performance_ratings_calibration():
+    # 50% accuracy -> ~500
+    res_50 = estimate_performance_ratings({"white": 50.0, "black": 50.0})
+    assert res_50["white"] == 500
+
+    # 75% accuracy -> ~1200
+    res_75 = estimate_performance_ratings({"white": 75.0, "black": 75.0})
+    assert res_75["white"] == 1200
+
+    # 90% accuracy -> ~2000
+    res_90 = estimate_performance_ratings({"white": 90.0, "black": 90.0})
+    assert res_90["white"] == 2000
+
+    # 98% accuracy -> ~2700
+    res_98 = estimate_performance_ratings({"white": 98.0, "black": 98.0})
+    assert res_98["white"] == 2700

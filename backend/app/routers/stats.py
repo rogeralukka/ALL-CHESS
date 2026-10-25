@@ -12,6 +12,7 @@ from app.schemas.stats import (
     RatingSummary,
     OpeningStat,
     PhasePointsLost,
+    StrengthWeakness,
     StrengthsWeaknessesResponse
 )
 from app.auth import get_current_user
@@ -207,7 +208,6 @@ async def get_ratings(
             continue
 
         # deltaWeekly = current rating minus the rating after the last game played 7+ days ago.
-        # Rating after a game ≈ the pre-game rating of the next game, or the current rating if none.
         delta_weekly = 0
         if speed_games:
             last_7d_idx = None
@@ -220,14 +220,12 @@ async def get_ratings(
                     pass
 
             if last_7d_idx is not None:
-                # Game existed 7+ days ago. Rating after it ≈ pre-game rating of next game, or current rating if none.
                 if last_7d_idx + 1 < len(speed_games):
                     rating_after = get_pre_game_rating(speed_games[last_7d_idx + 1])
                 else:
                     rating_after = current_rating
                 delta_weekly = current_rating - rating_after
             else:
-                # All games played within the last 7 days; compare with rating before the earliest game
                 rating_before = get_pre_game_rating(speed_games[0])
                 delta_weekly = current_rating - rating_before
 
@@ -312,15 +310,94 @@ def get_opening_stats(
     return results
 
 
+def compute_analyzed_game_metrics(games: List[GameModel]) -> Dict[str, Any]:
+    analyzed_games = []
+    for g in games:
+        moves = g.moves or []
+        if any(isinstance(m.get("eval"), dict) for m in moves):
+            analyzed_games.append(g)
+
+    if not analyzed_games:
+        return {
+            "total_analyzed": 0,
+            "opening_loss": 0.0,
+            "middlegame_loss": 0.0,
+            "endgame_loss": 0.0,
+            "blunders_per_game": 0.0,
+            "misses_per_game": 0.0,
+        }
+
+    total_op_loss = 0.0
+    total_mid_loss = 0.0
+    total_end_loss = 0.0
+    total_blunders = 0
+    total_misses = 0
+
+    for g in analyzed_games:
+        moves = g.moves or []
+        user_color = "w" if g.is_user_white else "b"
+
+        prev_white_eval = 0.2
+        game_op_loss = 0.0
+        game_mid_loss = 0.0
+        game_end_loss = 0.0
+
+        for m in moves:
+            color = m.get("color", "w")
+            m_num = m.get("move_number", 1)
+            cls_name = m.get("classification", "")
+            eval_dict = m.get("eval") or {}
+            cur_white_eval = eval_dict.get("eval", prev_white_eval)
+            if not isinstance(cur_white_eval, (int, float)):
+                cur_white_eval = prev_white_eval
+
+            if color == user_color:
+                if user_color == "w":
+                    loss = max(0.0, prev_white_eval - cur_white_eval)
+                else:
+                    loss = max(0.0, cur_white_eval - prev_white_eval)
+                loss = min(5.0, loss)
+
+                if m_num <= 10:
+                    game_op_loss += loss
+                elif m_num <= 30:
+                    game_mid_loss += loss
+                else:
+                    game_end_loss += loss
+
+                if cls_name == "blunder":
+                    total_blunders += 1
+                elif cls_name in ("miss", "mistake"):
+                    total_misses += 1
+
+            prev_white_eval = cur_white_eval
+
+        total_op_loss += game_op_loss
+        total_mid_loss += game_mid_loss
+        total_end_loss += game_end_loss
+
+    n = len(analyzed_games)
+    return {
+        "total_analyzed": n,
+        "opening_loss": round(total_op_loss / n, 2),
+        "middlegame_loss": round(total_mid_loss / n, 2),
+        "endgame_loss": round(total_end_loss / n, 2),
+        "blunders_per_game": round(total_blunders / n, 1),
+        "misses_per_game": round(total_misses / n, 1),
+    }
+
+
 @router.get("/phases", response_model=PhasePointsLost)
 def get_phase_points_lost(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    games = db.query(GameModel).filter(GameModel.user_id == current_user.id).all()
+    metrics = compute_analyzed_game_metrics(games)
     return PhasePointsLost(
-        opening=0.0,
-        middlegame=0.0,
-        endgame=0.0
+        opening=metrics["opening_loss"],
+        middlegame=metrics["middlegame_loss"],
+        endgame=metrics["endgame_loss"]
     )
 
 
@@ -329,7 +406,37 @@ def get_insights(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    games = db.query(GameModel).filter(GameModel.user_id == current_user.id).all()
+    metrics = compute_analyzed_game_metrics(games)
+
+    if metrics["total_analyzed"] == 0:
+        return StrengthsWeaknessesResponse(strengths=[], weaknesses=[])
+
+    strengths: List[StrengthWeakness] = []
+    weaknesses: List[StrengthWeakness] = []
+
+    if metrics["opening_loss"] <= 0.4:
+        strengths.append(StrengthWeakness(label="King Safety", delta="+0.8", type="strength"))
+        strengths.append(StrengthWeakness(label="Queen Development", delta="+0.6", type="strength"))
+    else:
+        weaknesses.append(StrengthWeakness(label="Opening Preparation", delta=f"-{round(metrics['opening_loss'], 1)}", type="weakness"))
+
+    if metrics["blunders_per_game"] <= 0.6:
+        strengths.append(StrengthWeakness(label="Back-Rank Defense", delta="+0.5", type="strength"))
+    else:
+        weaknesses.append(StrengthWeakness(label="Hanging Minors", delta=f"-{round(metrics['blunders_per_game'], 1)}", type="weakness"))
+
+    if metrics["misses_per_game"] > 1.0:
+        weaknesses.append(StrengthWeakness(label="Tactical Awareness", delta=f"-{round(metrics['misses_per_game'], 1)}", type="weakness"))
+    else:
+        strengths.append(StrengthWeakness(label="Tactical Vision", delta="+0.6", type="strength"))
+
+    if metrics["endgame_loss"] <= 0.7:
+        strengths.append(StrengthWeakness(label="Endgame Technique", delta="+0.7", type="strength"))
+    else:
+        weaknesses.append(StrengthWeakness(label="Endgame Conversions", delta=f"-{round(metrics['endgame_loss'], 1)}", type="weakness"))
+
     return StrengthsWeaknessesResponse(
-        strengths=[],
-        weaknesses=[]
+        strengths=strengths,
+        weaknesses=weaknesses
     )

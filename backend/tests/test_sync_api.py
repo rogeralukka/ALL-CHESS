@@ -28,13 +28,24 @@ def test_sync_games_mocked(auth_client):
         response = auth_client.post("/api/v1/sync")
         assert response.status_code == 200
         data = response.json()
-        assert data["syncedCount"] == 1
-        assert data["chesscom"] == 1
-        assert "Synced 1 new games" in data["message"]
+        assert "jobId" in data
+        job_id = data["jobId"]
+
+        # Check job status
+        job_resp = auth_client.get(f"/api/v1/jobs/{job_id}")
+        assert job_resp.status_code == 200
+        job_data = job_resp.json()
+        assert job_data["status"] == "done"
+        assert job_data["progress"] == 100
+        assert job_data["result"]["syncedCount"] == 1
+        assert job_data["result"]["chesscom"] == 1
 
         # Run sync again; verify de-duplication (0 new games)
         response2 = auth_client.post("/api/v1/sync")
         assert response2.status_code == 200
-        data2 = response2.json()
-        assert data2["syncedCount"] == 0
-        assert "up to date" in data2["message"]
+        job_id2 = response2.json()["jobId"]
+        job_resp2 = auth_client.get(f"/api/v1/jobs/{job_id2}")
+        assert job_resp2.status_code == 200
+        job_data2 = job_resp2.json()
+        assert job_data2["status"] == "done"
+        assert job_data2["result"]["syncedCount"] == 0

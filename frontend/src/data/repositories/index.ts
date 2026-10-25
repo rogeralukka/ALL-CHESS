@@ -7,6 +7,7 @@ import { MOCK_FRIENDS } from '../mock/mockFriends';
 import { MOCK_SCOUT_PROFILES } from '../mock/mockScout';
 import { getRandomCoachLine, ILLEGAL_MOVE_TEACHING_LINES } from '@/features/coach/coachLines';
 import { getExpressionForEvent } from '@/features/coach/expressionMap';
+import { wasmEngineService } from '@/services/wasmEngineService';
 
 export interface GameFilter {
   opening?: string;
@@ -181,19 +182,11 @@ export const scoutRepository: IScoutRepository = {
 };
 
 export const engineService: IEngineService = {
-  async getBestMove(_fen: string) {
-    return {
-      move: 'e4',
-      eval: 0.3,
-      why: 'Controls central squares and allows natural bishop and queen development.',
-    };
+  async getBestMove(fen: string, depth?: number) {
+    return wasmEngineService.getBestMove(fen, depth);
   },
-  async getTopLines(_fen: string) {
-    return [
-      { move: 'Nf3', eval: 0.4, depth: 16, why: 'Top choice: develops toward the center and contests e5.', pv: ['Nf3', 'Nc6', 'Bc4'] },
-      { move: 'd4', eval: 0.2, depth: 16, why: 'Aggressive pawn push to immediately challenge black territory.', pv: ['d4', 'exd4', 'Qxd4'] },
-      { move: 'c3', eval: 0.0, depth: 16, why: 'Solid preparation for d4 while keeping king defenses intact.', pv: ['c3', 'd5', 'exd5'] },
-    ];
+  async getTopLines(fen: string, depth?: number) {
+    return wasmEngineService.getTopLines(fen, depth);
   },
 };
 

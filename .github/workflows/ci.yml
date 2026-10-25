@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, backend-v1]
+    branches: [main, backend-v1, backend-phase2]
   pull_request:
     branches: [main]
 
@@ -15,6 +15,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install system dependencies (Stockfish)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y stockfish
 
       - name: Set up Python
         uses: actions/setup-python@v5

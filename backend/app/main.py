@@ -4,14 +4,14 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from app.config import settings
-from app.database import engine, Base
-import app.models # registers models with Base
-from app.routers import auth, games, sync, stats
+from app.database import engine as db_engine, Base
+import app.models  # registers models with Base
+from app.routers import auth, games, sync, stats, jobs, engine as engine_router
 
 logger = logging.getLogger("all_chess")
 
 # Create tables on application start
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=db_engine)
 
 app = FastAPI(
     title="ALL-CHESS API",
@@ -41,6 +41,8 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         error_type = "Forbidden"
     elif exc.status_code == 400:
         error_type = "BadRequest"
+    elif exc.status_code == 429:
+        error_type = "TooManyRequests"
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": error_type, "detail": exc.detail}
@@ -70,3 +72,5 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(games.router, prefix="/api/v1")
 app.include_router(sync.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
+app.include_router(jobs.router, prefix="/api/v1")
+app.include_router(engine_router.router, prefix="/api/v1")

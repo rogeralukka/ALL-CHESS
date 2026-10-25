@@ -16,9 +16,11 @@ class AnalysisJob(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
-    game_id = Column(String(64), ForeignKey("games.id"), nullable=False, index=True)
-    status = Column(String(32), default="queued", nullable=False) # queued, processing, done, failed
-    progress = Column(Integer, default=0, nullable=False) # 0 to 100
+    game_id = Column(String(64), ForeignKey("games.id"), nullable=True, index=True)
+    job_type = Column(String(32), default="analysis", nullable=False)  # 'analysis' | 'sync'
+    status = Column(String(32), default="queued", nullable=False)  # 'queued', 'processing', 'done', 'failed'
+    progress = Column(Integer, default=0, nullable=False)  # 0 to 100
     error_message = Column(Text, nullable=True)
+    result = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
