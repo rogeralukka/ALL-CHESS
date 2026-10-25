@@ -41,10 +41,10 @@ export default {
         pill: '9999px',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Nunito', 'sans-serif'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'Inter', 'sans-serif'],
+        display: ['Figtree', 'Segoe UI', 'sans-serif'],
         // numbers and notation use the same rounded game font as headings
-        mono: ['Nunito', 'ui-monospace', 'monospace'],
+        mono: ['Figtree', 'ui-monospace', 'monospace'],
       },
       transitionDuration: {
         snappy: '50ms',
