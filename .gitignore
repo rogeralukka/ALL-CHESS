@@ -24,6 +24,12 @@ __pycache__/
 .venv/
 env/
 venv/
+backend/.venv/
+backend/.env*
+backend/bin/
+*.db
+*.sqlite
+*.sqlite3
 
 # Local chat exports
 Chess_Coach_Conversation_History.pdf
