@@ -241,8 +241,9 @@ export const IsoLevelMap: React.FC<IsoLevelMapProps> = ({
       ref={scrollRef}
       // no `relative` here: callers position the map (e.g. `absolute inset-0`), and Tailwind's
       // `relative` would override their `absolute`, letting the map grow instead of scrolling
-      className={`overflow-y-auto overflow-x-hidden select-none ${className}`}
-      style={{ scrollbarWidth: 'thin', height: maxHeight ? Math.min(layout.height, maxHeight) : undefined }}
+      className={`overflow-y-auto overflow-x-hidden select-none no-scrollbar ${className}`}
+      // the roadmap scrolls like a game map: no visible scrollbar rail
+      style={{ scrollbarWidth: 'none', height: maxHeight ? Math.min(layout.height, maxHeight) : undefined }}
       data-testid="level-map"
     >
       <div
