@@ -33,6 +33,20 @@ if (-not (Test-Path $envFile)) {
     Write-Host ".env already exists."
 }
 
+# Generate random SESSION_SECRET if missing or placeholder
+if (Test-Path $envFile) {
+    $randomSecret = & $pythonExe -c "import secrets; print(secrets.token_hex(32))"
+    $content = Get-Content $envFile -Raw
+    if ($content -match "SESSION_SECRET=(your_session_secret_here)?\r?\n" -or $content -match "SESSION_SECRET=$") {
+        $content = $content -replace "SESSION_SECRET=.*", "SESSION_SECRET=$randomSecret"
+        Set-Content $envFile $content
+        Write-Host "Generated random SESSION_SECRET in .env."
+    } elseif ($content -notmatch "SESSION_SECRET=") {
+        Add-Content $envFile "`nSESSION_SECRET=$randomSecret"
+        Write-Host "Added random SESSION_SECRET to .env."
+    }
+}
+
 # 4. Stockfish Binary
 $binDir = Join-Path $backendDir "bin"
 $stockfishExe = Join-Path $binDir "stockfish.exe"

@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, Integer, Boolean, JSON, DateTime, ForeignKey
-from datetime import datetime
 import uuid
-from app.database import Base
+from app.database import Base, utc_now
 
 class Friend(Base):
     __tablename__ = "friends"
@@ -15,4 +14,4 @@ class Friend(Base):
     online = Column(Boolean, default=False, nullable=False)
     avatar_url = Column(String(256), nullable=True)
     last_active = Column(String(64), default="Recently", nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)

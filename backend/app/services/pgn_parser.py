@@ -112,7 +112,7 @@ def parse_iso_date(headers: Dict[str, str]) -> str:
             except Exception:
                 pass
 
-    return datetime.utcnow().replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 def parse_pgn_game(
     pgn_text: str,

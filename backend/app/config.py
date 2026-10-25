@@ -7,8 +7,25 @@ from pathlib import Path
 # Base directory for backend
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
+PLACEHOLDER_SECRETS = {
+    "",
+    "your_secret_passcode_here",
+    "your_session_secret_here",
+    "replace_me",
+    "change_me",
+    "all-chess-private-cookie-secret-2026",
+}
+
+def is_testing_environment() -> bool:
+    return bool(
+        os.environ.get("TESTING", "").lower() in ("true", "1")
+        or "PYTEST_CURRENT_TEST" in os.environ
+    )
+
 class Settings(BaseSettings):
-    app_passcode: str = Field(default="allchess123")
+    app_passcode: str = Field(default="")
+    session_secret: str = Field(default="")
+    seed_demo_data: bool = Field(default=False)
     frontend_origin: str = Field(default="http://localhost:5173")
     database_url: str = Field(default="sqlite:///./all_chess.db")
     stockfish_path: str = Field(default="backend/bin/stockfish.exe")
@@ -21,7 +38,6 @@ class Settings(BaseSettings):
     groq_api_key_1: str = Field(default="")
     groq_api_key_2: str = Field(default="")
     
-    session_secret: str = Field(default="all-chess-private-cookie-secret-2026")
     session_cookie_name: str = Field(default="all_chess_session")
 
     model_config = SettingsConfigDict(
@@ -48,3 +64,15 @@ class Settings(BaseSettings):
         return [k.strip() for k in keys if k and k.strip() and "your_groq" not in k]
 
 settings = Settings()
+
+# Validate secrets on startup (skip only when running tests)
+if is_testing_environment():
+    if not settings.app_passcode or settings.app_passcode in PLACEHOLDER_SECRETS:
+        settings.app_passcode = "allchess123"
+    if not settings.session_secret or settings.session_secret in PLACEHOLDER_SECRETS:
+        settings.session_secret = "test-session-secret-key-32-chars-long-123456"
+else:
+    if not settings.app_passcode.strip() or settings.app_passcode.strip() in PLACEHOLDER_SECRETS:
+        raise RuntimeError("APP_PASSCODE is required in backend/.env and must not be a placeholder.")
+    if not settings.session_secret.strip() or settings.session_secret.strip() in PLACEHOLDER_SECRETS:
+        raise RuntimeError("SESSION_SECRET is required in backend/.env and must not be a placeholder.")

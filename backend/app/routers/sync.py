@@ -11,7 +11,7 @@ from app.services.pgn_parser import parse_pgn_game
 
 router = APIRouter(prefix="/sync", tags=["Sync"])
 
-@router.post("", response_model=SyncResponse)
+@router.post("", response_model=SyncResponse, response_model_exclude_none=True)
 async def sync_games(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

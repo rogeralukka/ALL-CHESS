@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, JSON, DateTime, ForeignKey
-from datetime import datetime
 import uuid
-from app.database import Base
+from app.database import Base, utc_now
 
 class ScoutCache(Base):
     __tablename__ = "scout_cache"
@@ -9,7 +8,7 @@ class ScoutCache(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String(64), nullable=False, index=True)
     profile_json = Column(JSON, nullable=False)
-    cached_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    cached_at = Column(DateTime, default=utc_now, nullable=False)
     expires_at = Column(DateTime, nullable=False)
 
 class CoachCache(Base):
@@ -20,4 +19,4 @@ class CoachCache(Base):
     move_san = Column(String(16), nullable=False)
     response_text = Column(String(256), nullable=False)
     expression = Column(String(32), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)

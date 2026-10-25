@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+import hmac
+import time
+from collections import defaultdict
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
@@ -8,13 +11,34 @@ from app.auth import set_session_cookie, clear_session_cookie, get_current_user
 
 router = APIRouter(prefix="/session", tags=["Session"])
 
-@router.post("", response_model=SessionResponse)
+# Rate limiting for POST /session: max 10 attempts per minute per IP
+_SESSION_ATTEMPTS = defaultdict(list)
+_RATE_LIMIT_WINDOW_SECS = 60
+_MAX_SESSION_ATTEMPTS = 10
+
+def check_session_rate_limit(request: Request) -> None:
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+    # Filter attempts within the sliding window
+    attempts = [t for t in _SESSION_ATTEMPTS[client_ip] if now - t < _RATE_LIMIT_WINDOW_SECS]
+    if len(attempts) >= _MAX_SESSION_ATTEMPTS:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many session attempts. Please wait a minute before trying again."
+        )
+    attempts.append(now)
+    _SESSION_ATTEMPTS[client_ip] = attempts
+
+@router.post("", response_model=SessionResponse, response_model_exclude_none=True)
 def create_session(
     data: SessionCreate,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db)
 ):
-    if data.passcode.strip() != settings.app_passcode:
+    check_session_rate_limit(request)
+
+    if not hmac.compare_digest(data.passcode.strip(), settings.app_passcode.strip()):
         raise HTTPException(
             status_code=401,
             detail="Invalid app passcode."
@@ -61,7 +85,7 @@ def create_session(
         )
     )
 
-@router.get("", response_model=SessionResponse)
+@router.get("", response_model=SessionResponse, response_model_exclude_none=True)
 def get_session(current_user: User = Depends(get_current_user)):
     return SessionResponse(
         user=UserResponse(

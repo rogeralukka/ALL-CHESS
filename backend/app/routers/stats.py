@@ -1,4 +1,5 @@
 from typing import List, Literal, Optional
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -9,24 +10,11 @@ from app.schemas.stats import (
     RatingSummary,
     OpeningStat,
     PhasePointsLost,
-    StrengthsWeaknessesResponse,
-    StrengthWeakness
+    StrengthsWeaknessesResponse
 )
 from app.auth import get_current_user
-from app.routers.games import seed_initial_games_if_empty
 
 router = APIRouter(prefix="/stats", tags=["Stats"])
-
-MOCK_RATING_HISTORY = [
-    RatingPoint(date="2026-07-24", rapid=840, blitz=790, bullet=750),
-    RatingPoint(date="2026-08-01", rapid=855, blitz=810, bullet=780),
-    RatingPoint(date="2026-08-15", rapid=870, blitz=805, bullet=800),
-    RatingPoint(date="2026-09-01", rapid=860, blitz=830, bullet=820),
-    RatingPoint(date="2026-09-15", rapid=885, blitz=845, bullet=840),
-    RatingPoint(date="2026-10-01", rapid=895, blitz=850, bullet=865),
-    RatingPoint(date="2026-10-10", rapid=910, blitz=865, bullet=875),
-    RatingPoint(date="2026-10-22", rapid=905, blitz=870, bullet=880),
-]
 
 @router.get("/rating-history", response_model=List[RatingPoint])
 def get_rating_history(
@@ -34,50 +22,114 @@ def get_rating_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    seed_initial_games_if_empty(db, current_user)
+    games = (
+        db.query(GameModel)
+        .filter(GameModel.user_id == current_user.id)
+        .order_by(GameModel.date.asc())
+        .all()
+    )
+
+    if not games:
+        return []
+
+    now = datetime.now(timezone.utc)
+    cutoff = None
     if range == '30d':
-        return MOCK_RATING_HISTORY[-4:]
+        cutoff = now - timedelta(days=30)
     elif range == '90d':
-        return MOCK_RATING_HISTORY[-6:]
-    return MOCK_RATING_HISTORY
+        cutoff = now - timedelta(days=90)
+
+    current_ratings = {"rapid": 0, "blitz": 0, "bullet": 0}
+    history_by_date = {}
+
+    for g in games:
+        d_str = g.date[:10] if g.date else ""
+        if not d_str:
+            continue
+
+        speed = g.speed.lower() if g.speed else "rapid"
+        user_rating = g.white.get("rating") if g.is_user_white else g.black.get("rating")
+        if user_rating and isinstance(user_rating, int) and speed in current_ratings:
+            current_ratings[speed] = user_rating
+
+        history_by_date[d_str] = dict(current_ratings)
+
+    points: List[RatingPoint] = []
+    for d_str, r_dict in sorted(history_by_date.items()):
+        if cutoff:
+            try:
+                dt = datetime.fromisoformat(d_str).replace(tzinfo=timezone.utc)
+                if dt < cutoff:
+                    continue
+            except Exception:
+                pass
+
+        points.append(
+            RatingPoint(
+                date=d_str,
+                rapid=r_dict["rapid"],
+                blitz=r_dict["blitz"],
+                bullet=r_dict["bullet"]
+            )
+        )
+
+    return points
 
 @router.get("/ratings", response_model=List[RatingSummary])
 def get_ratings(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    seed_initial_games_if_empty(db, current_user)
-    # Derive latest ratings from games if available
-    games = db.query(GameModel).filter(GameModel.user_id == current_user.id).order_by(GameModel.date.desc()).all()
+    games = (
+        db.query(GameModel)
+        .filter(GameModel.user_id == current_user.id)
+        .order_by(GameModel.date.desc())
+        .all()
+    )
 
-    rapid_rating = 905
-    blitz_rating = 870
-    bullet_rating = 880
+    results: List[RatingSummary] = []
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-    for g in games:
-        speed = g.speed
-        user_rating = g.white.get("rating") if g.is_user_white else g.black.get("rating")
-        if user_rating and isinstance(user_rating, int):
-            if speed == "rapid" and rapid_rating == 905:
-                rapid_rating = user_rating
-            elif speed == "blitz" and blitz_rating == 870:
-                blitz_rating = user_rating
-            elif speed == "bullet" and bullet_rating == 880:
-                bullet_rating = user_rating
+    for speed_key, mode_name in [("rapid", "Rapid"), ("blitz", "Blitz"), ("bullet", "Bullet")]:
+        speed_games = [g for g in games if (g.speed or "").lower() == speed_key]
+        if not speed_games:
+            results.append(RatingSummary(mode=mode_name, rating=0, delta_weekly=0))
+            continue
 
-    return [
-        RatingSummary(mode="Rapid", rating=rapid_rating, delta_weekly=15),
-        RatingSummary(mode="Blitz", rating=blitz_rating, delta_weekly=5),
-        RatingSummary(mode="Bullet", rating=bullet_rating, delta_weekly=5),
-    ]
+        # games are already in date desc order
+        latest_game = speed_games[0]
+        latest_rating = (latest_game.white.get("rating") if latest_game.is_user_white else latest_game.black.get("rating")) or 0
+
+        # Find game closest to 7 days ago
+        past_rating = latest_rating
+        found_past = False
+        for g in speed_games:
+            try:
+                g_date = datetime.fromisoformat(g.date.replace("Z", "+00:00"))
+                if g_date <= seven_days_ago:
+                    past_rating = (g.white.get("rating") if g.is_user_white else g.black.get("rating")) or latest_rating
+                    found_past = True
+                    break
+            except Exception:
+                continue
+
+        if not found_past and len(speed_games) > 1:
+            earliest_game = speed_games[-1]
+            past_rating = (earliest_game.white.get("rating") if earliest_game.is_user_white else earliest_game.black.get("rating")) or latest_rating
+
+        delta = latest_rating - past_rating
+        results.append(RatingSummary(mode=mode_name, rating=latest_rating, delta_weekly=delta))
+
+    return results
 
 @router.get("/openings", response_model=List[OpeningStat])
 def get_opening_stats(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    seed_initial_games_if_empty(db, current_user)
     games = db.query(GameModel).filter(GameModel.user_id == current_user.id).all()
+    if not games:
+        return []
 
     # Aggregate by ECO + name
     stats_by_eco = {}
@@ -112,8 +164,8 @@ def get_opening_stats(
 
         acc_obj = g.accuracy or {}
         user_acc = acc_obj.get("white") if is_white else acc_obj.get("black")
-        if user_acc:
-            data["accuracies"].append(user_acc)
+        if user_acc is not None and isinstance(user_acc, (int, float)):
+            data["accuracies"].append(float(user_acc))
 
     results: List[OpeningStat] = []
     for (eco, name), data in sorted(stats_by_eco.items(), key=lambda x: x[1]["games"], reverse=True):
@@ -122,7 +174,7 @@ def get_opening_stats(
         draw_rate = round((data["draws"] / count) * 100.0, 1) if count else 0.0
         loss_rate = round((data["losses"] / count) * 100.0, 1) if count else 0.0
         accs = data["accuracies"]
-        avg_acc = round(sum(accs) / len(accs), 1) if accs else 80.0
+        avg_acc = round(sum(accs) / len(accs), 1) if accs else None
 
         results.append(
             OpeningStat(
@@ -136,14 +188,6 @@ def get_opening_stats(
             )
         )
 
-    # If few games, return top default list
-    if not results:
-        results = [
-            OpeningStat(eco='C50', name='Italian Game', games=28, win_rate=64.3, draw_rate=7.1, loss_rate=28.6, avg_accuracy=84.2),
-            OpeningStat(eco='B12', name='Caro-Kann Defense', games=22, win_rate=59.1, draw_rate=13.6, loss_rate=27.3, avg_accuracy=81.5),
-            OpeningStat(eco='B20', name='Sicilian Defense', games=19, win_rate=52.6, draw_rate=10.5, loss_rate=36.8, avg_accuracy=78.9),
-            OpeningStat(eco='D00', name='London System', games=16, win_rate=56.2, draw_rate=12.5, loss_rate=31.3, avg_accuracy=80.1),
-        ]
     return results
 
 @router.get("/phases", response_model=PhasePointsLost)
@@ -151,10 +195,11 @@ def get_phase_points_lost(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Until Phase 2 deep analysis exists, return exact zeros
     return PhasePointsLost(
-        opening=0.3,
-        middlegame=1.6,
-        endgame=1.0
+        opening=0.0,
+        middlegame=0.0,
+        endgame=0.0
     )
 
 @router.get("/insights", response_model=StrengthsWeaknessesResponse)
@@ -162,15 +207,8 @@ def get_insights(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Until Phase 2 deep analysis exists, return empty lists
     return StrengthsWeaknessesResponse(
-        strengths=[
-            StrengthWeakness(label="King Safety", delta="+0.8", type="strength"),
-            StrengthWeakness(label="Queen Development", delta="+0.6", type="strength"),
-            StrengthWeakness(label="Back-Rank Defense", delta="+0.5", type="strength"),
-        ],
-        weaknesses=[
-            StrengthWeakness(label="Hanging Minors", delta="-1.2", type="weakness"),
-            StrengthWeakness(label="Pawn Structure", delta="-0.9", type="weakness"),
-            StrengthWeakness(label="Time Management", delta="-0.6", type="weakness"),
-        ]
+        strengths=[],
+        weaknesses=[]
     )

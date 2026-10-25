@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, DateTime
-from datetime import datetime
 import uuid
-from app.database import Base
+from app.database import Base, utc_now
 
 class User(Base):
     __tablename__ = "users"
@@ -10,4 +9,4 @@ class User(Base):
     username = Column(String(64), unique=True, nullable=False, index=True)
     chesscom_username = Column(String(64), nullable=True)
     lichess_username = Column(String(64), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)

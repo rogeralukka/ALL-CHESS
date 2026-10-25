@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, Text, JSON, DateTime, ForeignKey, Boolean
-from datetime import datetime
 import uuid
-from app.database import Base
+from app.database import Base, utc_now
 
 class Game(Base):
     __tablename__ = "games"
@@ -28,4 +27,4 @@ class Game(Base):
     estimated_rating = Column(JSON, nullable=True) # { white, black }
     phase_grades = Column(JSON, nullable=True) # { opening, middlegame, tactics, endgame }
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)

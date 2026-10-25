@@ -29,6 +29,18 @@ else
     echo ".env already exists."
 fi
 
+# Generate random SESSION_SECRET if missing or placeholder
+if [ -f "$BACKEND_DIR/.env" ]; then
+    RANDOM_SECRET=$("$VENV_PATH/bin/python" -c "import secrets; print(secrets.token_hex(32))")
+    if grep -q "SESSION_SECRET=your_session_secret_here" "$BACKEND_DIR/.env"; then
+        sed -i.bak "s/SESSION_SECRET=.*/SESSION_SECRET=$RANDOM_SECRET/" "$BACKEND_DIR/.env" && rm -f "$BACKEND_DIR/.env.bak"
+        echo "Generated random SESSION_SECRET in .env."
+    elif ! grep -q "SESSION_SECRET=" "$BACKEND_DIR/.env"; then
+        echo "SESSION_SECRET=$RANDOM_SECRET" >> "$BACKEND_DIR/.env"
+        echo "Added random SESSION_SECRET to .env."
+    fi
+fi
+
 # 4. Stockfish Binary
 BIN_DIR="$BACKEND_DIR/bin"
 mkdir -p "$BIN_DIR"

@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 from app.schemas.common import CamelModel
 
 class RatingPoint(CamelModel):
@@ -19,7 +19,7 @@ class OpeningStat(CamelModel):
     win_rate: float
     draw_rate: float
     loss_rate: float
-    avg_accuracy: float
+    avg_accuracy: Optional[float] = None
 
 class PhasePointsLost(CamelModel):
     opening: float

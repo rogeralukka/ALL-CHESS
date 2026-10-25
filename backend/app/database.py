@@ -1,7 +1,11 @@
+from datetime import datetime, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from typing import Generator
 from app.config import settings
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # If relative sqlite URL, resolve from backend dir
 db_url = settings.database_url

@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, Integer, Boolean, JSON, DateTime, ForeignKey, Text
-from datetime import datetime
 import uuid
-from app.database import Base
+from app.database import Base, utc_now
 
 class Puzzle(Base):
     __tablename__ = "puzzles"
@@ -22,7 +21,7 @@ class PuzzleAttempt(Base):
     solved = Column(Boolean, nullable=False)
     time_seconds = Column(Integer, default=0, nullable=False)
     rating_delta = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
 class UserPuzzleRating(Base):
     __tablename__ = "user_puzzle_ratings"

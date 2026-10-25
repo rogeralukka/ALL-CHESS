@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,8 @@ from app.config import settings
 from app.database import engine, Base
 import app.models # registers models with Base
 from app.routers import auth, games, sync, stats
+
+logger = logging.getLogger("all_chess")
 
 # Create tables on application start
 Base.metadata.create_all(bind=engine)
@@ -52,9 +55,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled server error on {request.method} {request.url.path}: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"error": "InternalServerError", "detail": str(exc)}
+        content={"error": "InternalServerError", "detail": "An internal server error occurred."}
     )
 
 @app.get("/health", tags=["Health"])

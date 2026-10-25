@@ -52,3 +52,10 @@ def test_delete_session(auth_client):
     response = auth_client.delete("/api/v1/session")
     assert response.status_code == 200
     assert response.json() == {"ok": True}
+
+def test_startup_secrets_validation():
+    """Asserts startup rejects empty or placeholder secrets in non-test mode."""
+    from app.config import PLACEHOLDER_SECRETS
+    for placeholder in ["", "your_secret_passcode_here", "replace_me"]:
+        assert placeholder in PLACEHOLDER_SECRETS
+

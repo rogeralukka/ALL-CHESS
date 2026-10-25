@@ -1,20 +1,25 @@
 import json
 import os
+import uuid
 from typing import List, Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from app.config import BACKEND_DIR
+from app.config import BACKEND_DIR, settings
 from app.database import get_db
 from app.models.user import User
 from app.models.game import Game as GameModel
-from app.schemas.game import Game, GameFilterParams
+from app.schemas.game import Game
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
 MOCK_GAMES_FILE = os.path.join(BACKEND_DIR, "app", "data", "mock_games.json")
 
-def seed_initial_games_if_empty(db: Session, user: User) -> None:
+def maybe_seed_demo_data(db: Session, user: User) -> None:
+    """Only seeds mock games if explicitly enabled by the dev flag SEED_DEMO_DATA=true."""
+    if not settings.seed_demo_data:
+        return
+
     count = db.query(GameModel).filter(GameModel.user_id == user.id).count()
     if count > 0:
         return
@@ -27,14 +32,15 @@ def seed_initial_games_if_empty(db: Session, user: User) -> None:
             mock_games = json.load(f)
             
         for g in mock_games:
-            # Map mock game to DB
+            # Generate a fresh UUID per user per game so IDs never collide
+            unique_id = f"game-{user.id[:8]}-{uuid.uuid4().hex[:8]}"
             is_white = g.get("white", {}).get("username") == "You"
             db_game = GameModel(
-                id=g["id"],
+                id=unique_id,
                 user_id=user.id,
                 source=g.get("source", "online"),
                 platform=g.get("platform", "coach" if g.get("source") == "vs_coach" else "chesscom"),
-                external_id=g.get("id"),
+                external_id=unique_id,
                 pgn=g.get("pgn", ""),
                 white=g.get("white", {}),
                 black=g.get("black", {}),
@@ -53,9 +59,10 @@ def seed_initial_games_if_empty(db: Session, user: User) -> None:
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"Warning: failed to seed mock games: {e}")
+        # Non-fatal warning
+        print(f"Warning: failed to seed demo games: {e}")
 
-@router.get("", response_model=List[Game])
+@router.get("", response_model=List[Game], response_model_exclude_none=True)
 def get_games(
     opening: Optional[str] = Query(None),
     color: Optional[Literal['white', 'black', 'all']] = Query('all'),
@@ -66,7 +73,7 @@ def get_games(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    seed_initial_games_if_empty(db, current_user)
+    maybe_seed_demo_data(db, current_user)
 
     query = db.query(GameModel).filter(GameModel.user_id == current_user.id)
 
@@ -133,7 +140,7 @@ def get_games(
 
     return results
 
-@router.get("/{game_id}", response_model=Game)
+@router.get("/{game_id}", response_model=Game, response_model_exclude_none=True)
 def get_game_by_id(
     game_id: str,
     current_user: User = Depends(get_current_user),
