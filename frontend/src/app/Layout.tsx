@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { RefreshCw, Sun, Moon, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useSettingsStore } from '@/data/settingsStore';
 import { ToastContainer, toast } from '@/components/Toast';
 import { useMotion } from '@/lib/useMotion';
@@ -17,6 +17,9 @@ export const SECTION_ICON: Record<string, string> = {
   scout: '/assets/ui/icon_scout.webp',
   profile: '/assets/ui/icon_profile.webp',
   settings: '/assets/ui/icon_settings.webp',
+  sync: '/assets/ui/icon_sync.webp',
+  sun: '/assets/ui/icon_sun.webp',
+  moon: '/assets/ui/icon_moon.webp',
 };
 
 const NAV = [
@@ -41,6 +44,32 @@ const NavIcon: React.FC<{ name: string; size?: number; active?: boolean }> = ({ 
     style={{ width: size, height: size, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.35))' }}
   />
 );
+
+/** Day/night toggle drawn like a toy switch: a recessed slot with a raised knob carrying the 3D sun or moon. */
+const ThemeSwitch: React.FC<{ dusk: boolean; collapsed: boolean; onToggle: () => void }> = ({ dusk, collapsed, onToggle }) => {
+  const label = dusk ? 'Switch to day mode' : 'Switch to night mode';
+  return (
+    <button type="button" onClick={onToggle} title={label} aria-label={label} data-testid="theme-toggle" className="group flex items-center gap-3 px-2.5 h-11 rounded-[12px] text-theme-muted hover:text-theme-text transition-colors w-full">
+      {/* compact: just the 3D icon of the mode you'd switch to */}
+      <img src={dusk ? SECTION_ICON.sun : SECTION_ICON.moon} alt="" className={`w-7 h-7 object-contain flex-shrink-0 transition-transform duration-300 group-hover:rotate-12 ${collapsed ? '' : 'lg:hidden'}`} />
+      <span className={`${collapsed ? 'hidden' : 'hidden lg:flex'} well relative items-center w-full h-9 p-1`}>
+        <motion.span
+          className="chip-raised absolute top-1 bottom-[5px] w-[calc(50%-4px)] rounded-[10px]"
+          animate={{ left: dusk ? 'calc(50% + 0px)' : '4px' }}
+          transition={{ type: 'spring', stiffness: 500, damping: 34 }}
+        />
+        <span className={`relative z-10 flex-1 flex items-center justify-center gap-1 font-display font-extrabold text-[13px] ${!dusk ? 'text-theme-text' : 'text-theme-muted'}`}>
+          <img src={SECTION_ICON.sun} alt="" className="w-5 h-5 object-contain" />
+          Day
+        </span>
+        <span className={`relative z-10 flex-1 flex items-center justify-center gap-1 font-display font-extrabold text-[13px] ${dusk ? 'text-theme-text' : 'text-theme-muted'}`}>
+          <img src={SECTION_ICON.moon} alt="" className="w-5 h-5 object-contain" />
+          Night
+        </span>
+      </span>
+    </button>
+  );
+};
 
 export const Layout: React.FC = () => {
   const { appTheme, setAppTheme } = useSettingsStore();
@@ -78,10 +107,10 @@ export const Layout: React.FC = () => {
 
   // labels show when the sidebar is expanded on large screens
   const labelCls = collapsed ? 'hidden' : 'hidden lg:inline';
-  const widthCls = collapsed ? 'sm:w-[68px]' : 'sm:w-[68px] lg:w-[184px]';
+  const widthCls = collapsed ? 'sm:w-[68px]' : 'sm:w-[68px] lg:w-[212px]';
 
   const utilBtn =
-    'group flex items-center gap-3 px-3 h-10 rounded-lg font-semibold text-[13px] text-theme-muted hover:text-theme-text hover:bg-black/[0.05] dark:hover:bg-white/[0.06] transition-colors w-full';
+    'group flex items-center gap-3 px-2.5 h-11 rounded-[12px] font-display font-extrabold text-[14px] text-theme-muted hover:text-theme-text hover:bg-black/[0.05] dark:hover:bg-white/[0.06] transition-colors w-full';
 
   return (
     <div className="app-bg flex h-screen w-screen overflow-hidden text-theme-text font-sans relative">
@@ -92,19 +121,31 @@ export const Layout: React.FC = () => {
         data-testid="sidebar"
         data-collapsed={collapsed}
       >
-        {/* Logo */}
-        <NavLink to="/" className="group h-16 flex items-center gap-2.5 px-3.5 flex-shrink-0" aria-label="ALL-CHESS home">
-          <img
-            src="/assets/ui/logo_king.webp"
-            alt=""
-            className="w-9 h-10 object-contain flex-shrink-0 transition-transform duration-200 group-hover:-rotate-6 group-hover:scale-105"
-            style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,.4))' }}
-          />
-          <div className={`${collapsed ? 'hidden' : 'hidden lg:flex'} flex-col leading-none`}>
-            <span className="font-display font-black text-[19px] tracking-tight text-theme-text whitespace-nowrap">ALL-CHESS</span>
-            <span className="text-[12px] font-bold text-amber-500 tracking-[0.06em] uppercase mt-1 whitespace-nowrap">Free &amp; Private</span>
-          </div>
-        </NavLink>
+        {/* Logo + collapse (top, where polished apps keep it) */}
+        <div className={`flex-shrink-0 flex ${collapsed ? 'flex-col items-center gap-1 pt-3 pb-1' : 'flex-col items-center gap-1 pt-3 pb-1 lg:flex-row lg:justify-between lg:h-16 lg:pt-0 lg:pb-0 lg:pl-3.5 lg:pr-2'}`}>
+          <NavLink to="/" className="group flex items-center gap-2.5" aria-label="ALL-CHESS home">
+            <img
+              src="/assets/ui/logo_king.webp"
+              alt=""
+              className="w-9 h-10 object-contain flex-shrink-0 transition-transform duration-200 group-hover:-rotate-6 group-hover:scale-105"
+              style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,.4))' }}
+            />
+            <div className={`${collapsed ? 'hidden' : 'hidden lg:flex'} flex-col leading-none`}>
+              <span className="font-display font-black text-[19px] tracking-tight text-theme-text whitespace-nowrap">ALL-CHESS</span>
+              <span className="text-[12px] font-bold text-amber-500 tracking-[0.06em] uppercase mt-1 whitespace-nowrap">Free &amp; Private</span>
+            </div>
+          </NavLink>
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="hidden lg:flex items-center justify-center w-8 h-8 rounded-[10px] chip-raised text-theme-muted hover:text-theme-text active:translate-y-[2px] transition-transform"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            data-testid="sidebar-toggle"
+          >
+            {collapsed ? <ChevronsRight size={17} /> : <ChevronsLeft size={17} />}
+          </button>
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-0.5 px-2 pt-2 overflow-y-auto overflow-x-hidden" aria-label="Main Navigation">
@@ -115,14 +156,14 @@ export const Layout: React.FC = () => {
                 key={item.to}
                 to={item.to}
                 title={item.label}
-                className={`group relative flex items-center gap-3 px-2.5 h-11 rounded-lg font-bold text-[15px] transition-colors ${
-                  active ? 'bg-black/[0.05] dark:bg-white/[0.08] text-theme-text' : 'text-theme-text/75 hover:text-theme-text hover:bg-black/[0.05] dark:hover:bg-white/[0.05]'
+                className={`group relative flex items-center gap-3 px-2.5 h-11 rounded-[12px] font-display font-extrabold text-[15px] transition-colors ${
+                  active ? 'chip-raised text-theme-text' : 'text-theme-text/75 hover:text-theme-text hover:bg-black/[0.05] dark:hover:bg-white/[0.05]'
                 }`}
               >
                 {active && (
                   <motion.span
                     layoutId={isOff ? undefined : 'nav-active-bar'}
-                    className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-amber-500"
+                    className="absolute left-0 top-2.5 bottom-2.5 w-[4px] rounded-full bg-amber-500"
                     transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                   />
                 )}
@@ -134,40 +175,24 @@ export const Layout: React.FC = () => {
         </nav>
 
         {/* Utilities */}
-        <div className="p-2 flex flex-col gap-0.5" style={{ boxShadow: '0 -1px 0 rgba(255,255,255,0.05)' }}>
+        <div className="p-2 flex flex-col gap-1" style={{ boxShadow: '0 -1px 0 rgba(255,255,255,0.05)' }}>
           <button type="button" onClick={handleSync} disabled={isSyncing} className={utilBtn} title="Sync games from Chess.com and Lichess" aria-label="Sync games with Chess.com and Lichess">
-            <RefreshCw size={18} className={`flex-shrink-0 mx-[5px] ${isSyncing ? 'animate-spin text-amber-500' : ''}`} />
-            <span className={`${labelCls} truncate`}>{isSyncing ? 'Syncing...' : 'Sync Games'}</span>
+            <img
+              src={SECTION_ICON.sync}
+              alt=""
+              className={`w-7 h-7 object-contain flex-shrink-0 ${isSyncing ? 'animate-spin' : 'transition-transform duration-300 group-hover:-rotate-90'}`}
+            />
+            <span className={`${labelCls} truncate`}>{isSyncing ? 'Syncing...' : 'Sync games'}</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setAppTheme(appTheme === 'dusk' ? 'dawn' : 'dusk')}
-            className={utilBtn}
-            title={`Switch to ${appTheme === 'dusk' ? 'Dawn (light)' : 'Dusk (dark)'}`}
-            aria-label="Toggle theme"
-          >
-            {appTheme === 'dusk' ? <Sun size={18} className="text-amber-400 flex-shrink-0 mx-[5px]" /> : <Moon size={18} className="text-indigo-400 flex-shrink-0 mx-[5px]" />}
-            <span className={`${labelCls} truncate capitalize`}>{appTheme === 'dusk' ? 'Light mode' : 'Dark mode'}</span>
-          </button>
+          <ThemeSwitch dusk={appTheme === 'dusk'} collapsed={collapsed} onToggle={() => setAppTheme(appTheme === 'dusk' ? 'dawn' : 'dusk')} />
           <NavLink
             to="/settings"
             title="Settings"
-            className={({ isActive }) => `${utilBtn} ${isActive ? '!bg-black/[0.05] dark:bg-white/[0.08] !text-theme-text' : ''}`}
+            className={({ isActive }) => `${utilBtn} ${isActive ? 'chip-raised !text-theme-text' : ''}`}
           >
             <img src={SECTION_ICON.settings} alt="" className="w-7 h-7 object-contain flex-shrink-0 transition-transform duration-300 group-hover:rotate-45" />
             <span className={`${labelCls} truncate`}>Settings</span>
           </NavLink>
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            className={`${utilBtn} hidden lg:flex`}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            data-testid="sidebar-toggle"
-          >
-            {collapsed ? <ChevronsRight size={18} className="flex-shrink-0 mx-[5px]" /> : <ChevronsLeft size={18} className="flex-shrink-0 mx-[5px]" />}
-            <span className={`${labelCls} truncate`}>Collapse</span>
-          </button>
         </div>
       </aside>
 
