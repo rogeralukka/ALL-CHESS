@@ -183,10 +183,24 @@ def fit_camera(margin=0.05, iters=10):
             cam.location += fwd * dist * (1 - scale)
 
 
+ANIM = os.environ.get('UI_FINISH', 'anim') == 'anim'
+
+
 def polish_materials():
-    """Pro look for the simple props too: lacquered, saturated, with a clear coat."""
+    """Finish pass. 'anim' (default): satin, painted-toy finish like the reference's 3D icons,
+    soft highlights, no clear-coat mirror. 'gloss': lacquered with a clear coat."""
     for m in bpy.data.materials:
-        if not m.use_nodes or m.get('pro'):
+        if not m.use_nodes:
+            continue
+        p = m.node_tree.nodes.get('Principled BSDF')
+        if ANIM and p and p.inputs['Transmission Weight'].default_value <= 0.1:
+            metal = p.inputs['Metallic'].default_value
+            p.inputs['Roughness'].default_value = max(p.inputs['Roughness'].default_value, 0.32 if metal > 0.5 else 0.5)
+            p.inputs['Coat Weight'].default_value = min(p.inputs['Coat Weight'].default_value, 0.12)
+            p.inputs['Coat Roughness'].default_value = 0.3
+            p.inputs['Specular IOR Level'].default_value = min(p.inputs['Specular IOR Level'].default_value, 0.4)
+            continue
+        if m.get('pro'):
             continue
         p = m.node_tree.nodes.get('Principled BSDF')
         if not p or p.inputs['Transmission Weight'].default_value > 0.1:
@@ -699,7 +713,7 @@ def icon_sync():
         tip.parent = root
 
 
-RANK_COLORS = {'pawn': '#b9c2cf', 'knight': '#86c46a', 'bishop': '#5aa9e6', 'rook': '#a78bfa', 'queen': '#f472b6', 'king': '#f5b833'}
+RANK_COLORS = {'pawn': '#b9c2cf', 'knight': '#7fbf5a', 'bishop': '#4ea3e3', 'rook': '#9b7cf2', 'queen': '#ee6aa7', 'king': '#f2b531'}
 
 
 def rank_icon(kind):
@@ -707,12 +721,27 @@ def rank_icon(kind):
     def job():
         icon_scene()
         col = RANK_COLORS[kind]
-        cyl(0.52, 0.16, (0, 0, 0), mat('coin', '#d9a441', 0.45, 0.6), verts=48)
-        cyl(0.44, 0.03, (0, 0, 0.16), mat('coinTop', '#ffd36b', 0.5, 0.4), verts=48)
+        # pedestal in a darker shade of the same colour, so the badge reads as one object
+        dark = '#%02x%02x%02x' % tuple(int(int(col[i:i + 2], 16) * 0.62) for i in (1, 3, 5))
+        cyl(0.52, 0.14, (0, 0, 0), mat('ped' + kind, dark, 0.55), verts=64)
+        cyl(0.47, 0.04, (0, 0, 0.14), mat('pedTop' + kind, col, 0.55), verts=64)
         fn = {'pawn': pawn, 'knight': knight, 'bishop': bishop, 'rook': rook, 'queen': queen, 'king': king}[kind]
         kw = {'facing': math.radians(-144)} if kind == 'knight' else {}
         fn((0, 0, 0.19), col, 1.0, **kw)
     return job
+
+
+def icon_leaderboard():
+    icon_scene()
+    for x, h, c in [(-0.42, 0.55, '#c9c8c5'), (0.0, 0.85, '#f7c631'), (0.42, 0.38, '#cd8a3a')]:
+        box((0.4, 0.42, h), (x, 0, h / 2), mat('pod' + c, c, 0.5, 0.3), bevel=0.04)
+    # crown on the winner's block
+    gold = mat('crown', '#ffcf3d', 0.4, 0.6)
+    cyl(0.17, 0.09, (0, 0, 0.85), gold, verts=40)
+    for i in range(5):
+        a = i / 5 * math.tau
+        o = cyl(0.045, 0.13, (math.cos(a) * 0.14, math.sin(a) * 0.14, 0.93), gold, verts=12, r2=0.01)
+    sphere(0.035, (0, 0, 1.0), mat('ruby', '#e0324a', 0.35))
 
 
 def logo_king():
@@ -840,6 +869,7 @@ JOBS = {
     'icon_home': icon_home, 'icon_play': icon_play, 'icon_puzzles': icon_puzzles, 'icon_learn': icon_learn,
     'icon_review': icon_review, 'icon_scout': icon_scout, 'icon_profile': icon_profile, 'icon_settings': icon_settings,
     **{f'rank_{k}': rank_icon(k) for k in ('pawn', 'knight', 'bishop', 'rook', 'queen', 'king')},
+    'icon_leaderboard': icon_leaderboard,
     'logo_king': logo_king, 'icon_sun': icon_sun, 'icon_moon': icon_moon, 'icon_sync': icon_sync,
     'hero_404': hero_404,
     'hero_home': hero_home, 'hero_scout': hero_scout, 'hero_review': hero_review, 'hero_profile': hero_profile, 'hero_play': hero_play,
