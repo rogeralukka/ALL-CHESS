@@ -1,36 +1,36 @@
 :root,
 :root[data-theme="dusk"] {
   /* warm charcoal, like a lamp-lit study: page lighter than the panels that sit on it */
-  --color-page: #2a2825;
-  --color-card: #201e1c;
-  --color-raised: #36332f;
-  --color-border: rgba(255, 255, 255, 0.07);
-  --panel-lip: #141210;
-  --well-bg: rgba(0, 0, 0, 0.28);
-  --color-sidebar: #1d1b19;
-  --page-glow: rgba(255, 178, 64, 0.07);
-  --page-glow-2: rgba(120, 160, 255, 0.045);
-  --color-text: rgba(255, 255, 255, 0.88);
-  --color-text-muted: rgba(255, 255, 255, 0.64);
+  --color-page: #312e2b;
+  --color-card: #262522;
+  --color-raised: #3c3a37;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --panel-lip: rgba(0, 0, 0, 0.25);
+  --well-bg: rgba(0, 0, 0, 0.2);
+  --color-sidebar: #262421;
+  --page-glow: rgba(255, 255, 255, 0);
+  --page-glow-2: rgba(255, 255, 255, 0);
+  --color-text: rgba(255, 255, 255, 0.85);
+  --color-text-muted: rgba(255, 255, 255, 0.55);
   --color-accent: #f59e0b;
   --color-accent-hover: #d97706;
-  --color-accent-text: #141312;
+  --color-accent-text: #ffffff;
   
-  --btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%);
-  --btn-primary-hover-bg: linear-gradient(180deg, #f8bd52 0%, #f19f1d 100%);
-  --btn-primary-active-bg: linear-gradient(180deg, #dc8604 0%, #c47300 100%);
-  --btn-primary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 4px 0 #a85f00, 0 10px 16px -8px rgba(0, 0, 0, 0.5);
-  --btn-primary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #a85f00, 0 12px 18px -8px rgba(0, 0, 0, 0.5);
-  --btn-primary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #a85f00;
-  --btn-primary-border: #d47e06;
+  --btn-primary-bg: linear-gradient(180deg, #81b64c 0%, #5d9948 100%);
+  --btn-primary-hover-bg: linear-gradient(180deg, #95c95c 0%, #6aa752 100%);
+  --btn-primary-active-bg: linear-gradient(180deg, #5d9948 0%, #45753c 100%);
+  --btn-primary-shadow: inset 0 1px 0 rgba(178, 224, 104, 0.4), inset 0 -1px 0 #45753c, inset 0 2px 4px rgba(178, 224, 104, 0.5), inset 0 -2px 4px rgba(69, 117, 60, 0.5), 0 1px 2px rgba(0, 0, 0, 0.14), 0 2px 4px rgba(0, 0, 0, 0.1);
+  --btn-primary-shadow-hover: inset 0 1px 0 rgba(178, 224, 104, 0.5), inset 0 -1px 0 #45753c, inset 0 2px 4px rgba(178, 224, 104, 0.6), inset 0 -2px 4px rgba(69, 117, 60, 0.5), 0 2px 4px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.12);
+  --btn-primary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  --btn-primary-border: transparent;
 
-  --btn-secondary-bg: linear-gradient(180deg, #45413b 0%, #36322d 100%);
-  --btn-secondary-hover-bg: linear-gradient(180deg, #4d4842 0%, #3c3832 100%);
-  --btn-secondary-active-bg: linear-gradient(180deg, #312d29 0%, #2c2925 100%);
-  --btn-secondary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08), 0 4px 0 #141210, 0 10px 14px -8px rgba(0, 0, 0, 0.5);
-  --btn-secondary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 0.1), 0 5px 0 #141210, 0 12px 16px -8px rgba(0, 0, 0, 0.5);
-  --btn-secondary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #141210;
-  --btn-secondary-border: rgba(255, 255, 255, 0.09);
+  --btn-secondary-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --btn-secondary-hover-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+  --btn-secondary-active-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.06) 100%);
+  --btn-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.14), 0 2px 4px rgba(0, 0, 0, 0.1);
+  --btn-secondary-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.18), 0 4px 8px rgba(0, 0, 0, 0.1);
+  --btn-secondary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  --btn-secondary-border: transparent;
   
   --color-eval-white: #ffffff;
   --color-eval-black: #1a1918;
@@ -39,39 +39,47 @@
   --coach-bubble-bg: #ffffff;
   --coach-bubble-text: #141312;
   --coach-bubble-border: rgba(0, 0, 0, 0.1);
+  --color-win: #81b64c;
+  --color-loss: #fa412d;
+  --color-draw: #8b8987;
+  --color-gold: #f7c631;
+  --color-silver: #bebdb9;
+  --color-bronze: #cd7f32;
+  --color-chart: #5ec1e6;
+  --color-link: #009fd9;
 }
 
 :root[data-theme="dawn"] {
-  --color-page: #f4f1ec;
+  --color-page: #efeeec;
   --color-card: #ffffff;
-  --color-raised: #f2efe9;
-  --color-border: #e8e4df;
-  --panel-lip: #ddd5c8;
-  --well-bg: #ece7df;
-  --color-sidebar: #ebe6de;
-  --page-glow: rgba(255, 178, 64, 0.12);
-  --page-glow-2: rgba(120, 160, 255, 0.08);
-  --color-text: #1e1b18;
-  --color-text-muted: #6b645d;
+  --color-raised: #f6f5f3;
+  --color-border: rgba(0, 0, 0, 0.1);
+  --panel-lip: rgba(0, 0, 0, 0.08);
+  --well-bg: rgba(0, 0, 0, 0.05);
+  --color-sidebar: #e4e2df;
+  --page-glow: rgba(255, 255, 255, 0);
+  --page-glow-2: rgba(255, 255, 255, 0);
+  --color-text: #312e2b;
+  --color-text-muted: #6e6b68;
   --color-accent: #f59e0b;
   --color-accent-hover: #d97706;
-  --color-accent-text: #1e1b18;
+  --color-accent-text: #ffffff;
   
-  --btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%);
-  --btn-primary-hover-bg: linear-gradient(180deg, #f8bd52 0%, #f19f1d 100%);
-  --btn-primary-active-bg: linear-gradient(180deg, #dc8604 0%, #c47300 100%);
-  --btn-primary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 4px 0 #c27400, 0 10px 16px -8px rgba(0, 0, 0, 0.5);
-  --btn-primary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #c27400, 0 12px 18px -8px rgba(0, 0, 0, 0.5);
-  --btn-primary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #c27400;
-  --btn-primary-border: #d47e06;
+  --btn-primary-bg: linear-gradient(180deg, #81b64c 0%, #5d9948 100%);
+  --btn-primary-hover-bg: linear-gradient(180deg, #95c95c 0%, #6aa752 100%);
+  --btn-primary-active-bg: linear-gradient(180deg, #5d9948 0%, #45753c 100%);
+  --btn-primary-shadow: inset 0 1px 0 rgba(178, 224, 104, 0.4), inset 0 -1px 0 #45753c, inset 0 2px 4px rgba(178, 224, 104, 0.5), inset 0 -2px 4px rgba(69, 117, 60, 0.5), 0 1px 2px rgba(0, 0, 0, 0.14), 0 2px 4px rgba(0, 0, 0, 0.1);
+  --btn-primary-shadow-hover: inset 0 1px 0 rgba(178, 224, 104, 0.5), inset 0 -1px 0 #45753c, inset 0 2px 4px rgba(178, 224, 104, 0.6), inset 0 -2px 4px rgba(69, 117, 60, 0.5), 0 2px 4px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.12);
+  --btn-primary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  --btn-primary-border: transparent;
 
-  --btn-secondary-bg: linear-gradient(180deg, #ffffff 0%, #f3eee7 100%);
-  --btn-secondary-hover-bg: linear-gradient(180deg, #ffffff 0%, #ebe5dc 100%);
-  --btn-secondary-active-bg: linear-gradient(180deg, #e8e2d9 0%, #eee8df 100%);
-  --btn-secondary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 4px 0 #cfc6b8, 0 10px 14px -8px rgba(0, 0, 0, 0.15);
-  --btn-secondary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 1), 0 5px 0 #cfc6b8, 0 12px 16px -8px rgba(0, 0, 0, 0.18);
-  --btn-secondary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #cfc6b8;
-  --btn-secondary-border: #d6cfc5;
+  --btn-secondary-bg: linear-gradient(180deg, #ffffff 0%, #f1f0ee 100%);
+  --btn-secondary-hover-bg: linear-gradient(180deg, #ffffff 0%, #e9e8e5 100%);
+  --btn-secondary-active-bg: linear-gradient(180deg, #e9e8e5 0%, #efeeec 100%);
+  --btn-secondary-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --btn-secondary-shadow-hover: inset 0 -1px 0 rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.14);
+  --btn-secondary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.12);
+  --btn-secondary-border: rgba(0, 0, 0, 0.08);
 
   --color-eval-white: #ffffff;
   --color-eval-black: #2b2824;
@@ -80,6 +88,14 @@
   --coach-bubble-bg: #ffffff;
   --coach-bubble-text: #1e1b18;
   --coach-bubble-border: #e8e4df;
+  --color-win: #5d9948;
+  --color-loss: #e02828;
+  --color-draw: #8b8987;
+  --color-gold: #e3aa24;
+  --color-silver: #9b9a97;
+  --color-bronze: #b5702e;
+  --color-chart: #1e9fd6;
+  --color-link: #008cd1;
 }
 
 :root {

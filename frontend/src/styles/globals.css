@@ -7,8 +7,17 @@
 @import '@fontsource/nunito/700.css';
 @import '@fontsource/nunito/800.css';
 @import '@fontsource/nunito/900.css';
+@import '@fontsource/figtree/600.css';
+@import '@fontsource/figtree/700.css';
+@import '@fontsource/figtree/800.css';
+@import '@fontsource/figtree/900.css';
 
 @tailwind base;
+
+/* 14px body text like the reference, without shrinking rem units (html stays 16px) */
+body {
+  font-size: 14px;
+}
 @tailwind components;
 @tailwind utilities;
 
@@ -16,74 +25,54 @@
   html, body {
     margin: 0;
     padding: 0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    /* body text uses the system UI font (Segoe UI on Windows), headings and numbers the display font */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Inter', Helvetica, Arial, sans-serif;
     background-color: var(--color-page);
     color: var(--color-text);
   }
 
-  /* Page background with depth: two soft light pools, a faint grain and a vignette,
-     so panels read as layers sitting on a surface instead of boxes on flat black. */
+  /* Flat warm-charcoal page with only a whisper of vignette (the reference keeps pages flat) */
   .app-bg {
-    background:
-      radial-gradient(1100px 640px at 18% -12%, var(--page-glow), transparent 62%),
-      radial-gradient(900px 720px at 108% 112%, var(--page-glow-2), transparent 60%),
-      radial-gradient(140% 120% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.22) 100%),
-      var(--color-page);
-  }
-  .app-bg::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.05;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
-    z-index: 0;
+    background: radial-gradient(140% 120% at 50% 30%, transparent 60%, rgba(0, 0, 0, 0.12) 100%), var(--color-page);
   }
   :root[data-theme='dawn'] .app-bg {
-    background:
-      radial-gradient(1100px 640px at 18% -12%, var(--page-glow), transparent 62%),
-      radial-gradient(900px 720px at 108% 112%, var(--page-glow-2), transparent 60%),
-      var(--color-page);
+    background: var(--color-page);
   }
 
-  /* A panel that sits on the page: soft drop shadow + 1px top highlight */
-  /* Game-style card: chunky rounded slab with a solid bottom lip, like the roadmap tiles */
+  /* Card: flat darker slab, small radius, no border (reference: rgba(0,0,0,.2) on the page, 5px) */
   .panel {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 40%), var(--color-card);
-    border: 2px solid var(--color-border);
-    border-radius: 18px;
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.04), 0 5px 0 var(--panel-lip), 0 16px 28px -14px rgba(0, 0, 0, 0.55);
+    background: var(--color-card);
+    border-radius: 8px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
   }
   :root[data-theme='dawn'] .panel {
-    background: var(--color-card);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 5px 0 var(--panel-lip), 0 16px 26px -16px rgba(90, 70, 40, 0.25);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(0, 0, 0, 0.04);
   }
   .panel-hover {
-    transition: transform 160ms cubic-bezier(0, 0, 0.2, 1), box-shadow 160ms cubic-bezier(0, 0, 0.2, 1), border-color 160ms;
+    transition: background-color 120ms ease, transform 120ms ease;
   }
   .panel-hover:hover {
-    transform: translateY(-3px);
-    border-color: rgba(245, 165, 36, 0.55);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.05), 0 8px 0 var(--panel-lip), 0 20px 30px -14px rgba(0, 0, 0, 0.55);
+    background: color-mix(in srgb, var(--color-card) 88%, white);
   }
-  .panel-hover:active {
-    transform: translateY(2px);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.05), 0 2px 0 var(--panel-lip);
+  :root[data-theme='dawn'] .panel-hover:hover {
+    background: #f7f6f4;
   }
-  /* recessed well: the slot that toy controls (tabs, toggles, inputs) sit in */
+  /* slot for tabs / inputs */
   .well {
     background: var(--well-bg);
-    border-radius: 14px;
-    box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.22), inset 0 0 0 2px var(--color-border);
+    border-radius: 6px;
   }
-  /* raised toy chip: selected tab / toggle knob */
+  /* selected tab / toggle knob */
   .chip-raised {
     background: var(--btn-secondary-bg);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1), 0 3px 0 var(--panel-lip);
+    box-shadow: var(--btn-secondary-shadow);
   }
-  :root[data-theme='dawn'] .chip-raised {
-    box-shadow: inset 0 2px 0 #fff, 0 3px 0 var(--panel-lip), 0 4px 8px -4px rgba(0, 0, 0, 0.2);
+  /* table rows: every other row slightly lighter */
+  .row-stripe:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  :root[data-theme='dawn'] .row-stripe:nth-child(odd) {
+    background: rgba(0, 0, 0, 0.02);
   }
   .font-mono {
     font-variant-numeric: tabular-nums;
@@ -91,7 +80,7 @@
   }
 
   h1, h2, h3, h4, h5, h6, .font-display {
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Figtree', 'Segoe UI', sans-serif;
     font-weight: 800;
   }
 }
@@ -141,17 +130,17 @@
   border: 1px solid var(--btn-primary-border);
   color: var(--color-accent-text);
   font-weight: 700;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
   transition: background 100ms ease, box-shadow 100ms ease, transform 100ms ease, filter 100ms ease;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--btn-primary-hover-bg);
   box-shadow: var(--btn-primary-shadow-hover);
-  transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) {
   background: var(--btn-primary-active-bg);
   box-shadow: var(--btn-primary-shadow-active);
-  transform: translateY(3px);
+  transform: translateY(1px);
 }
 
 /* Secondary Bevelled Button */
@@ -166,12 +155,11 @@
 .btn-secondary:hover:not(:disabled) {
   background: var(--btn-secondary-hover-bg);
   box-shadow: var(--btn-secondary-shadow-hover);
-  transform: translateY(-1px);
 }
 .btn-secondary:active:not(:disabled) {
   background: var(--btn-secondary-active-bg);
   box-shadow: var(--btn-secondary-shadow-active);
-  transform: translateY(3px);
+  transform: translateY(1px);
 }
 
 /* Accessible focus: visible 2px accent ring with offset on every interactive element */
