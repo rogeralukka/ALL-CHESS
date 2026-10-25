@@ -38,7 +38,7 @@ export const Segmented = <T extends string>({
             role="tab"
             aria-selected={isSelected}
             onClick={() => onChange(opt.value)}
-            className={`relative flex-1 flex items-center justify-center font-display font-extrabold rounded-[10px] transition-colors select-none z-10 ${
+            className={`relative flex-1 flex items-center justify-center font-display font-bold rounded-[5px] transition-colors select-none z-10 ${
               size === 'sm' ? 'min-h-[36px] px-3 text-[13px]' : 'min-h-[42px] px-3.5 text-[14px]'
             } ${
               isSelected ? 'text-theme-text' : 'text-theme-muted hover:text-theme-text'
@@ -47,7 +47,7 @@ export const Segmented = <T extends string>({
             {isSelected && (
               <motion.div
                 layoutId={`segmented-indicator-${groupId}`}
-                className="chip-raised absolute inset-x-0 top-0 bottom-[3px] rounded-[10px] -z-10"
+                className="chip-raised absolute inset-0 rounded-[5px] -z-10"
                 transition={{ type: 'spring', stiffness: 450, damping: 35 }}
               />
             )}

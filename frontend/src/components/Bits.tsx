@@ -2,42 +2,41 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useMotion } from "@/lib/useMotion";
 
-const PALETTES = [
-  ["#f6b13a", "#d9730f"],
-  ["#7bb661", "#3f8a46"],
-  ["#5aa9e6", "#2d6fb3"],
-  ["#e8737a", "#b33d4a"],
-  ["#a78bfa", "#6d4fd3"],
-  ["#2bc4b0", "#13867a"],
-];
 const hash = (s: string) =>
   [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
 
-/** Round avatar with a per-name gradient and a soft ring, used for opponents and friends. */
+const MUTED = ["#7c7a77", "#6f8a5b", "#5b7f99", "#9a6c62", "#7d6a9a", "#5c8f88", "#9a8456"];
+
+/**
+ * Player avatar. "You" shows the coach portrait; everyone else gets the default-avatar look of
+ * the reference (a white pawn silhouette on a muted tile), tinted per name so rows stay distinct.
+ */
 export const PlayerAvatar: React.FC<{
   name: string;
   size?: number;
   className?: string;
-}> = ({ name, size = 44, className = "" }) => {
-  const [a, b] = PALETTES[Math.abs(hash(name)) % PALETTES.length];
+  square?: boolean;
+}> = ({ name, size = 44, className = "", square }) => {
+  const radius = square ? (size >= 40 ? 4 : 3) : 999;
+  if (name === "You") {
+    return (
+      <span className={`inline-block overflow-hidden flex-shrink-0 bg-[#4a4642] ${className}`} style={{ width: size, height: size, borderRadius: radius }} aria-hidden="true">
+        <img src="/assets/coach/coach_neutral.webp" alt="" className="w-full h-full object-cover object-top" />
+      </span>
+    );
+  }
+  const bg = MUTED[Math.abs(hash(name)) % MUTED.length];
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full font-display font-black text-white flex-shrink-0 select-none ${className}`}
-      style={{
-        width: size,
-        height: size,
-        // never below 12px; tiny avatars show a single initial
-        fontSize: Math.max(12, size * 0.38),
-        background: `linear-gradient(145deg, ${a}, ${b})`,
-        boxShadow: `inset 0 2px 0 rgba(255,255,255,.28), inset 0 -2px 0 rgba(0,0,0,.18), 0 0 0 2px rgba(255,255,255,.06), 0 4px 10px -4px ${b}`,
-        textShadow: "0 1px 1px rgba(0,0,0,.25)",
-      }}
+      className={`inline-flex items-end justify-center overflow-hidden flex-shrink-0 select-none ${className}`}
+      style={{ width: size, height: size, borderRadius: radius, background: `linear-gradient(180deg, ${bg}, color-mix(in srgb, ${bg} 70%, black))` }}
       aria-hidden="true"
     >
-      {name
-        .replace(/[^A-Za-z0-9]/g, "")
-        .slice(0, size < 32 ? 1 : 2)
-        .toUpperCase()}
+      <svg viewBox="0 0 40 40" width={size * 0.86} height={size * 0.86}>
+        <circle cx="20" cy="12" r="6.4" fill="#fff" fillOpacity=".92" />
+        <path d="M14.5 19.5 H25.5 L24 22.5 C25.8 25.5 27 29 27.5 32 H12.5 C13 29 14.2 25.5 16 22.5 Z" fill="#fff" fillOpacity=".92" />
+        <rect x="9.5" y="32.5" width="21" height="5" rx="2" fill="#fff" fillOpacity=".92" />
+      </svg>
     </span>
   );
 };
@@ -104,38 +103,21 @@ export const StatTile: React.FC<{
   sub?: React.ReactNode;
   icon?: React.ReactNode;
   accent?: string;
-}> = ({ label, value, sub, icon, accent }) => {
-  const c = accent || "#f5a524";
-  return (
-    <div
-      className="relative overflow-hidden rounded-[16px] px-4 py-3 flex items-center gap-3 min-w-0 border-2"
-      style={{
-        borderColor: `color-mix(in srgb, ${c} 30%, transparent)`,
-        background: `linear-gradient(160deg, color-mix(in srgb, ${c} 16%, transparent), transparent 70%), var(--color-card)`,
-        boxShadow: `inset 0 2px 0 rgba(255,255,255,.06), 0 4px 0 color-mix(in srgb, ${c} 28%, var(--panel-lip))`,
-      }}
-    >
-      {icon && <div className="flex-shrink-0">{icon}</div>}
-      <div className="min-w-0">
-        <div
-          className="text-[12px] font-display font-black uppercase tracking-wider"
-          style={{ color: `color-mix(in srgb, ${c} 75%, var(--color-text))` }}
-        >
-          {label}
-        </div>
-        <div
-          className="text-[26px] leading-tight font-black font-display tabular-nums truncate"
-          style={{ color: accent || "var(--color-text)" }}
-        >
-          {value}
-        </div>
-        {sub && <div className="text-xs text-theme-muted truncate">{sub}</div>}
+}> = ({ label, value, sub, icon, accent }) => (
+  // flat stat block (reference style): small muted label over a big bold number
+  <div className="panel px-4 py-3 flex items-center gap-3 min-w-0">
+    {icon && <div className="flex-shrink-0">{icon}</div>}
+    <div className="min-w-0">
+      <div className="text-[12px] font-semibold text-theme-muted leading-4">{label}</div>
+      <div className="text-[22px] leading-7 font-bold font-display tabular-nums truncate" style={{ color: accent || "var(--color-text)" }}>
+        {value}
       </div>
+      {sub && <div className="text-[12px] text-theme-muted truncate">{sub}</div>}
     </div>
-  );
-};
+  </div>
+);
 
-/** Chunky progress meter in a recessed slot, like an XP bar. */
+/** Slim progress bar (puzzle / XP style). */
 export const Meter: React.FC<{
   value: number;
   color: string;
@@ -146,8 +128,7 @@ export const Meter: React.FC<{
   const { isOff } = useMotion();
   return (
     <div
-      className={`well p-[3px] ${className}`}
-      style={{ borderRadius: 999 }}
+      className={`rounded-full bg-black/[0.08] dark:bg-white/[0.1] ${className}`}
       role="progressbar"
       aria-valuenow={Math.round(value * 100)}
       aria-valuemin={0}
@@ -161,9 +142,7 @@ export const Meter: React.FC<{
         <motion.div
           className="absolute left-0 top-0 bottom-0 rounded-full"
           style={{
-            background: `linear-gradient(180deg, color-mix(in srgb, ${color} 80%, white), ${color})`,
-            boxShadow:
-              "inset 0 -3px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.35)",
+            background: color,
           }}
           initial={isOff ? false : { width: 0 }}
           animate={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }}
@@ -184,13 +163,13 @@ export const Pill: React.FC<{
     neutral:
       "bg-black/[0.05] dark:bg-white/[0.07] text-theme-text/80 border-theme-border",
     amber: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-    green: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    green: "bg-[#81b64c]/15 text-[#81b64c] border-transparent",
     red: "bg-red-500/15 text-red-400 border-red-500/30",
     blue: "bg-sky-500/15 text-sky-400 border-sky-500/30",
   };
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border-2 text-[12px] font-display font-black uppercase tracking-wide shadow-[0_2px_0_rgba(0,0,0,.25)] ${tones[tone]} ${className}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[12px] font-bold uppercase tracking-wide ${tones[tone]} ${className}`}
     >
       {children}
     </span>

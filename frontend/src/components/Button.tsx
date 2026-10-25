@@ -18,12 +18,12 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    'relative inline-flex items-center justify-center font-display font-extrabold rounded-[12px] transition-all duration-100 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-theme-page disabled:opacity-50 disabled:pointer-events-none';
+    'relative inline-flex items-center justify-center font-display font-bold rounded-[8px] transition-all duration-100 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-theme-page disabled:opacity-50 disabled:pointer-events-none';
 
   const sizeClasses = {
     sm: 'h-9 px-3.5 text-xs gap-1.5',
     md: 'h-10 px-4 text-sm gap-2',
-    lg: 'h-12 px-6 text-[15px] gap-2.5',
+    lg: 'h-12 px-6 text-[17px] gap-2.5 !rounded-[10px]',
   };
 
   const variantClasses = {
