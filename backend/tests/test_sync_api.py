@@ -19,8 +19,11 @@ MOCK_CHESSCOM_GAME = {
 }
 
 def test_sync_games_mocked(auth_client):
-    with patch("app.services.chesscom_client.ChesscomClient.fetch_recent_games", new_callable=AsyncMock) as mock_cc:
-        mock_cc.return_value = [MOCK_CHESSCOM_GAME]
+    with patch("app.services.chesscom_client.ChesscomClient.fetch_archives", new_callable=AsyncMock) as mock_archives, \
+         patch("app.services.chesscom_client.ChesscomClient.fetch_archive_games", new_callable=AsyncMock) as mock_games:
+
+        mock_archives.return_value = ["https://api.chess.com/pub/player/test_chesscom_user/games/2026/10"]
+        mock_games.return_value = [MOCK_CHESSCOM_GAME]
 
         response = auth_client.post("/api/v1/sync")
         assert response.status_code == 200

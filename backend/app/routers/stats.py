@@ -1,4 +1,6 @@
-from typing import List, Literal, Optional
+import logging
+import time
+from typing import List, Literal, Optional, Dict, Tuple, Any
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -13,18 +15,63 @@ from app.schemas.stats import (
     StrengthsWeaknessesResponse
 )
 from app.auth import get_current_user
+from app.services.chesscom_client import ChesscomClient
+from app.services.lichess_client import LichessClient
 
+logger = logging.getLogger("all_chess.stats")
 router = APIRouter(prefix="/stats", tags=["Stats"])
+
+# In-memory cache for live platform stats (10 min TTL)
+_LIVE_STATS_CACHE: Dict[Tuple[str, str], Tuple[float, Dict[str, Any]]] = {}
+_STATS_CACHE_TTL_SECS = 600.0
+
+
+async def get_cached_live_stats(platform: str, username: str) -> Optional[Dict[str, Any]]:
+    key = (platform, username.lower())
+    now = time.time()
+    if key in _LIVE_STATS_CACHE:
+        cached_at, data = _LIVE_STATS_CACHE[key]
+        if now - cached_at < _STATS_CACHE_TTL_SECS:
+            return data
+
+    data = None
+    try:
+        if platform == "chesscom":
+            client = ChesscomClient()
+            data = await client.fetch_player_stats(username)
+        elif platform == "lichess":
+            client = LichessClient()
+            data = await client.fetch_player_stats(username)
+    except Exception as e:
+        logger.warning(f"Could not fetch live {platform} stats for {username}: {e}")
+
+    if data:
+        _LIVE_STATS_CACHE[key] = (now, data)
+    return data
+
+
+def resolve_platform(user: User, platform_param: Optional[str]) -> str:
+    if platform_param in ("chesscom", "lichess"):
+        return platform_param
+    if user.chesscom_username:
+        return "chesscom"
+    if user.lichess_username:
+        return "lichess"
+    return "chesscom"
+
 
 @router.get("/rating-history", response_model=List[RatingPoint])
 def get_rating_history(
     range: Optional[Literal['30d', '90d', 'all']] = Query('90d'),
+    platform: Optional[Literal['chesscom', 'lichess']] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    target_platform = resolve_platform(current_user, platform)
+
     games = (
         db.query(GameModel)
-        .filter(GameModel.user_id == current_user.id)
+        .filter(GameModel.user_id == current_user.id, GameModel.platform == target_platform)
         .order_by(GameModel.date.asc())
         .all()
     )
@@ -32,27 +79,42 @@ def get_rating_history(
     if not games:
         return []
 
-    now = datetime.now(timezone.utc)
-    cutoff = None
-    if range == '30d':
-        cutoff = now - timedelta(days=30)
-    elif range == '90d':
-        cutoff = now - timedelta(days=90)
+    # 1. Determine first known rating for each speed (to carry backwards before first game)
+    first_known_ratings: Dict[str, int] = {}
+    for g in games:
+        speed = (g.speed or "rapid").lower()
+        rating = g.white.get("rating") if g.is_user_white else g.black.get("rating")
+        if speed not in first_known_ratings and rating and isinstance(rating, int) and rating > 0:
+            first_known_ratings[speed] = rating
 
-    current_ratings = {"rapid": 0, "blitz": 0, "bullet": 0}
-    history_by_date = {}
+    # 2. Track running rating per date. Speeds start at their first known rating (or 0 if never played).
+    current_ratings = {
+        "rapid": first_known_ratings.get("rapid", 0),
+        "blitz": first_known_ratings.get("blitz", 0),
+        "bullet": first_known_ratings.get("bullet", 0),
+    }
+
+    history_by_date: Dict[str, Dict[str, int]] = {}
 
     for g in games:
         d_str = g.date[:10] if g.date else ""
         if not d_str:
             continue
 
-        speed = g.speed.lower() if g.speed else "rapid"
+        speed = (g.speed or "rapid").lower()
         user_rating = g.white.get("rating") if g.is_user_white else g.black.get("rating")
         if user_rating and isinstance(user_rating, int) and speed in current_ratings:
             current_ratings[speed] = user_rating
 
         history_by_date[d_str] = dict(current_ratings)
+
+    # 3. Apply range filtering
+    now = datetime.now(timezone.utc)
+    cutoff = None
+    if range == '30d':
+        cutoff = now - timedelta(days=30)
+    elif range == '90d':
+        cutoff = now - timedelta(days=90)
 
     points: List[RatingPoint] = []
     for d_str, r_dict in sorted(history_by_date.items()):
@@ -75,64 +137,123 @@ def get_rating_history(
 
     return points
 
+
 @router.get("/ratings", response_model=List[RatingSummary])
-def get_ratings(
+async def get_ratings(
+    platform: Optional[Literal['chesscom', 'lichess']] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    target_platform = resolve_platform(current_user, platform)
+
+    # 1. Attempt live stats fetch from platform public API (cached for 10 min)
+    live_ratings: Dict[str, Optional[int]] = {"rapid": None, "blitz": None, "bullet": None}
+    username_for_platform = (
+        current_user.chesscom_username if target_platform == "chesscom"
+        else current_user.lichess_username
+    )
+
+    if username_for_platform:
+        stats_data = await get_cached_live_stats(target_platform, username_for_platform)
+        if stats_data:
+            if target_platform == "chesscom":
+                rapid_info = stats_data.get("chess_rapid", {}).get("last", {})
+                blitz_info = stats_data.get("chess_blitz", {}).get("last", {})
+                bullet_info = stats_data.get("chess_bullet", {}).get("last", {})
+                if rapid_info.get("rating"):
+                    live_ratings["rapid"] = int(rapid_info["rating"])
+                if blitz_info.get("rating"):
+                    live_ratings["blitz"] = int(blitz_info["rating"])
+                if bullet_info.get("rating"):
+                    live_ratings["bullet"] = int(bullet_info["rating"])
+            elif target_platform == "lichess":
+                perfs = stats_data.get("perfs", {})
+                if perfs.get("rapid", {}).get("rating"):
+                    live_ratings["rapid"] = int(perfs["rapid"]["rating"])
+                if perfs.get("blitz", {}).get("rating"):
+                    live_ratings["blitz"] = int(perfs["blitz"]["rating"])
+                if perfs.get("bullet", {}).get("rating"):
+                    live_ratings["bullet"] = int(perfs["bullet"]["rating"])
+
+    # 2. Query user's games on this platform sorted by date asc for delta calculation
     games = (
         db.query(GameModel)
-        .filter(GameModel.user_id == current_user.id)
-        .order_by(GameModel.date.desc())
+        .filter(GameModel.user_id == current_user.id, GameModel.platform == target_platform)
+        .order_by(GameModel.date.asc())
         .all()
     )
 
     results: List[RatingSummary] = []
     seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
+    def get_pre_game_rating(game: GameModel) -> int:
+        r = game.white.get("rating") if game.is_user_white else game.black.get("rating")
+        return int(r) if r and isinstance(r, int) else 0
+
     for speed_key, mode_name in [("rapid", "Rapid"), ("blitz", "Blitz"), ("bullet", "Bullet")]:
         speed_games = [g for g in games if (g.speed or "").lower() == speed_key]
-        if not speed_games:
+
+        # Current rating: from live stats first, then fall back to latest game
+        current_rating = live_ratings.get(speed_key)
+        if current_rating is None:
+            if speed_games:
+                current_rating = get_pre_game_rating(speed_games[-1])
+            else:
+                current_rating = 0
+
+        # If user has no current rating and no games for this speed, rating is 0, delta is 0
+        if current_rating == 0 and not speed_games:
             results.append(RatingSummary(mode=mode_name, rating=0, delta_weekly=0))
             continue
 
-        # games are already in date desc order
-        latest_game = speed_games[0]
-        latest_rating = (latest_game.white.get("rating") if latest_game.is_user_white else latest_game.black.get("rating")) or 0
+        # deltaWeekly = current rating minus the rating after the last game played 7+ days ago.
+        # Rating after a game ≈ the pre-game rating of the next game, or the current rating if none.
+        delta_weekly = 0
+        if speed_games:
+            last_7d_idx = None
+            for idx, g in enumerate(speed_games):
+                try:
+                    g_dt = datetime.fromisoformat(g.date.replace("Z", "+00:00"))
+                    if g_dt <= seven_days_ago:
+                        last_7d_idx = idx
+                except Exception:
+                    pass
 
-        # Find game closest to 7 days ago
-        past_rating = latest_rating
-        found_past = False
-        for g in speed_games:
-            try:
-                g_date = datetime.fromisoformat(g.date.replace("Z", "+00:00"))
-                if g_date <= seven_days_ago:
-                    past_rating = (g.white.get("rating") if g.is_user_white else g.black.get("rating")) or latest_rating
-                    found_past = True
-                    break
-            except Exception:
-                continue
+            if last_7d_idx is not None:
+                # Game existed 7+ days ago. Rating after it ≈ pre-game rating of next game, or current rating if none.
+                if last_7d_idx + 1 < len(speed_games):
+                    rating_after = get_pre_game_rating(speed_games[last_7d_idx + 1])
+                else:
+                    rating_after = current_rating
+                delta_weekly = current_rating - rating_after
+            else:
+                # All games played within the last 7 days; compare with rating before the earliest game
+                rating_before = get_pre_game_rating(speed_games[0])
+                delta_weekly = current_rating - rating_before
 
-        if not found_past and len(speed_games) > 1:
-            earliest_game = speed_games[-1]
-            past_rating = (earliest_game.white.get("rating") if earliest_game.is_user_white else earliest_game.black.get("rating")) or latest_rating
-
-        delta = latest_rating - past_rating
-        results.append(RatingSummary(mode=mode_name, rating=latest_rating, delta_weekly=delta))
+        results.append(RatingSummary(mode=mode_name, rating=current_rating, delta_weekly=delta_weekly))
 
     return results
 
+
 @router.get("/openings", response_model=List[OpeningStat])
 def get_opening_stats(
+    platform: Optional[Literal['chesscom', 'lichess']] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    games = db.query(GameModel).filter(GameModel.user_id == current_user.id).all()
+    target_platform = resolve_platform(current_user, platform)
+
+    games = (
+        db.query(GameModel)
+        .filter(GameModel.user_id == current_user.id, GameModel.platform == target_platform)
+        .all()
+    )
     if not games:
         return []
 
     # Aggregate by ECO + name
-    stats_by_eco = {}
+    stats_by_eco: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for g in games:
         op = g.opening or {}
         eco = op.get("eco", "A00")
@@ -190,24 +311,24 @@ def get_opening_stats(
 
     return results
 
+
 @router.get("/phases", response_model=PhasePointsLost)
 def get_phase_points_lost(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Until Phase 2 deep analysis exists, return exact zeros
     return PhasePointsLost(
         opening=0.0,
         middlegame=0.0,
         endgame=0.0
     )
 
+
 @router.get("/insights", response_model=StrengthsWeaknessesResponse)
 def get_insights(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Until Phase 2 deep analysis exists, return empty lists
     return StrengthsWeaknessesResponse(
         strengths=[],
         weaknesses=[]

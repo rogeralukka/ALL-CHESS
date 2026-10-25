@@ -1,5 +1,7 @@
-import pytest
 import os
+os.environ["TESTING"] = "1"
+
+import pytest
 import sys
 from pathlib import Path
 from fastapi.testclient import TestClient

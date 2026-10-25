@@ -61,7 +61,7 @@ def test_user_with_games_stats(auth_client, test_user, db_session):
         id="real-game-02",
         user_id=test_user.id,
         source="online",
-        platform="lichess",
+        platform="chesscom",
         pgn="1. d4 Nf6 0-1",
         white={"username": "Opponent2", "rating": 1140},
         black={"username": test_user.username, "rating": 1150},
@@ -80,13 +80,17 @@ def test_user_with_games_stats(auth_client, test_user, db_session):
     games = auth_client.get("/api/v1/games").json()
     assert len(games) == 2
 
-    # Rating history has 2 points
-    history = auth_client.get("/api/v1/stats/rating-history?range=all").json()
+    # Rating history has 2 points. Notice Blitz's first known rating (1150) is carried backwards to 2026-10-20!
+    history = auth_client.get("/api/v1/stats/rating-history?range=all&platform=chesscom").json()
     assert len(history) == 2
     assert history[0]["date"] == "2026-10-20"
     assert history[0]["rapid"] == 1200
+    assert history[0]["blitz"] == 1150
+    assert history[0]["bullet"] == 0
     assert history[1]["date"] == "2026-10-22"
+    assert history[1]["rapid"] == 1200
     assert history[1]["blitz"] == 1150
+    assert history[1]["bullet"] == 0
 
     # Ratings shows Rapid 1200, Blitz 1150, Bullet 0
     ratings = auth_client.get("/api/v1/stats/ratings").json()

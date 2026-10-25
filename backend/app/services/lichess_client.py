@@ -9,21 +9,30 @@ class LichessClient:
             "Accept": "application/x-ndjson",
             "User-Agent": "ChessGuideApp/1.0"
         }
-        self.timeout = 15.0
+        self.timeout = 20.0
 
-    async def fetch_recent_games(self, username: str, max_games: int = 50) -> List[Dict[str, Any]]:
+    async def fetch_games(
+        self,
+        username: str,
+        since: int = 0,
+        max_games: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         """
-        Fetches recent games for a Lichess user in NDJSON format.
+        Fetches games for a Lichess user in NDJSON format.
+        since: Milliseconds epoch timestamp (0 for full history).
         """
         clean_user = username.strip().lower()
         url = f"https://lichess.org/api/games/user/{clean_user}"
-        params = {
-            "max": max_games,
+        params: Dict[str, Any] = {
             "pgnInJson": "true",
             "clocks": "true",
             "opening": "true",
             "evals": "true"
         }
+        if since > 0:
+            params["since"] = since
+        if max_games is not None:
+            params["max"] = max_games
 
         async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
             resp = await self._get_with_retry(client, url, params)
@@ -41,6 +50,23 @@ class LichessClient:
                         continue
             return games
 
+    async def fetch_player_stats(self, username: str) -> Optional[Dict[str, Any]]:
+        """Fetches public user profile with ratings per speed from https://lichess.org/api/user/{username}."""
+        clean_user = username.strip().lower()
+        url = f"https://lichess.org/api/user/{clean_user}"
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": "ChessGuideApp/1.0"
+        }
+        async with httpx.AsyncClient(headers=headers, timeout=self.timeout) as client:
+            resp = await self._get_with_retry(client, url, params={})
+            if resp and resp.status_code == 200:
+                return resp.json()
+            return None
+
+    async def fetch_recent_games(self, username: str, max_games: int = 50) -> List[Dict[str, Any]]:
+        return await self.fetch_games(username, since=0, max_games=max_games)
+
     async def _get_with_retry(
         self,
         client: httpx.AsyncClient,
@@ -52,7 +78,7 @@ class LichessClient:
         for attempt in range(max_retries):
             try:
                 resp = await client.get(url, params=params)
-                if resp.status_code == 429: # Rate limit
+                if resp.status_code == 429:  # Rate limit
                     await asyncio.sleep(delay)
                     delay *= 2.0
                     continue
