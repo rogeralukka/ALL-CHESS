@@ -12,6 +12,7 @@ const PuzzleScreen = lazy(() => import('@/features/puzzles/PuzzleScreen'));
 const ScoutSearch = lazy(() => import('@/features/scout/ScoutSearch'));
 const Profile = lazy(() => import('@/features/profile/Profile'));
 const SettingsShell = lazy(() => import('@/features/settings/SettingsShell'));
+const CoachLab = lazy(() => import('./CoachLab'));
 const Playground = lazy(() => import('./Playground').then((m) => ({ default: m.Playground })));
 
 const LoadingFallback = () => <LoadingScreen />;
@@ -90,6 +91,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingFallback />}>
             <Playground />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'dev/coach',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <CoachLab />
           </Suspense>
         ),
       },
