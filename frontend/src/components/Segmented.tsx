@@ -26,7 +26,7 @@ export const Segmented = <T extends string>({
   const groupId = useId();
   return (
     <div
-      className={`relative flex items-center p-1 bg-black/[0.04] dark:bg-black/25 rounded-[10px] border border-theme-border ${className}`}
+      className={`well relative flex items-center p-1 gap-0.5 ${className}`}
       role="tablist"
     >
       {options.map((opt) => {
@@ -38,16 +38,16 @@ export const Segmented = <T extends string>({
             role="tab"
             aria-selected={isSelected}
             onClick={() => onChange(opt.value)}
-            className={`relative flex-1 flex items-center justify-center font-semibold rounded-lg transition-colors select-none z-10 ${
+            className={`relative flex-1 flex items-center justify-center font-display font-extrabold rounded-[10px] transition-colors select-none z-10 ${
               size === 'sm' ? 'min-h-[36px] px-3 text-[13px]' : 'min-h-[42px] px-3.5 text-[14px]'
             } ${
-              isSelected ? 'text-theme-text font-bold' : 'text-theme-muted hover:text-theme-text'
+              isSelected ? 'text-theme-text' : 'text-theme-muted hover:text-theme-text'
             }`}
           >
             {isSelected && (
               <motion.div
                 layoutId={`segmented-indicator-${groupId}`}
-                className="absolute inset-0 rounded-lg -z-10 bg-white dark:bg-white/[0.1] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_1px_2px_rgba(0,0,0,.25)]"
+                className="chip-raised absolute inset-x-0 top-0 bottom-[3px] rounded-[10px] -z-10"
                 transition={{ type: 'spring', stiffness: 450, damping: 35 }}
               />
             )}

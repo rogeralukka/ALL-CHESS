@@ -44,7 +44,7 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
           src="/assets/ui/hero_scout.webp"
           alt=""
           aria-hidden="true"
-          className="hidden md:block absolute -right-6 -bottom-6 h-[125%] opacity-90 pointer-events-none"
+          className="hidden md:block absolute right-5 top-4 h-[calc(100%-32px)] w-auto max-w-[34%] object-contain object-right pointer-events-none"
           style={{ filter: 'drop-shadow(0 18px 24px rgba(0,0,0,.45))' }}
         />
         <div className="relative p-5 md:p-7 flex flex-col sm:flex-row sm:items-center gap-5 md:max-w-[64%]">

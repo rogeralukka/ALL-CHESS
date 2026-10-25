@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from './Layout';
-import { Skeleton } from '@/components/Skeleton';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { NotFound } from './NotFound';
 
 const Home = lazy(() => import('@/features/home/Home'));
 const ReviewRouter = lazy(() => import('@/features/review/ReviewRouter'));
@@ -11,19 +12,10 @@ const PuzzleScreen = lazy(() => import('@/features/puzzles/PuzzleScreen'));
 const ScoutSearch = lazy(() => import('@/features/scout/ScoutSearch'));
 const Profile = lazy(() => import('@/features/profile/Profile'));
 const SettingsShell = lazy(() => import('@/features/settings/SettingsShell'));
+const CoachLab = lazy(() => import('./CoachLab'));
 const Playground = lazy(() => import('./Playground').then((m) => ({ default: m.Playground })));
 
-const LoadingFallback = () => (
-  <div className="p-8 max-w-5xl mx-auto space-y-4">
-    <Skeleton height={40} width={240} />
-    <Skeleton height={200} />
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Skeleton height={120} />
-      <Skeleton height={120} />
-      <Skeleton height={120} />
-    </div>
-  </div>
-);
+const LoadingFallback = () => <LoadingScreen />;
 
 export const router = createBrowserRouter([
   {
@@ -102,6 +94,15 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
+      {
+        path: 'dev/coach',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <CoachLab />
+          </Suspense>
+        ),
+      },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ], {

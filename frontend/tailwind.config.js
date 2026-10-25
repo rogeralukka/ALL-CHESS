@@ -43,6 +43,8 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['Nunito', 'sans-serif'],
+        // numbers and notation use the same rounded game font as headings
+        mono: ['Nunito', 'ui-monospace', 'monospace'],
       },
       transitionDuration: {
         snappy: '50ms',

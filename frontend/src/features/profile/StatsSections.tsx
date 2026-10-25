@@ -8,6 +8,7 @@ import {
   MOCK_WEAKNESSES,
 } from '@/data/mock/mockStats';
 import { ShieldCheck, AlertTriangle, BookOpen, Layers } from 'lucide-react';
+import { Meter, StatTile, WDLBar } from '@/components/Bits';
 
 export const StatsSections: React.FC = () => {
   // Aggregate record
@@ -28,60 +29,18 @@ export const StatsSections: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Win / Draw / Loss Record Card */}
-      <Card className="p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="font-bold font-display text-theme-text text-base">Game Record</h3>
-            <p className="text-xs text-theme-muted">{totalGames} Games Analyzed (All Time Controls)</p>
-          </div>
-          <div className="flex gap-4 text-xs font-semibold">
-            <span className="text-emerald-500 font-mono tabular-nums">{wins} Wins ({winPct}%)</span>
-            <span className="text-neutral-400 font-mono tabular-nums">{draws} Draws ({drawPct}%)</span>
-            <span className="text-red-500 font-mono tabular-nums">{losses} Losses ({lossPct}%)</span>
-          </div>
+      {/* Win / Draw / Loss record as three game badges over a chunky bar */}
+      <Card className="p-4 md:p-5 space-y-4">
+        <div>
+          <h3 className="font-black font-display text-theme-text text-[18px]">Game record</h3>
+          <p className="text-[13px] text-theme-muted">{totalGames} games analysed, all time controls</p>
         </div>
-
-        {/* Visual Record Segmented Bar */}
-        <div className="w-full flex gap-1.5 h-3">
-          <div
-            style={{ width: `${winPct}%` }}
-            className="bg-emerald-500 rounded-l-full transition-all duration-500"
-            title={`Wins: ${winPct}%`}
-          />
-          <div
-            style={{ width: `${drawPct}%` }}
-            className="bg-neutral-400 transition-all duration-500"
-            title={`Draws: ${drawPct}%`}
-          />
-          <div
-            style={{ width: `${lossPct}%` }}
-            className="bg-red-500 rounded-r-full transition-all duration-500"
-            title={`Losses: ${lossPct}%`}
-          />
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile label="Wins" value={wins} sub={`${winPct}%`} accent="#34d399" />
+          <StatTile label="Draws" value={draws} sub={`${drawPct}%`} accent="#a8a29e" />
+          <StatTile label="Losses" value={losses} sub={`${lossPct}%`} accent="#f87171" />
         </div>
-
-        {/* Labels under each segment */}
-        <div className="flex justify-between items-center text-xs pt-1">
-          <div className="text-left">
-            <span className="block text-xs uppercase font-bold text-theme-muted tracking-wider">Wins</span>
-            <span className="font-mono font-bold text-emerald-500 tabular-nums">
-              {wins} <span className="text-theme-muted font-normal">({winPct}%)</span>
-            </span>
-          </div>
-          <div className="text-center">
-            <span className="block text-xs uppercase font-bold text-theme-muted tracking-wider">Draws</span>
-            <span className="font-mono font-bold text-neutral-400 tabular-nums">
-              {draws} <span className="text-theme-muted font-normal">({drawPct}%)</span>
-            </span>
-          </div>
-          <div className="text-right">
-            <span className="block text-xs uppercase font-bold text-theme-muted tracking-wider">Losses</span>
-            <span className="font-mono font-bold text-red-500 tabular-nums">
-              {losses} <span className="text-theme-muted font-normal">({lossPct}%)</span>
-            </span>
-          </div>
-        </div>
+        <WDLBar win={wins} draw={draws} loss={losses} height={14} />
       </Card>
 
       {/* Strengths & Areas to Polish Cards */}
@@ -89,7 +48,7 @@ export const StatsSections: React.FC = () => {
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <ShieldCheck size={18} className="text-emerald-500" />
-            <h3 className="font-bold font-display text-theme-text text-base">Key Strengths</h3>
+            <h3 className="font-black font-display text-theme-text text-[17px]">Key Strengths</h3>
           </div>
           <p className="text-xs text-theme-muted">Consistent positive tactical impact across your matches</p>
           <div className="flex flex-wrap gap-2 pt-1">
@@ -105,7 +64,7 @@ export const StatsSections: React.FC = () => {
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle size={18} className="text-amber-500" />
-            <h3 className="font-bold font-display text-theme-text text-base">Areas to Polish</h3>
+            <h3 className="font-black font-display text-theme-text text-[17px]">Areas to Polish</h3>
           </div>
           <p className="text-xs text-theme-muted">Frequent sources of lost advantage identified by coach</p>
           <div className="flex flex-wrap gap-2 pt-1">
@@ -124,59 +83,27 @@ export const StatsSections: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers size={18} className="text-amber-500" />
-            <h3 className="font-bold font-display text-theme-text text-base">Phase Points Lost per Game</h3>
+            <h3 className="font-black font-display text-theme-text text-[17px]">Phase Points Lost per Game</h3>
           </div>
           <span className="text-xs text-theme-muted font-medium">Lower is better</span>
         </div>
 
-        <div className="space-y-3 pt-1">
-          {/* Opening */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-semibold text-theme-text">Opening</span>
-              <span className="font-mono text-theme-muted">
-                You: <strong className="text-emerald-500">{MOCK_PHASE_POINTS_LOST.opening}</strong> vs Peer: {benchmarks.opening}
-              </span>
-            </div>
-            <div className="w-full bg-theme-raised rounded-full h-2 overflow-hidden flex">
-              <div
-                style={{ width: `${(MOCK_PHASE_POINTS_LOST.opening / 2) * 100}%` }}
-                className="bg-emerald-500 rounded-full"
-              />
-            </div>
-          </div>
-
-          {/* Middlegame */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-semibold text-theme-text">Middlegame</span>
-              <span className="font-mono text-theme-muted">
-                You: <strong className="text-red-500">{MOCK_PHASE_POINTS_LOST.middlegame}</strong> vs Peer: {benchmarks.middlegame}
-              </span>
-            </div>
-            <div className="w-full bg-theme-raised rounded-full h-2 overflow-hidden flex">
-              <div
-                style={{ width: `${(MOCK_PHASE_POINTS_LOST.middlegame / 2) * 100}%` }}
-                className="bg-red-500 rounded-full"
-              />
-            </div>
-          </div>
-
-          {/* Endgame */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-semibold text-theme-text">Endgame</span>
-              <span className="font-mono text-theme-muted">
-                You: <strong className="text-emerald-500">{MOCK_PHASE_POINTS_LOST.endgame}</strong> vs Peer: {benchmarks.endgame}
-              </span>
-            </div>
-            <div className="w-full bg-theme-raised rounded-full h-2 overflow-hidden flex">
-              <div
-                style={{ width: `${(MOCK_PHASE_POINTS_LOST.endgame / 2) * 100}%` }}
-                className="bg-emerald-500 rounded-full"
-              />
-            </div>
-          </div>
+        <div className="space-y-4 pt-1">
+          {(['opening', 'middlegame', 'endgame'] as const).map((ph) => {
+            const you = MOCK_PHASE_POINTS_LOST[ph];
+            const good = you <= benchmarks[ph];
+            return (
+              <div key={ph} className="space-y-1.5">
+                <div className="flex justify-between text-[13px]">
+                  <span className="font-display font-black text-theme-text capitalize">{ph}</span>
+                  <span className="text-theme-muted font-semibold">
+                    You <strong className={`font-display font-black ${good ? 'text-emerald-400' : 'text-red-400'}`}>{you}</strong> · peers {benchmarks[ph]}
+                  </span>
+                </div>
+                <Meter value={you / 2} color={good ? '#34d399' : '#f87171'} height={12} label={`${ph} points lost`} />
+              </div>
+            );
+          })}
         </div>
       </Card>
 
@@ -185,7 +112,7 @@ export const StatsSections: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen size={18} className="text-amber-500" />
-            <h3 className="font-bold font-display text-theme-text text-base">Opening Repertoire Mastery</h3>
+            <h3 className="font-black font-display text-theme-text text-[17px]">Opening Repertoire Mastery</h3>
           </div>
           <span className="text-xs text-theme-muted font-medium">Ranked by frequency</span>
         </div>
@@ -201,11 +128,11 @@ export const StatsSections: React.FC = () => {
                 <th className="py-2.5 px-3 text-right">Accuracy</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-theme-border/40">
+            <tbody>
               {MOCK_OPENING_STATS.map((o) => (
-                <tr key={o.eco} className="hover:bg-theme-raised/50 transition-colors">
-                  <td className="py-3 px-3 font-mono text-xs text-amber-500 font-bold">
-                    {o.eco}
+                <tr key={o.eco} className="hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors border-t-2 border-theme-border/60">
+                  <td className="py-3 px-3">
+                    <span className="inline-flex items-center justify-center min-w-[44px] h-7 px-2 rounded-[8px] bg-amber-500/15 border-2 border-amber-500/30 text-amber-400 font-display font-black text-[12px]">{o.eco}</span>
                   </td>
                   <td className="py-3 px-3 font-semibold text-theme-text">
                     {o.name}

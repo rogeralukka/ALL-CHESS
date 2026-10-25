@@ -1,3 +1,4 @@
+import { rankFor } from '@/lib/rank';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -159,7 +160,7 @@ export const Home: React.FC = () => {
             src="/assets/ui/hero_home.webp"
             alt=""
             aria-hidden="true"
-            className="hidden lg:block absolute right-[-30px] bottom-[-40px] h-[135%] pointer-events-none"
+            className="hidden lg:block absolute right-5 top-4 h-[calc(100%-32px)] w-auto max-w-[40%] object-contain object-right pointer-events-none"
             style={{ filter: 'drop-shadow(0 18px 26px rgba(0,0,0,.5))' }}
           />
           <div className="relative p-5 md:p-7 lg:max-w-[58%] space-y-4">
@@ -249,15 +250,20 @@ export const Home: React.FC = () => {
             Your ratings
           </SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {ratings.map((r, i) => (
+            {ratings.map((r, i) => {
+              const tier = rankFor(r.rating).tier;
+              return (
               <Reveal key={r.mode} i={i}>
                 <button
                   type="button"
                   onClick={() => navigate('/profile')}
-                  className="w-full text-left rounded-xl bg-black/[0.04] dark:bg-black/25 border border-theme-border hover:border-amber-500/40 px-4 py-3 transition-colors"
+                  title={`${tier.name} rank`}
+                  className="w-full text-left rounded-[14px] border-2 px-4 py-3 transition-transform hover:-translate-y-0.5 active:translate-y-[2px]"
+                  style={{ borderColor: `color-mix(in srgb, ${tier.color} 30%, transparent)`, background: `linear-gradient(160deg, color-mix(in srgb, ${tier.color} 14%, transparent), transparent 75%)`, boxShadow: `0 4px 0 color-mix(in srgb, ${tier.color} 22%, var(--panel-lip))` }}
                 >
-                  <div className="flex items-center gap-2 text-[13px] font-bold text-theme-muted">
+                  <div className="flex items-center gap-2 text-[13px] font-display font-black text-theme-muted capitalize">
                     {MODE_ICON[r.mode]} {r.mode}
+                    <img src={tier.icon} alt="" className="ml-auto w-7 h-7 object-contain" />
                   </div>
                   <div className="flex items-end justify-between mt-1">
                     <span className="text-[28px] font-black font-display tabular-nums text-theme-text leading-none">{r.rating}</span>
@@ -267,7 +273,8 @@ export const Home: React.FC = () => {
                   </div>
                 </button>
               </Reveal>
-            ))}
+              );
+            })}
           </div>
         </Card>
         <Card>

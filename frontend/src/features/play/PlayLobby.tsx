@@ -1,3 +1,4 @@
+import { rankFor } from '@/lib/rank';
 import React, { useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
@@ -109,21 +110,20 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
                   key={lvl.rating}
                   type="button"
                   onClick={() => setSelectedLevel(lvl.rating)}
-                  className={`p-3 rounded-lg text-left transition-all relative select-none flex flex-col justify-between gap-1.5 ${
+                  className={`p-3 rounded-[14px] text-left transition-all relative select-none flex items-center gap-3 border-2 active:translate-y-[2px] ${
                     isSelected
-                      ? 'bg-amber-500/15 border-2 border-amber-500 ring-2 ring-amber-500/40 shadow-md'
-                      : 'bg-theme-card border border-theme-border hover:bg-theme-raised/60'
+                      ? 'bg-amber-500/15 border-amber-500 shadow-[0_4px_0_#a85f00]'
+                      : 'bg-theme-card border-theme-border shadow-[0_4px_0_var(--panel-lip)] hover:border-amber-500/40'
                   }`}
                 >
+                  <img src={rankFor(lvl.rating).tier.icon} alt="" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.35))' }} />
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-theme-text flex items-center gap-2">
-                      <span className={isSelected ? 'text-amber-500' : 'text-theme-muted'}>
-                        {lvl.icon}
-                      </span>
+                    <span className="font-display font-black text-[15px] text-theme-text flex items-center gap-2">
                       {lvl.name}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono tabular-nums font-bold bg-theme-raised px-2 py-0.5 rounded">
+                      <span className="text-[12px] font-display font-black tabular-nums well px-2 py-0.5 !rounded-[8px]">
                         {lvl.rating}
                       </span>
                       {isSelected && (
@@ -132,6 +132,7 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
                     </div>
                   </div>
                   <p className="text-xs text-theme-muted leading-snug">{lvl.desc}</p>
+                  </div>
                 </button>
               );
             })}

@@ -19,7 +19,7 @@ interface PageHeaderProps {
 
 /**
  * Hero header used by the non-board pages: a panel with a warm light pool, the page's 3D art
- * spilling out on the right, title + subtitle + actions on the left. The art floats in gently.
+ * sitting fully inside the card on the right (never clipped), title + subtitle + actions on the left. The art floats in gently.
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, art, eyebrow, actions, className = '', tint = 'rgba(245,165,36,0.18)' }) => {
   const { isFull, isOff } = useMotion();
@@ -41,7 +41,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, a
           alt=""
           aria-hidden="true"
           draggable={false}
-          className="hidden sm:block absolute right-0 bottom-0 h-[118%] max-w-[54%] object-contain object-right-bottom pointer-events-none select-none"
+          className="hidden sm:block absolute right-4 top-3 h-[calc(100%-24px)] w-auto max-w-[46%] object-contain object-right pointer-events-none select-none"
           style={{ filter: 'drop-shadow(0 18px 24px rgba(0,0,0,0.45))' }}
           initial={isOff ? false : { opacity: 0, x: 24, y: 8 }}
           animate={isFull ? { opacity: 1, x: 0, y: [0, -4, 0] } : { opacity: 1, x: 0, y: 0 }}

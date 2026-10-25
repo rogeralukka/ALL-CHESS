@@ -5,6 +5,8 @@
   --color-card: #201e1c;
   --color-raised: #36332f;
   --color-border: rgba(255, 255, 255, 0.07);
+  --panel-lip: #141210;
+  --well-bg: rgba(0, 0, 0, 0.28);
   --color-sidebar: #1d1b19;
   --page-glow: rgba(255, 178, 64, 0.07);
   --page-glow-2: rgba(120, 160, 255, 0.045);
@@ -17,18 +19,18 @@
   --btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%);
   --btn-primary-hover-bg: linear-gradient(180deg, #f8bd52 0%, #f19f1d 100%);
   --btn-primary-active-bg: linear-gradient(180deg, #dc8604 0%, #c47300 100%);
-  --btn-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
-  --btn-primary-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 3px 6px rgba(0, 0, 0, 0.3);
-  --btn-primary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 -1px 0 rgba(255, 255, 255, 0.1), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --btn-primary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 4px 0 #a85f00, 0 10px 16px -8px rgba(0, 0, 0, 0.5);
+  --btn-primary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #a85f00, 0 12px 18px -8px rgba(0, 0, 0, 0.5);
+  --btn-primary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #a85f00;
   --btn-primary-border: #d47e06;
 
-  --btn-secondary-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
-  --btn-secondary-hover-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
-  --btn-secondary-active-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
-  --btn-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.2);
-  --btn-secondary-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 5px rgba(0, 0, 0, 0.25);
-  --btn-secondary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-  --btn-secondary-border: rgba(255, 255, 255, 0.12);
+  --btn-secondary-bg: linear-gradient(180deg, #45413b 0%, #36322d 100%);
+  --btn-secondary-hover-bg: linear-gradient(180deg, #4d4842 0%, #3c3832 100%);
+  --btn-secondary-active-bg: linear-gradient(180deg, #312d29 0%, #2c2925 100%);
+  --btn-secondary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08), 0 4px 0 #141210, 0 10px 14px -8px rgba(0, 0, 0, 0.5);
+  --btn-secondary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 0.1), 0 5px 0 #141210, 0 12px 16px -8px rgba(0, 0, 0, 0.5);
+  --btn-secondary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #141210;
+  --btn-secondary-border: rgba(255, 255, 255, 0.09);
   
   --color-eval-white: #ffffff;
   --color-eval-black: #1a1918;
@@ -44,6 +46,8 @@
   --color-card: #ffffff;
   --color-raised: #f2efe9;
   --color-border: #e8e4df;
+  --panel-lip: #ddd5c8;
+  --well-bg: #ece7df;
   --color-sidebar: #ebe6de;
   --page-glow: rgba(255, 178, 64, 0.12);
   --page-glow-2: rgba(120, 160, 255, 0.08);
@@ -56,17 +60,17 @@
   --btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%);
   --btn-primary-hover-bg: linear-gradient(180deg, #f8bd52 0%, #f19f1d 100%);
   --btn-primary-active-bg: linear-gradient(180deg, #dc8604 0%, #c47300 100%);
-  --btn-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
-  --btn-primary-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.65), inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 3px 6px rgba(0, 0, 0, 0.16);
-  --btn-primary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 -1px 0 rgba(255, 255, 255, 0.2), 0 1px 1px rgba(0, 0, 0, 0.1);
+  --btn-primary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 4px 0 #c27400, 0 10px 16px -8px rgba(0, 0, 0, 0.5);
+  --btn-primary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #c27400, 0 12px 18px -8px rgba(0, 0, 0, 0.5);
+  --btn-primary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #c27400;
   --btn-primary-border: #d47e06;
 
   --btn-secondary-bg: linear-gradient(180deg, #ffffff 0%, #f3eee7 100%);
-  --btn-secondary-hover-bg: linear-gradient(180deg, #ffffff 0%, #e8e2d9 100%);
-  --btn-secondary-active-bg: linear-gradient(180deg, #e4ded4 0%, #eae4dc 100%);
-  --btn-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.08);
-  --btn-secondary-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 1), 0 2px 4px rgba(0, 0, 0, 0.12);
-  --btn-secondary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  --btn-secondary-hover-bg: linear-gradient(180deg, #ffffff 0%, #ebe5dc 100%);
+  --btn-secondary-active-bg: linear-gradient(180deg, #e8e2d9 0%, #eee8df 100%);
+  --btn-secondary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 4px 0 #cfc6b8, 0 10px 14px -8px rgba(0, 0, 0, 0.15);
+  --btn-secondary-shadow-hover: inset 0 2px 0 rgba(255, 255, 255, 1), 0 5px 0 #cfc6b8, 0 12px 16px -8px rgba(0, 0, 0, 0.18);
+  --btn-secondary-shadow-active: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 1px 0 #cfc6b8;
   --btn-secondary-border: #d6cfc5;
 
   --color-eval-white: #ffffff;
