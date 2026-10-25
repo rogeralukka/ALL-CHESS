@@ -25,7 +25,10 @@ __pycache__/
 env/
 venv/
 backend/.venv/
-backend/.env*
+backend/.env
+backend/.env.local
+backend/.env.*.local
+!backend/.env.example
 backend/bin/
 *.db
 *.sqlite
