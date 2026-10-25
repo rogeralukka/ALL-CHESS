@@ -5,7 +5,7 @@ import { useMotion } from '@/lib/useMotion';
 const SHEET = '/assets/ui/loader_sheet.webp';
 const COLS = 12;
 const FRAMES = 96;
-const FW = 99;
+const FW = 103;
 const FH = 208;
 const FPS = 24;
 
