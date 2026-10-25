@@ -41,13 +41,16 @@ def scene(res_x, res_y, cam_loc, cam_target, lens=70, ortho=None, catcher=True, 
     sc.render.resolution_y = res_y
     sc.render.image_settings.file_format = 'PNG'
     sc.render.image_settings.color_mode = 'RGBA'
-    sc.view_settings.view_transform = 'Standard'
+    # AgX instead of Standard: whites roll off instead of clipping (the 'glare' on white pieces)
+    # Standard keeps the toy colours saturated; matte materials (soften_materials) stop the clipping
+    sc.view_settings.view_transform = os.environ.get('UI_VIEW', 'Standard')
+    sc.view_settings.exposure = float(os.environ.get('UI_EXPOSURE', '-0.2'))
     world = bpy.data.worlds.new('W')
     sc.world = world
     world.use_nodes = True
     bg = world.node_tree.nodes['Background']
     bg.inputs['Color'].default_value = (0.8, 0.86, 1.0, 1)
-    bg.inputs['Strength'].default_value = 0.7
+    bg.inputs['Strength'].default_value = 1.0
 
     cd = bpy.data.cameras.new('C')
     if ortho:
@@ -72,8 +75,8 @@ def scene(res_x, res_y, cam_loc, cam_target, lens=70, ortho=None, catcher=True, 
 
     # cool rim light from behind so silhouettes pop on dark UI
     rd = bpy.data.lights.new('Rim', 'AREA')
-    rd.energy = 260
-    rd.size = 3
+    rd.energy = 70
+    rd.size = 5
     rd.color = (0.8, 0.88, 1.0)
     ro = bpy.data.objects.new('Rim', rd)
     sc.collection.objects.link(ro)
@@ -83,23 +86,111 @@ def scene(res_x, res_y, cam_loc, cam_target, lens=70, ortho=None, catcher=True, 
     if catcher:
         bpy.ops.mesh.primitive_plane_add(size=40, location=(0, 0, 0))
         g = bpy.context.active_object
+        g.name = 'Catcher'
         g.is_shadow_catcher = True
+        # keep the floor out of the ink outline (its far edge would draw a line across the frame)
+        noink = bpy.data.collections.new('NoInk')
+        sc.collection.children.link(noink)
+        sc.collection.objects.unlink(g)
+        noink.objects.link(g)
+
+    # thin ink outline: the cartoon look of the roadmap, and keeps white pieces readable
+    sc.render.use_freestyle = True
+    bpy.context.view_layer.use_freestyle = True
+    sc.render.line_thickness_mode = 'ABSOLUTE'
+    sc.render.line_thickness = max(1.0, res_x / 700)
+    fs = bpy.context.view_layer.freestyle_settings
+    fs.crease_angle = math.radians(120)
+    ls = fs.linesets[0] if fs.linesets else fs.linesets.new('ink')
+    ls.select_by_visibility = True
+    ls.select_silhouette = True
+    ls.select_border = True
+    ls.select_crease = False
+    if catcher:
+        ls.select_by_collection = True
+        ls.collection = bpy.data.collections['NoInk']
+        ls.collection_negation = 'EXCLUSIVE'
+    else:
+        ls.select_by_collection = False
+    if ls.linestyle is None:
+        ls.linestyle = bpy.data.linestyles.new('ink')
+    ls.linestyle.color = srgb('#2a1d14')
+    ls.linestyle.alpha = 0.85
+    ls.linestyle.thickness = 1.0
     return sc
 
 
+def soften_materials():
+    """Matte toy finish: no hot highlights eating detail (the glare the earlier renders had)."""
+    for m in bpy.data.materials:
+        if not m.use_nodes:
+            continue
+        p = m.node_tree.nodes.get('Principled BSDF')
+        if not p:
+            continue
+        if p.inputs['Transmission Weight'].default_value > 0.1:
+            p.inputs['Roughness'].default_value = 0.25
+            continue
+        metal = p.inputs['Metallic'].default_value
+        p.inputs['Roughness'].default_value = max(p.inputs['Roughness'].default_value, 0.42 if metal > 0.5 else 0.58)
+        p.inputs['Metallic'].default_value = min(metal, 0.55)
+        p.inputs['Specular IOR Level'].default_value = 0.28
+
+
+def fit_camera(margin=0.05, iters=10):
+    """Move the camera so every visible object sits inside the frame with a margin (no clipped art)."""
+    from bpy_extras.object_utils import world_to_camera_view
+    sc = bpy.context.scene
+    cam = sc.camera
+    bpy.context.view_layer.update()
+    pts = []
+    for o in sc.objects:
+        if o.type != 'MESH' or o.name.startswith('Catcher'):
+            continue
+        pts += [o.matrix_world @ Vector(c) for c in o.bound_box]
+    if not pts:
+        return
+    fwd = cam.matrix_world.to_quaternion() @ Vector((0, 0, -1))
+    right = cam.matrix_world.to_quaternion() @ Vector((1, 0, 0))
+    up = cam.matrix_world.to_quaternion() @ Vector((0, 1, 0))
+    for _ in range(iters):
+        bpy.context.view_layer.update()
+        ndc = [world_to_camera_view(sc, cam, p) for p in pts]
+        xs, ys = [v.x for v in ndc], [v.y for v in ndc]
+        cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+        aspect = sc.render.resolution_x / sc.render.resolution_y
+        ext = max(max(xs) - min(xs), (max(ys) - min(ys)))
+        centre = sum(pts, Vector()) / len(pts)
+        dist = (centre - cam.location).dot(fwd)
+        if cam.data.type == 'ORTHO':
+            w = cam.data.ortho_scale
+        else:
+            w = dist * cam.data.sensor_width / cam.data.lens
+        h = w / aspect if aspect >= 1 else w
+        w = w if aspect >= 1 else w * aspect
+        cam.location += right * (cx - 0.5) * w + up * (cy - 0.5) * h
+        scale = ext / (1 - 2 * margin)
+        if cam.data.type == 'ORTHO':
+            cam.data.ortho_scale *= scale
+        else:
+            cam.location += fwd * dist * (1 - scale)
+
+
 def render(name):
+    soften_materials()
+    fit_camera(0.04 if name.startswith(('icon_', 'logo_')) else 0.05)
     bpy.context.scene.render.filepath = os.path.join(OUT, name + '_raw.png')
     bpy.ops.render.render(write_still=True)
     print('rendered', name, flush=True)
 
 
 # ----------------------------------------------------------------------------- chess pieces
-WHITE = '#e6dfd2'
-BLACK = '#3b3734'
+WHITE = '#efe6d4'
+BLACK = '#45403b'
 
 
 def piece_mat(color):
-    return mat('piece' + color, color, 0.32)
+    return mat('piece' + color, color, 0.55)
 
 
 def lathe(profile, loc, material, seg=48):
@@ -178,30 +269,50 @@ def king(loc, color, s=1.0, accent=None):
 
 
 def knight(loc, color, s=1.0, facing=0.0):
-    """Lathe base plus an extruded horse-head silhouette (our own outline)."""
+    """Lathe base plus a thick, rounded horse head (our own outline) with an eye and a mane."""
     m = piece_mat(color)
-    lathe([(r * s, z * s) for r, z in BASE + [(0.18, 0.2), (0.0, 0.2)]], loc, m)
-    outline = [(-0.2, 0.18), (0.2, 0.18), (0.18, 0.34), (0.12, 0.5), (0.2, 0.6), (0.28, 0.66), (0.3, 0.74), (0.24, 0.78),
-               (0.14, 0.76), (0.06, 0.86), (0.02, 0.94), (-0.04, 0.86), (-0.14, 0.82), (-0.22, 0.7), (-0.25, 0.52), (-0.24, 0.34)]
+    base = lathe([(r * s, z * s) for r, z in BASE + [(0.19, 0.2), (0.0, 0.2)]], (0, 0, 0), m)
+    outline = [(-0.21, 0.18), (0.19, 0.18), (0.17, 0.34), (0.09, 0.48), (0.15, 0.55), (0.27, 0.58), (0.34, 0.63),
+               (0.36, 0.7), (0.31, 0.77), (0.2, 0.85), (0.11, 0.93), (0.07, 1.02), (0.01, 1.06), (-0.04, 0.97),
+               (-0.13, 0.9), (-0.21, 0.78), (-0.26, 0.6), (-0.27, 0.42), (-0.25, 0.28)]
+    depth = 0.28
     me = bpy.data.meshes.new('kn')
     bm = bmesh.new()
     vs = [bm.verts.new((x * s, 0, z * s)) for x, z in outline]
     f = bm.faces.new(vs)
     ext = bmesh.ops.extrude_face_region(bm, geom=[f])
     moved = [e for e in ext['geom'] if isinstance(e, bmesh.types.BMVert)]
-    bmesh.ops.translate(bm, vec=(0, 0.22 * s, 0), verts=moved)
-    bmesh.ops.translate(bm, vec=(0, -0.11 * s, 0), verts=bm.verts)
+    bmesh.ops.translate(bm, vec=(0, depth * s, 0), verts=moved)
+    bmesh.ops.translate(bm, vec=(0, -depth / 2 * s, 0), verts=bm.verts)
     bm.to_mesh(me)
     bm.free()
-    o = bpy.data.objects.new('kn', me)
-    bpy.context.scene.collection.objects.link(o)
-    o.location = loc
-    o.rotation_euler.z = facing
-    bev = o.modifiers.new('b', 'BEVEL')
-    bev.width = 0.03 * s
-    bev.segments = 3
-    assign(o, m)
-    return o
+    head = bpy.data.objects.new('kn', me)
+    bpy.context.scene.collection.objects.link(head)
+    bev = head.modifiers.new('b', 'BEVEL')
+    bev.width = 0.06 * s
+    bev.segments = 4
+    bev.limit_method = 'ANGLE'
+    smooth(head)
+    assign(head, m)
+    parts = [base, head]
+    # eyes (dark on white pieces, light on dark pieces) and nostril
+    eye_c = '#2a2420' if color == WHITE else '#efe6d4'
+    em = mat('eye' + eye_c, eye_c, 0.6)
+    for side in (-1, 1):
+        parts.append(sphere(0.035 * s, (0.13 * s, side * (depth / 2 + 0.005) * s, 0.8 * s), em, scale=(1, 0.5, 1.2)))
+        parts.append(sphere(0.022 * s, (0.31 * s, side * (depth / 2 - 0.02) * s, 0.68 * s), em, scale=(1, 0.5, 1)))
+    # mane: a ridge of rounded tufts down the back of the neck
+    mane_c = '#cbbfa8' if color == WHITE else '#2f2b28'
+    mm = mat('mane' + mane_c, mane_c, 0.7)
+    for i, (x, z) in enumerate([(-0.06, 0.98), (-0.15, 0.9), (-0.22, 0.79), (-0.27, 0.66), (-0.29, 0.52), (-0.29, 0.38)]):
+        parts.append(sphere(0.06 * s, (x * s, 0, z * s), mm, scale=(1, 1.15, 1)))
+    bpy.ops.object.empty_add(location=(0, 0, 0))
+    root = bpy.context.active_object
+    for o in parts:
+        o.parent = root
+    root.location = loc
+    root.rotation_euler.z = facing
+    return root
 
 
 def board(size=8, sq=0.5, loc=(0, 0, 0), light='#e9e2cf', dark='#7a9e5b', frame='#6b4a2c', thickness=0.12):
@@ -270,11 +381,18 @@ def grad_cap(loc, s=1.0):
     b = box((0.95 * s, 0.95 * s, 0.06 * s), (loc[0], loc[1], loc[2] + 0.3 * s), blk, bevel=0.02)
     b.rotation_euler.z = math.radians(45)
     cyl(0.06 * s, 0.05 * s, (loc[0], loc[1], loc[2] + 0.33 * s), gold, verts=20)
-    # tassel cord + tassel hanging off one corner
-    c = cyl(0.012 * s, 0.45 * s, (0, 0, 0), gold, verts=8)
-    c.location = (loc[0] + 0.2 * s, loc[1] - 0.2 * s, loc[2] + 0.36 * s)
-    c.rotation_euler = (math.radians(70), 0, math.radians(-45))
-    cyl(0.045 * s, 0.16 * s, (loc[0] + 0.5 * s, loc[1] - 0.5 * s, loc[2] + 0.02 * s), gold, verts=12, r2=0.02 * s)
+    # tassel: cord from the button to a corner, then hanging straight down to the tassel
+    top = loc[2] + 0.34 * s
+    corner = Vector((loc[0] + 0.47 * s, loc[1] - 0.0 * s, top))
+    def rod(p0, p1, r):
+        d = p1 - p0
+        o = cyl(r, d.length, (0, 0, 0), gold, verts=12)
+        o.location = (p0 + p1) / 2
+        o.rotation_euler = d.normalized().to_track_quat('Z', 'Y').to_euler()
+        return o
+    rod(Vector((loc[0], loc[1], top)), corner, 0.018 * s)
+    rod(corner, corner - Vector((0, 0, 0.3 * s)), 0.018 * s)
+    cyl(0.05 * s, 0.18 * s, (corner.x, corner.y, corner.z - 0.46 * s), gold, verts=14, r2=0.025 * s)
 
 
 def magnifier(loc, s=1.0, tilt=35):
@@ -420,13 +538,18 @@ def icon_home():
 def icon_play():
     icon_scene()
     z = tile((0, 0, 0), 0.9)
-    knight((0, 0, z), WHITE, 1.05, facing=math.radians(-120))
+    knight((0, 0, z), WHITE, 1.05, facing=math.radians(-144))
 
 
 def icon_puzzles():
     icon_scene()
+    # stood up about 50 degrees so the knobs read, like a piece being slotted in
     p = puzzle_piece((0, 0, 0.0), AMBER, 1.0)
-    p.rotation_euler = (math.radians(0), 0, math.radians(12))
+    bpy.ops.object.empty_add(location=(0, 0, 0))
+    root = bpy.context.active_object
+    p.parent = root
+    root.rotation_euler = (math.radians(52), 0, math.radians(18))
+    root.location = (0, 0, 0.62)
 
 
 def icon_learn():
@@ -452,8 +575,108 @@ def icon_profile():
 
 def icon_settings():
     icon_scene()
-    g = gear((0, 0, 0.1), '#a7b1bf', 0.95)
-    g.rotation_euler = (math.radians(58), 0, math.radians(20))
+    # lifted clear of the floor so no part of the ring sinks below the shadow catcher
+    g = gear((0, 0, 0.75), '#a7b1bf', 0.95)
+    g.rotation_euler = (math.radians(62), 0, math.radians(20))
+
+
+def facing_root(z=0.75):
+    """Empty whose local XZ plane faces the icon camera, for flat-ish badge icons."""
+    bpy.ops.object.empty_add(location=(0, 0, z))
+    root = bpy.context.active_object
+    to_cam = (Vector(ICON_CAM['cam_loc']) - Vector((0, 0, z))).normalized()
+    root.rotation_euler = (-to_cam).to_track_quat('Y', 'Z').to_euler()
+    return root
+
+
+def arc(radius, thick, a0, a1, m, seg=40):
+    """Torus segment in the local XZ plane."""
+    bpy.ops.mesh.primitive_torus_add(major_radius=radius, minor_radius=thick, major_segments=seg * 2, minor_segments=16,
+                                     location=(0, 0, 0), rotation=(math.radians(90), 0, 0))
+    o = bpy.context.active_object
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    kill = []
+    for v in bm.verts:
+        ang = math.atan2(v.co.z, v.co.x) % math.tau
+        lo, hi = a0 % math.tau, a1 % math.tau
+        inside = lo <= ang <= hi if lo <= hi else (ang >= lo or ang <= hi)
+        if not inside:
+            kill.append(v)
+    bmesh.ops.delete(bm, geom=kill, context='VERTS')
+    bm.to_mesh(o.data)
+    bm.free()
+    smooth(o)
+    return assign(o, m)
+
+
+def icon_sun():
+    icon_scene()
+    root = facing_root()
+    core = sphere(0.4, (0, 0, 0), mat('sun', '#ffbe2e', 0.55))
+    core.scale = (1, 0.7, 1)
+    core.parent = root
+    ray = mat('ray', '#ff9a1f', 0.55)
+    for i in range(8):
+        a = i / 8 * math.tau + math.radians(22.5)
+        d = Vector((math.cos(a), 0, math.sin(a)))
+        c = cyl(0.11, 0.2, (0, 0, 0), ray, verts=20, r2=0.0)
+        c.location = d * 0.6
+        c.rotation_euler = d.to_track_quat('Z', 'Y').to_euler()
+        smooth(c)
+        c.parent = root
+
+
+def icon_moon():
+    icon_scene()
+    root = facing_root()
+    m = mat('moon', '#cfd3ff', 0.6)
+    body = sphere(0.5, (0, 0, 0), m)
+    cut = sphere(0.47, (0.3, 0, 0.17), m, scale=(1, 2.2, 1))
+    mod = body.modifiers.new('c', 'BOOLEAN')
+    mod.operation = 'DIFFERENCE'
+    mod.object = cut
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    bpy.data.objects.remove(cut, do_unlink=True)
+    body.scale = (1, 0.55, 1)
+    body.parent = root
+    star = mat('star', '#ffd75e', 0.5)
+    for x, z, r in [(0.48, 0.42, 0.08), (0.62, -0.05, 0.055)]:
+        sphere(r, (x, 0, z), star).parent = root
+
+
+def icon_sync():
+    icon_scene()
+    root = facing_root()
+    for k, m in ((0, mat('syncA', '#4fb3ff', 0.5)), (1, mat('syncB', '#6cc95b', 0.5))):
+        a0 = k * math.pi + math.radians(20)
+        a1 = a0 + math.radians(130)
+        arc(0.45, 0.1, a0, a1, m).parent = root
+        tip = cyl(0.2, 0.26, (0, 0, 0), m, verts=24, r2=0.0)
+        pos = Vector((math.cos(a1), 0, math.sin(a1))) * 0.45
+        tangent = Vector((-math.sin(a1), 0, math.cos(a1)))
+        tip.location = pos + tangent * 0.06
+        tip.rotation_euler = tangent.to_track_quat('Z', 'Y').to_euler()
+        tip.scale = (1, 0.55, 1)
+        tip.parent = root
+
+
+RANK_COLORS = {'pawn': '#b9c2cf', 'knight': '#86c46a', 'bishop': '#5aa9e6', 'rook': '#a78bfa', 'queen': '#f472b6', 'king': '#f5b833'}
+
+
+def rank_icon(kind):
+    """A piece in its tier colour on a round coin pedestal: the profile's rank badge."""
+    def job():
+        icon_scene()
+        col = RANK_COLORS[kind]
+        cyl(0.52, 0.16, (0, 0, 0), mat('coin', '#d9a441', 0.45, 0.6), verts=48)
+        cyl(0.44, 0.03, (0, 0, 0.16), mat('coinTop', '#ffd36b', 0.5, 0.4), verts=48)
+        fn = {'pawn': pawn, 'knight': knight, 'bishop': bishop, 'rook': rook, 'queen': queen, 'king': king}[kind]
+        kw = {'facing': math.radians(-144)} if kind == 'knight' else {}
+        fn((0, 0, 0.19), col, 1.0, **kw)
+    return job
 
 
 def logo_king():
@@ -461,73 +684,101 @@ def logo_king():
     king((0, 0, 0), '#f5b833', 1.0, accent='#fff1c2')
 
 
+PIECE_S = 0.6   # pieces sit inside their square with room to breathe
+
+
 def hero_board(pieces, cam=(5.6, -7.8, 6.2), target=(0, 0, 0.3), res=(1400, 820), lens=58, extra=None):
-    scene(res_x=res[0], res_y=res[1], cam_loc=cam, cam_target=target, lens=lens, sun_dir=(-0.6, 0.7, -1.2), sun=3.2)
+    scene(res_x=res[0], res_y=res[1], cam_loc=cam, cam_target=target, lens=lens, sun_dir=(-0.6, 0.7, -1.2), sun=2.8)
     z = board()
     for fn, f, r, c, kw in pieces:
-        fn(sq_pos(f, r, z=z), c, 0.82, **kw)
+        fn(sq_pos(f, r, z=z), c, PIECE_S, **kw)
     if extra:
         extra(z)
 
 
 def hero_home():
+    # a calm opening position plus the trophy beside the board (fully in frame)
     hero_board([
-        (king, 6, 0, WHITE, {}), (rook, 5, 0, WHITE, {}), (pawn, 5, 1, WHITE, {}), (pawn, 6, 1, WHITE, {}), (pawn, 7, 1, WHITE, {}),
-        (queen, 3, 3, WHITE, {}), (knight, 2, 2, WHITE, {'facing': math.radians(-60)}), (bishop, 4, 3, WHITE, {}),
-        (king, 6, 7, BLACK, {}), (pawn, 5, 6, BLACK, {}), (pawn, 6, 5, BLACK, {}), (pawn, 7, 6, BLACK, {}),
-        (rook, 0, 7, BLACK, {}), (knight, 2, 5, BLACK, {'facing': math.radians(110)}), (bishop, 4, 6, BLACK, {}),
-    ], extra=lambda z: trophy((3.0, 1.6, 0), 1.25))
+        (king, 4, 0, WHITE, {}), (knight, 5, 2, WHITE, {'facing': math.radians(36)}), (pawn, 4, 3, WHITE, {}), (pawn, 3, 1, WHITE, {}),
+        (king, 4, 7, BLACK, {}), (knight, 2, 5, BLACK, {'facing': math.radians(-144)}), (pawn, 4, 4, BLACK, {}), (pawn, 5, 6, BLACK, {}),
+    ], extra=lambda z: trophy((3.1, 1.2, 0), 1.15))
 
 
 def hero_scout():
     def extra(z):
-        spyglass((2.6, -1.6, 0.25), 1.35)
-        # target rings on the scouted square
-        for r_, c_ in [(0.24, '#ff6b4a')]:
-            bpy.ops.mesh.primitive_torus_add(major_radius=r_, minor_radius=0.025, location=(*sq_pos(4, 4)[:2], z + 0.03))
-            t = bpy.context.active_object
-            assign(t, mat('target', c_, 0.4, emission=c_, emit_strength=1.5))
+        spyglass((2.9, -1.4, 0.25), 1.2)
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.22, minor_radius=0.022, location=(*sq_pos(4, 4)[:2], z + 0.03))
+        t = bpy.context.active_object
+        assign(t, mat('target', '#ff6b4a', 0.5, emission='#ff6b4a', emit_strength=1.2))
     hero_board([
-        (king, 4, 4, BLACK, {}), (queen, 3, 6, BLACK, {}), (knight, 5, 5, BLACK, {'facing': math.radians(100)}),
-        (pawn, 2, 5, BLACK, {}), (pawn, 6, 6, BLACK, {}), (bishop, 1, 6, BLACK, {}),
-        (pawn, 3, 3, WHITE, {}), (knight, 2, 2, WHITE, {'facing': math.radians(-70)}), (rook, 0, 0, WHITE, {}),
+        (king, 4, 4, BLACK, {}), (queen, 3, 6, BLACK, {}), (knight, 5, 5, BLACK, {'facing': math.radians(-144)}),
+        (pawn, 2, 5, BLACK, {}), (pawn, 3, 3, WHITE, {}), (knight, 2, 2, WHITE, {'facing': math.radians(36)}), (rook, 0, 0, WHITE, {}),
     ], extra=extra)
 
 
 def hero_review():
     def extra(z):
-        magnifier((0.55, -0.4, z + 1.25), 1.6, tilt=58)
+        magnifier((0.6, -0.5, z + 1.0), 1.3, tilt=58)
     hero_board([
-        (knight, 4, 4, WHITE, {'facing': math.radians(-60)}), (king, 6, 0, WHITE, {}), (pawn, 3, 3, WHITE, {}),
-        (pawn, 5, 2, WHITE, {}), (queen, 2, 1, WHITE, {}),
+        (knight, 4, 4, WHITE, {'facing': math.radians(36)}), (king, 6, 0, WHITE, {}), (pawn, 3, 3, WHITE, {}), (queen, 2, 1, WHITE, {}),
         (king, 6, 7, BLACK, {}), (rook, 4, 7, BLACK, {}), (pawn, 4, 5, BLACK, {}), (bishop, 1, 6, BLACK, {}),
     ], extra=extra)
 
 
 def hero_profile():
-    scene(res_x=1400, res_y=820, cam_loc=(4.2, -7.2, 4.0), cam_target=(0, 0, 0.7), lens=60, sun_dir=(-0.6, 0.7, -1.2), sun=3.2)
-    plinth = mat('podium', '#4a3f6b', 0.5)
+    scene(res_x=1400, res_y=820, cam_loc=(4.2, -7.2, 4.0), cam_target=(0, 0, 0.7), lens=60, sun_dir=(-0.6, 0.7, -1.2), sun=2.8)
+    plinth = mat('podium', '#5a4c86', 0.6)
     for x, h, c in [(-1.05, 0.55, '#c0c7d1'), (0.0, 0.85, '#ffc93c'), (1.05, 0.4, '#d8955b')]:
-        box((1.0, 0.9, h), (x, 0, h / 2), plinth, bevel=0.05)
-        box((0.5, 0.05, 0.3), (x, -0.455, h * 0.55), mat('medal' + c, c, 0.25, 0.9), bevel=0.02)
-    trophy((0, 0, 0.85), 1.2)
+        box((1.0, 0.9, h), (x, 0, h / 2), plinth, bevel=0.06)
+        box((0.5, 0.05, 0.3), (x, -0.455, h * 0.55), mat('medal' + c, c, 0.45, 0.6), bevel=0.02)
+    trophy((0, 0, 0.85), 1.1)
     king((-1.05, 0, 0.55), WHITE, 0.62)
     queen((1.05, 0, 0.4), BLACK, 0.62)
-    bar_chart((2.6, 0.6, 0), 1.05)
+    bar_chart((2.5, 0.7, 0), 0.95)
 
 
 def hero_play():
     hero_board([
-        (king, 4, 0, WHITE, {}), (queen, 3, 0, WHITE, {}), (pawn, 4, 3, WHITE, {}), (pawn, 3, 1, WHITE, {}), (knight, 5, 2, WHITE, {'facing': math.radians(-60)}),
+        (king, 4, 0, WHITE, {}), (queen, 3, 0, WHITE, {}), (pawn, 4, 3, WHITE, {}), (knight, 5, 2, WHITE, {'facing': math.radians(36)}),
         (bishop, 2, 3, WHITE, {}),
-        (king, 4, 7, BLACK, {}), (queen, 3, 7, BLACK, {}), (pawn, 4, 4, BLACK, {}), (pawn, 3, 6, BLACK, {}), (knight, 2, 5, BLACK, {'facing': math.radians(110)}),
+        (king, 4, 7, BLACK, {}), (queen, 3, 7, BLACK, {}), (pawn, 4, 4, BLACK, {}), (knight, 2, 5, BLACK, {'facing': math.radians(-144)}),
     ])
+
+
+def hero_404():
+    """A knight knocked over beside a small broken board corner, with a big amber question mark."""
+    scene(res_x=1200, res_y=820, cam_loc=(4.6, -7.0, 4.6), cam_target=(0, 0, 0.5), lens=60, sun_dir=(-0.6, 0.7, -1.2), sun=2.8)
+    lm, dm = mat('sqL', '#e9e2cf', 0.6), mat('sqD', '#7a9e5b', 0.6)
+    frame = M.wood_mat('frame', '#6b4a2c', '#4e3420', scale=6, side_dark=0.7)
+    sq = 0.62
+    for i, j in [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (0, 2)]:
+        x, y = (i - 1) * sq, (j - 1) * sq
+        box((sq, sq, 0.16), (x, y, 0.08), frame, bevel=0.02)
+        box((sq * 0.96, sq * 0.96, 0.03), (x, y, 0.175), lm if (i + j) % 2 else dm)
+    # knight teetering on the broken edge, looking puzzled at the question mark
+    k = knight((0, 0, 0), WHITE, 1.0, facing=math.radians(36))
+    k.rotation_euler = (0, math.radians(9), math.radians(36))
+    k.location = (0.02, 0.0, 0.215)
+    pawn((-0.62, 0.62, 0.19), BLACK, 0.85)
+    # question mark from a text object, extruded
+    bpy.ops.object.text_add(location=(1.35, 0.35, 0.0))
+    t = bpy.context.active_object
+    t.data.body = '?'
+    t.data.extrude = 0.12
+    t.data.bevel_depth = 0.03
+    t.data.size = 1.9
+    t.data.align_x = 'CENTER'
+    t.rotation_euler = (math.radians(90), 0, math.radians(30))
+    bpy.ops.object.convert(target='MESH')
+    assign(bpy.context.active_object, mat('qm', AMBER, 0.5))
 
 
 JOBS = {
     'icon_home': icon_home, 'icon_play': icon_play, 'icon_puzzles': icon_puzzles, 'icon_learn': icon_learn,
     'icon_review': icon_review, 'icon_scout': icon_scout, 'icon_profile': icon_profile, 'icon_settings': icon_settings,
-    'logo_king': logo_king,
+    **{f'rank_{k}': rank_icon(k) for k in ('pawn', 'knight', 'bishop', 'rook', 'queen', 'king')},
+    'logo_king': logo_king, 'icon_sun': icon_sun, 'icon_moon': icon_moon, 'icon_sync': icon_sync,
+    'hero_404': hero_404,
     'hero_home': hero_home, 'hero_scout': hero_scout, 'hero_review': hero_review, 'hero_profile': hero_profile, 'hero_play': hero_play,
 }
 
