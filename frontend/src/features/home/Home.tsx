@@ -1,4 +1,4 @@
-import { rankFor } from '@/lib/rank';
+import { ModeIcon, GameMode } from '@/components/ModeIcon';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -21,18 +21,13 @@ import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
 import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
 import { storage } from '@/lib/storage';
 import { useMotion } from '@/lib/useMotion';
-import { Flame, ChevronRight, Sparkles, Clock, ArrowUpRight, Zap, Timer, Users } from 'lucide-react';
+import { Flame, ChevronRight, Sparkles, Users } from 'lucide-react';
 
 const DEFAULT_RATINGS: RatingSummary[] = [
   { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
   { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
   { mode: 'Bullet', rating: 880, deltaWeekly: 5 },
 ];
-const MODE_ICON: Record<string, React.ReactNode> = {
-  Rapid: <Clock size={20} className="text-emerald-400" />,
-  Blitz: <Timer size={20} className="text-yellow-300" />,
-  Bullet: <Zap size={20} className="text-amber-400" />,
-};
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -250,31 +245,27 @@ export const Home: React.FC = () => {
             Your ratings
           </SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {ratings.map((r, i) => {
-              const tier = rankFor(r.rating).tier;
-              return (
+            {ratings.map((r, i) => (
               <Reveal key={r.mode} i={i}>
                 <button
                   type="button"
                   onClick={() => navigate('/profile')}
-                  title={`${tier.name} rank`}
-                  className="w-full text-left rounded-[14px] border-2 px-4 py-3 transition-transform hover:-translate-y-0.5 active:translate-y-[2px]"
-                  style={{ borderColor: `color-mix(in srgb, ${tier.color} 30%, transparent)`, background: `linear-gradient(160deg, color-mix(in srgb, ${tier.color} 14%, transparent), transparent 75%)`, boxShadow: `0 4px 0 color-mix(in srgb, ${tier.color} 22%, var(--panel-lip))` }}
+                  className="w-full text-left rounded-[5px] bg-black/[0.05] dark:bg-black/20 hover:bg-black/[0.08] dark:hover:bg-black/30 px-3 py-3 flex items-center gap-3 transition-colors"
                 >
-                  <div className="flex items-center gap-2 text-[13px] font-display font-black text-theme-muted capitalize">
-                    {MODE_ICON[r.mode]} {r.mode}
-                    <img src={tier.icon} alt="" className="ml-auto w-7 h-7 object-contain" />
+                  <ModeIcon mode={r.mode.toLowerCase() as GameMode} size={34} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-semibold text-theme-muted capitalize leading-4">{r.mode}</div>
+                    <div className="text-[22px] font-bold font-display tabular-nums text-theme-text leading-7">{r.rating}</div>
                   </div>
-                  <div className="flex items-end justify-between mt-1">
-                    <span className="text-[28px] font-black font-display tabular-nums text-theme-text leading-none">{r.rating}</span>
-                    <span className="flex items-center text-[13px] font-bold text-[var(--class-best)]">
-                      <ArrowUpRight size={15} />+{r.deltaWeekly}
+                  {r.deltaWeekly !== 0 && (
+                    <span className={`text-[13px] font-semibold tabular-nums ${r.deltaWeekly > 0 ? 'text-[var(--color-win)]' : 'text-[var(--color-loss)]'}`}>
+                      {r.deltaWeekly > 0 ? '↑' : '↓'}
+                      {Math.abs(r.deltaWeekly)}
                     </span>
-                  </div>
+                  )}
                 </button>
               </Reveal>
-              );
-            })}
+            ))}
           </div>
         </Card>
         <Card>
