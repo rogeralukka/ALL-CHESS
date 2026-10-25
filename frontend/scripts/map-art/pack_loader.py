@@ -10,7 +10,7 @@ frames = sorted(glob.glob(os.path.join(src, 'f*.png')))
 # crop every frame to the union of their visible pixels, so the piece fills the sprite
 box = None
 for f in frames:
-    b = Image.open(f).getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox()
+    b = Image.open(f).getchannel('A').point(lambda v: 255 if v > 90 else 0).getbbox()
     if b:
         box = b if box is None else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
 pad = 6
@@ -23,7 +23,7 @@ sheet = Image.new('RGBA', (COLS * W, rows * H), (0, 0, 0, 0))
 for i, f in enumerate(frames):
     im = Image.open(f).convert('RGBA').crop(box)
     r, g, b, a = im.split()
-    a = a.point(lambda v: 0 if v <= 8 else round((v - 8) * 255 / 247))
+    a = a.point(lambda v: 0 if v <= 22 else round((v - 22) * 255 / 233))
     im = Image.merge('RGBA', (r, g, b, a)).resize((W, H), Image.LANCZOS)
     sheet.paste(im, ((i % COLS) * W, (i // COLS) * H))
 sheet.save(out, 'WEBP', quality=86, method=6)

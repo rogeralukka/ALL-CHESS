@@ -19,6 +19,7 @@ from mathutils import Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_map_sprites as M  # noqa: E402  (materials and prop builders)
 
+PRO = os.environ.get('UI_STYLE', 'pro') == 'pro'
 OUT = sys.argv[-1] if len(sys.argv) > 1 and not sys.argv[-1].endswith('.py') else 'ui_out'
 os.makedirs(OUT, exist_ok=True)
 SAMPLES = int(os.environ.get('UI_SAMPLES', '64'))
@@ -43,8 +44,10 @@ def scene(res_x, res_y, cam_loc, cam_target, lens=70, ortho=None, catcher=True, 
     sc.render.image_settings.color_mode = 'RGBA'
     # AgX instead of Standard: whites roll off instead of clipping (the 'glare' on white pieces)
     # Standard keeps the toy colours saturated; matte materials (soften_materials) stop the clipping
-    sc.view_settings.view_transform = os.environ.get('UI_VIEW', 'Standard')
-    sc.view_settings.exposure = float(os.environ.get('UI_EXPOSURE', '-0.2'))
+    sc.view_settings.view_transform = os.environ.get('UI_VIEW', 'AgX')
+    if sc.view_settings.view_transform == 'AgX':
+        sc.view_settings.look = os.environ.get('UI_LOOK', 'AgX - Punchy')
+    sc.view_settings.exposure = float(os.environ.get('UI_EXPOSURE', '0.0'))
     world = bpy.data.worlds.new('W')
     sc.world = world
     world.use_nodes = True
@@ -95,8 +98,8 @@ def scene(res_x, res_y, cam_loc, cam_target, lens=70, ortho=None, catcher=True, 
         noink.objects.link(g)
 
     # thin ink outline: the cartoon look of the roadmap, and keeps white pieces readable
-    sc.render.use_freestyle = True
-    bpy.context.view_layer.use_freestyle = True
+    sc.render.use_freestyle = os.environ.get('UI_STYLE', 'pro') != 'pro'
+    bpy.context.view_layer.use_freestyle = sc.render.use_freestyle
     sc.render.line_thickness_mode = 'ABSOLUTE'
     sc.render.line_thickness = max(1.0, res_x / 700)
     fs = bpy.context.view_layer.freestyle_settings
@@ -117,11 +120,15 @@ def scene(res_x, res_y, cam_loc, cam_target, lens=70, ortho=None, catcher=True, 
     ls.linestyle.color = srgb('#2a1d14')
     ls.linestyle.alpha = 0.85
     ls.linestyle.thickness = 1.0
+    if PRO:
+        P.studio(cam_loc, cam_target)
     return sc
 
 
 def soften_materials():
     """Matte toy finish: no hot highlights eating detail (the glare the earlier renders had)."""
+    if os.environ.get('UI_STYLE', 'pro') == 'pro':
+        return
     for m in bpy.data.materials:
         if not m.use_nodes:
             continue
@@ -176,8 +183,27 @@ def fit_camera(margin=0.05, iters=10):
             cam.location += fwd * dist * (1 - scale)
 
 
+def polish_materials():
+    """Pro look for the simple props too: lacquered, saturated, with a clear coat."""
+    for m in bpy.data.materials:
+        if not m.use_nodes or m.get('pro'):
+            continue
+        p = m.node_tree.nodes.get('Principled BSDF')
+        if not p or p.inputs['Transmission Weight'].default_value > 0.1:
+            continue
+        metal = p.inputs['Metallic'].default_value
+        p.inputs['Roughness'].default_value = min(p.inputs['Roughness'].default_value, 0.22 if metal > 0.5 else 0.38)
+        if metal > 0.5:
+            p.inputs['Metallic'].default_value = 1.0
+        p.inputs['Coat Weight'].default_value = 0.35
+        p.inputs['Coat Roughness'].default_value = 0.12
+
+
 def render(name):
-    soften_materials()
+    if PRO:
+        polish_materials()
+    else:
+        soften_materials()
     fit_camera(0.04 if name.startswith(('icon_', 'logo_')) else 0.05)
     bpy.context.scene.render.filepath = os.path.join(OUT, name + '_raw.png')
     bpy.ops.render.render(write_still=True)
@@ -331,6 +357,12 @@ def board(size=8, sq=0.5, loc=(0, 0, 0), light='#e9e2cf', dark='#7a9e5b', frame=
 def sq_pos(file, rank, sq=0.5, size=8, z=0.0):
     w = size * sq
     return (-w / 2 + sq * (file + 0.5), -w / 2 + sq * (rank + 0.5), z)
+
+
+# ----------------------------------------------------------------------------- detailed kit
+import pro_pieces as P  # noqa: E402
+if PRO:
+    pawn, rook, bishop, queen, king, knight, board = P.pawn, P.rook, P.bishop, P.queen, P.king, P.knight, P.board  # noqa: F811
 
 
 # ----------------------------------------------------------------------------- icon props
@@ -491,6 +523,10 @@ def trophy(loc, s=1.0):
         t.rotation_euler = (math.radians(90), 0, 0)
         smooth(t)
         assign(t, gold)
+
+
+if PRO:
+    trophy = P.trophy  # noqa: F811
 
 
 def house(loc, s=1.0):
@@ -701,7 +737,7 @@ def hero_home():
     hero_board([
         (king, 4, 0, WHITE, {}), (knight, 5, 2, WHITE, {'facing': math.radians(36)}), (pawn, 4, 3, WHITE, {}), (pawn, 3, 1, WHITE, {}),
         (king, 4, 7, BLACK, {}), (knight, 2, 5, BLACK, {'facing': math.radians(-144)}), (pawn, 4, 4, BLACK, {}), (pawn, 5, 6, BLACK, {}),
-    ], extra=lambda z: trophy((3.1, 1.2, 0), 1.15))
+    ], extra=lambda z: trophy((3.3, 1.0, 0), 1.7))
 
 
 def hero_scout():
@@ -773,7 +809,34 @@ def hero_404():
     assign(bpy.context.active_object, mat('qm', AMBER, 0.5))
 
 
+def test_lineup():
+    scene(res_x=1400, res_y=600, cam_loc=(0.6, -7.5, 2.4), cam_target=(0, 0, 0.55), lens=70)
+    for i, (fn, c) in enumerate([(pawn, WHITE), (knight, WHITE), (bishop, WHITE), (rook, WHITE), (queen, WHITE), (king, WHITE),
+                                 (pawn, BLACK), (knight, BLACK), (bishop, BLACK), (rook, BLACK), (queen, BLACK), (king, BLACK)]):
+        kw = {'facing': math.radians(-90 + 25)} if fn is knight else {}
+        fn(((i - 5.5) * 0.85, 0.4 if i >= 6 else -0.2, 0), c, 1.0, **kw)
+    trophy((5.6, 0.2, 0), 1.3)
+
+
+def pieces_test():
+    scene(res_x=1400, res_y=560, cam_loc=(0.0, -9.0, 3.4), cam_target=(0, 0, 0.55), lens=70, sun_dir=(-0.6, 0.7, -1.2), sun=2.8)
+    for i, fn in enumerate([pawn, rook, knight, bishop, queen, king]):
+        kw = {'facing': math.radians(-90)} if fn is knight else {}
+        fn((-2.5 + i * 1.0, 0.45, 0), WHITE, 1.0, **kw)
+        fn((-2.5 + i * 1.0, -0.45, 0), BLACK, 1.0, **({'facing': math.radians(-90)} if fn is knight else {}))
+    trophy((3.6, 0.0, 0), 1.2)
+
+
+def knight_test():
+    scene(res_x=900, res_y=560, cam_loc=(2.0, -7.5, 2.6), cam_target=(0, 0, 0.6), lens=70, sun_dir=(-0.6, 0.7, -1.2), sun=2.8)
+    knight((-0.6, 0, 0), WHITE, 1.0, facing=math.radians(-20))
+    knight((0.6, 0.3, 0), BLACK, 1.0, facing=math.radians(200))
+
+
 JOBS = {
+    'knight_test': knight_test,
+    'pieces_test': pieces_test,
+    'test_lineup': test_lineup,
     'icon_home': icon_home, 'icon_play': icon_play, 'icon_puzzles': icon_puzzles, 'icon_learn': icon_learn,
     'icon_review': icon_review, 'icon_scout': icon_scout, 'icon_profile': icon_profile, 'icon_settings': icon_settings,
     **{f'rank_{k}': rank_icon(k) for k in ('pawn', 'knight', 'bishop', 'rook', 'queen', 'king')},
