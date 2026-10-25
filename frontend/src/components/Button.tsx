@@ -18,7 +18,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    'relative inline-flex items-center justify-center font-bold rounded-md transition-all duration-100 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-theme-page disabled:opacity-50 disabled:pointer-events-none';
+    'relative inline-flex items-center justify-center font-display font-extrabold rounded-[12px] transition-all duration-100 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-theme-page disabled:opacity-50 disabled:pointer-events-none';
 
   const sizeClasses = {
     sm: 'h-9 px-3.5 text-xs gap-1.5',
