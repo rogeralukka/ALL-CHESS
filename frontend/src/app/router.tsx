@@ -11,6 +11,7 @@ const LearnPath = lazy(() => import('@/features/learn/LearnPath'));
 const PuzzleScreen = lazy(() => import('@/features/puzzles/PuzzleScreen'));
 const ScoutSearch = lazy(() => import('@/features/scout/ScoutSearch'));
 const Profile = lazy(() => import('@/features/profile/Profile'));
+const Leaderboard = lazy(() => import('@/features/leaderboard/Leaderboard'));
 const SettingsShell = lazy(() => import('@/features/settings/SettingsShell'));
 const CoachLab = lazy(() => import('./CoachLab'));
 const Playground = lazy(() => import('./Playground').then((m) => ({ default: m.Playground })));
@@ -75,6 +76,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingFallback />}>
             <Profile />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'leaderboard',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <Leaderboard />
           </Suspense>
         ),
       },
