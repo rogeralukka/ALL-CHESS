@@ -103,7 +103,8 @@ describe('Phase 1.5 Motion, Sound & Feedback Suite', () => {
       expect(css).toContain('--btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%)');
       expect(css).toContain('--btn-primary-hover-bg');
       expect(css).toContain('--btn-primary-active-bg');
-      expect(css).toContain('--btn-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4)');
+      // chunky game button: top highlight plus a solid bottom lip
+      expect(css).toContain('--btn-primary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 4px 0');
       expect(css).toContain('--btn-secondary-bg');
       expect(css).toContain(':root[data-motion="full"]');
       expect(css).toContain(':root[data-motion="reduced"]');
