@@ -100,11 +100,11 @@ describe('Phase 1.5 Motion, Sound & Feedback Suite', () => {
       const tokensPath = path.resolve(__dirname, '../styles/tokens.css');
       const css = fs.readFileSync(tokensPath, 'utf-8');
 
-      expect(css).toContain('--btn-primary-bg: linear-gradient(180deg, #f6b13a 0%, #e8920a 100%)');
+      expect(css).toContain('--btn-primary-bg: linear-gradient(180deg, #81b64c 0%, #5d9948 100%)');
       expect(css).toContain('--btn-primary-hover-bg');
       expect(css).toContain('--btn-primary-active-bg');
-      // chunky game button: top highlight plus a solid bottom lip
-      expect(css).toContain('--btn-primary-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 4px 0');
+      // green bevelled primary: inner highlight and inner shade, soft drop
+      expect(css).toContain('--btn-primary-shadow: inset 0 1px 0 rgba(178, 224, 104, 0.4), inset 0 -1px 0 #45753c');
       expect(css).toContain('--btn-secondary-bg');
       expect(css).toContain(':root[data-motion="full"]');
       expect(css).toContain(':root[data-motion="reduced"]');
