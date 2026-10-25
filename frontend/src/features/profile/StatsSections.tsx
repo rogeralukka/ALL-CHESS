@@ -8,18 +8,9 @@ import {
   MOCK_WEAKNESSES,
 } from '@/data/mock/mockStats';
 import { ShieldCheck, AlertTriangle, BookOpen, Layers } from 'lucide-react';
-import { Meter, StatTile, WDLBar } from '@/components/Bits';
+import { Meter } from '@/components/Bits';
 
 export const StatsSections: React.FC = () => {
-  // Aggregate record
-  const totalGames = 105;
-  const wins = 59;
-  const draws = 11;
-  const losses = 35;
-  const winPct = ((wins / totalGames) * 100).toFixed(1);
-  const drawPct = ((draws / totalGames) * 100).toFixed(1);
-  const lossPct = ((losses / totalGames) * 100).toFixed(1);
-
   // Benchmarks for Phase points lost
   const benchmarks = {
     opening: 0.4,
@@ -29,26 +20,12 @@ export const StatsSections: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Win / Draw / Loss record as three game badges over a chunky bar */}
-      <Card className="p-4 md:p-5 space-y-4">
-        <div>
-          <h3 className="font-black font-display text-theme-text text-[18px]">Game record</h3>
-          <p className="text-[13px] text-theme-muted">{totalGames} games analysed, all time controls</p>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <StatTile label="Wins" value={wins} sub={`${winPct}%`} accent="#34d399" />
-          <StatTile label="Draws" value={draws} sub={`${drawPct}%`} accent="#a8a29e" />
-          <StatTile label="Losses" value={losses} sub={`${lossPct}%`} accent="#f87171" />
-        </div>
-        <WDLBar win={wins} draw={draws} loss={losses} height={14} />
-      </Card>
-
       {/* Strengths & Areas to Polish Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <ShieldCheck size={18} className="text-emerald-500" />
-            <h3 className="font-black font-display text-theme-text text-[17px]">Key Strengths</h3>
+            <h3 className="font-bold font-display text-theme-text text-[17px]">Key Strengths</h3>
           </div>
           <p className="text-xs text-theme-muted">Consistent positive tactical impact across your matches</p>
           <div className="flex flex-wrap gap-2 pt-1">
@@ -64,7 +41,7 @@ export const StatsSections: React.FC = () => {
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle size={18} className="text-amber-500" />
-            <h3 className="font-black font-display text-theme-text text-[17px]">Areas to Polish</h3>
+            <h3 className="font-bold font-display text-theme-text text-[17px]">Areas to Polish</h3>
           </div>
           <p className="text-xs text-theme-muted">Frequent sources of lost advantage identified by coach</p>
           <div className="flex flex-wrap gap-2 pt-1">
@@ -83,7 +60,7 @@ export const StatsSections: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers size={18} className="text-amber-500" />
-            <h3 className="font-black font-display text-theme-text text-[17px]">Phase Points Lost per Game</h3>
+            <h3 className="font-bold font-display text-theme-text text-[17px]">Phase Points Lost per Game</h3>
           </div>
           <span className="text-xs text-theme-muted font-medium">Lower is better</span>
         </div>
@@ -112,7 +89,7 @@ export const StatsSections: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen size={18} className="text-amber-500" />
-            <h3 className="font-black font-display text-theme-text text-[17px]">Opening Repertoire Mastery</h3>
+            <h3 className="font-bold font-display text-theme-text text-[17px]">Opening Repertoire Mastery</h3>
           </div>
           <span className="text-xs text-theme-muted font-medium">Ranked by frequency</span>
         </div>
