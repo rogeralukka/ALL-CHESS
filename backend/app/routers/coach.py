@@ -1,15 +1,15 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 
 from app.routers.auth import get_current_user
 from app.models.user import User
 from app.services.coach_service import generate_move_comment
+from app.schemas.common import CamelModel
 
 router = APIRouter(prefix="/coach", tags=["coach"])
 
 
-class ExplainMoveIn(BaseModel):
+class ExplainMoveIn(CamelModel):
     fen_before: str
     san: str
     classification: str = "good"
@@ -21,7 +21,7 @@ class ExplainMoveIn(BaseModel):
     color: str = "w"
 
 
-class ExplainMoveOut(BaseModel):
+class ExplainMoveOut(CamelModel):
     comment: str
     provider: str
 

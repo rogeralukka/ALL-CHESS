@@ -35,7 +35,15 @@ def get_stages(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    stages = load_raw_stages()
+    all_stages = load_raw_stages()
+    # Find first stage of each category
+    first_in_category = {}
+    for s in all_stages:
+        cat = s.get("category", "")
+        if cat not in first_in_category:
+            first_in_category[cat] = s["id"]
+
+    stages = all_stages
     if category:
         stages = [s for s in stages if s.get("category") == category]
 
@@ -55,6 +63,11 @@ def get_stages(
             stage_copy["status"] = p.status
             stage_copy["stars"] = p.stars
             stage_copy["xp"] = p.xp
+        else:
+            cat = s.get("category", "")
+            stage_copy["status"] = "current" if first_in_category.get(cat) == s["id"] else "locked"
+            stage_copy["stars"] = 0
+            stage_copy["xp"] = 0
         result.append(stage_copy)
 
     return result
@@ -66,8 +79,14 @@ def get_stage_by_id(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    stages = load_raw_stages()
-    stage = next((s for s in stages if s["id"] == stage_id), None)
+    all_stages = load_raw_stages()
+    first_in_category = {}
+    for s in all_stages:
+        cat = s.get("category", "")
+        if cat not in first_in_category:
+            first_in_category[cat] = s["id"]
+
+    stage = next((s for s in all_stages if s["id"] == stage_id), None)
     if not stage:
         raise HTTPException(status_code=404, detail="Lesson stage not found")
 
@@ -82,6 +101,11 @@ def get_stage_by_id(
         stage_copy["status"] = p.status
         stage_copy["stars"] = p.stars
         stage_copy["xp"] = p.xp
+    else:
+        cat = stage.get("category", "")
+        stage_copy["status"] = "current" if first_in_category.get(cat) == stage["id"] else "locked"
+        stage_copy["stars"] = 0
+        stage_copy["xp"] = 0
 
     return stage_copy
 

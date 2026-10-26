@@ -15,8 +15,10 @@ from app.services.accuracy import (
     estimate_performance_ratings,
     calculate_phase_grades
 )
-from app.services.coach_service import generate_move_comment
+from app.config import is_testing_environment
+from app.services.coach_service import generate_template_comment, generate_batch_move_comments_async
 from app.schemas.game import TopEngineLine
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger("all_chess.engine")
 
@@ -245,7 +247,8 @@ def _run_single_pass_review_sync(
     is_user_white: bool = True,
     white_rating: Optional[int] = None,
     black_rating: Optional[int] = None,
-    on_progress: Optional[Callable[[int], None]] = None
+    on_progress: Optional[Callable[[int], None]] = None,
+    db: Optional[Session] = None
 ) -> Dict[str, Any]:
     """
     ONE EVAL PER POSITION:
@@ -498,31 +501,38 @@ def _run_single_pass_review_sync(
         if color == 'b':
             played_win_pct = round(100.0 - played_win_pct, 1)
 
-        # Generate coach commentary grounded in engine facts
-        top_pv = pos_before["top_lines"][0].get("pv", []) if pos_before["top_lines"] else []
-        comment_info = generate_move_comment(
-            fen_before=board_before.fen(),
+        top_lines = pos_before["top_lines"]
+        top_pv = top_lines[0].get("pv", []) if top_lines else []
+        engine_line_why = top_lines[0].get("why", "Engine recommended line") if top_lines else "Engine recommended line"
+
+        # Fast template comment for baseline
+        tmpl_comment = generate_template_comment(
             san=raw_move["san"],
             classification=classification,
-            fen_after=positions[idx + 1].fen(),
+            best_move=pos_before["best_move_san"],
             eval_before=pos_before["eval"],
             eval_after=pos_after["eval"],
-            best_move=pos_before["best_move_san"],
             pv=top_pv,
             color=color,
         )
 
         updated_m = dict(raw_move)
         updated_m["classification"] = classification
-        updated_m["coachComment"] = comment_info["comment"]
+        updated_m["coachComment"] = tmpl_comment
         updated_m["eval"] = {
             "eval": pos_after["eval"],
             "mate": pos_after["mate"],
             "bestMove": pos_before["best_move_san"],
             "winPct": played_win_pct,
-            "why": comment_info["comment"],
+            "why": engine_line_why,
             "lines": pos_before["top_lines"]
         }
+        # Metadata for post-engine turning-point LLM pass
+        updated_m["_fen_before"] = board_before.fen()
+        updated_m["_fen_after"] = positions[idx + 1].fen()
+        updated_m["_eval_before"] = pos_before["eval"]
+        updated_m["_eval_after"] = pos_after["eval"]
+        updated_m["_color"] = color
         analyzed_moves.append(updated_m)
 
     # Compute game-level accuracy using the Chess.com calibrated method
@@ -543,6 +553,41 @@ def _run_single_pass_review_sync(
     }
 
 
+def select_critical_turning_point_indices(analyzed_moves: List[Dict[str, Any]], max_llm_calls: int = 8) -> List[int]:
+    blunders = []
+    misses = []
+    brilliants_greats = []
+    mistakes = []
+    critical_bests = []
+
+    for idx, m in enumerate(analyzed_moves):
+        cls = m.get("classification")
+        if cls == "blunder":
+            blunders.append(idx)
+        elif cls == "miss":
+            misses.append(idx)
+        elif cls in ("brilliant", "great"):
+            brilliants_greats.append(idx)
+        elif cls == "mistake":
+            mistakes.append(idx)
+        elif cls == "best":
+            lines = m.get("eval", {}).get("lines", [])
+            if len(lines) >= 2:
+                eval1 = lines[0].get("eval", 0.0) or 0.0
+                eval2 = lines[1].get("eval", 0.0) or 0.0
+                if abs(eval1 - eval2) >= 1.5:
+                    critical_bests.append(idx)
+
+    critical_bests = critical_bests[:2]
+    selected = []
+    for group in (blunders, misses, brilliants_greats, mistakes, critical_bests):
+        for idx in group:
+            if idx not in selected and len(selected) < max_llm_calls:
+                selected.append(idx)
+
+    return sorted(selected)
+
+
 async def analyze_game_moves_full(
     moves_list: List[Dict[str, Any]],
     depth: int = 16,
@@ -550,7 +595,8 @@ async def analyze_game_moves_full(
     is_user_white: bool = True,
     white_rating: Optional[int] = None,
     black_rating: Optional[int] = None,
-    on_progress: Optional[Callable[[int], None]] = None
+    on_progress: Optional[Callable[[int], None]] = None,
+    db: Optional[Session] = None
 ) -> Dict[str, Any]:
     """
     Performs full depth 16 game review across every position in a game.
@@ -558,7 +604,7 @@ async def analyze_game_moves_full(
     """
     pool = get_global_engine_pool()
     async with pool.acquire() as engine:
-        return await asyncio.to_thread(
+        review_data = await asyncio.to_thread(
             _run_single_pass_review_sync,
             engine,
             moves_list,
@@ -569,3 +615,40 @@ async def analyze_game_moves_full(
             black_rating,
             on_progress
         )
+
+    # Engine slot released. Run LLM commentary for critical turning points (max 8)
+    analyzed_moves = review_data["moves"]
+    critical_indices = select_critical_turning_point_indices(analyzed_moves, max_llm_calls=8)
+
+    if critical_indices and not is_testing_environment():
+        items_to_generate = []
+        for c_idx in critical_indices:
+            m = analyzed_moves[c_idx]
+            lines = m.get("eval", {}).get("lines", [])
+            top_pv = lines[0].get("pv", []) if lines else []
+            items_to_generate.append({
+                "fen_before": m["_fen_before"],
+                "san": m["san"],
+                "classification": m["classification"],
+                "fen_after": m["_fen_after"],
+                "eval_before": m["_eval_before"],
+                "eval_after": m["_eval_after"],
+                "best_move": m["eval"]["bestMove"],
+                "pv": top_pv,
+                "color": m["_color"],
+            })
+
+        try:
+            llm_results = await generate_batch_move_comments_async(items_to_generate, db=db, concurrency_limit=2)
+            for c_idx, res in zip(critical_indices, llm_results):
+                if res and res.get("comment"):
+                    analyzed_moves[c_idx]["coachComment"] = res["comment"]
+        except Exception as e:
+            logger.warning(f"[EngineService] LLM commentary batch generation error: {e}")
+
+    # Remove temporary internal keys
+    for m in analyzed_moves:
+        for k in ("_fen_before", "_fen_after", "_eval_before", "_eval_after", "_color"):
+            m.pop(k, None)
+
+    return review_data

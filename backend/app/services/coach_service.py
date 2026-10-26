@@ -1,19 +1,41 @@
 """
 Coach commentary service: Gemini -> Groq -> template fallback.
 All commentary is strictly grounded in engine facts and validated for move legality.
+Database persistence in coach_cache with key rotation and safe logging.
 """
+import asyncio
+import hashlib
 import logging
 import re
+import time
 from typing import List, Optional, Tuple, Dict, Any
 import chess
 import httpx
+from sqlalchemy.orm import Session
 
 from app.config import settings, is_testing_environment
+from app.models.scout import CoachCache
 
 logger = logging.getLogger(__name__)
 
-# Cache for position comments: key = (fen_before, san)
+# In-memory cache for position comments: key = (fen_before, san)
 _COMMENT_CACHE: Dict[Tuple[str, str], Dict[str, str]] = {}
+
+# Cooldown tracking for rate-limited (429) or failing (5xx) keys
+_KEY_COOLDOWNS: Dict[str, float] = {}
+
+
+def hash_fen(fen: str) -> str:
+    """Computes a SHA256 hex digest for a FEN string."""
+    return hashlib.sha256(fen.encode("utf-8")).hexdigest()
+
+
+def is_key_on_cooldown(key: str) -> bool:
+    return time.time() < _KEY_COOLDOWNS.get(key, 0.0)
+
+
+def set_key_cooldown(key: str, seconds: float = 60.0) -> None:
+    _KEY_COOLDOWNS[key] = time.time() + seconds
 
 
 def extract_candidate_moves(text: str) -> List[str]:
@@ -99,54 +121,57 @@ def generate_template_comment(
     best_move: Optional[str] = None,
     eval_before: Optional[float] = None,
     eval_after: Optional[float] = None,
+    pv: Optional[List[str]] = None,
     color: str = "w",
 ) -> str:
     """
-    Deterministic, high-quality, 100% legal chess commentary.
-    Used when LLM APIs are unreachable, rate-limited, or fail legality validation.
+    High-quality, grounded deterministic chess coach explanation fallback.
+    Explains the exact tactical meaning based on classification and best move.
     """
-    cls = classification.lower()
+    eval_drop = None
+    if eval_before is not None and eval_after is not None:
+        if color == "w":
+            eval_drop = eval_before - eval_after
+        else:
+            eval_drop = eval_after - eval_before
 
-    if cls == "blunder":
-        if best_move:
-            return f"A tough blunder. {san} drops decisive ground. Playing {best_move} was needed to hold the position."
-        return f"A costly oversight. {san} concedes decisive material or positional advantage."
+    best_desc = f" The engine preferred {best_move}." if best_move and best_move != san else ""
 
-    if cls == "miss":
-        if best_move:
-            return f"Missed opportunity. {san} lets the opponent off the hook. {best_move} would have maintained a winning attack."
-        return f"A missed chance. {san} overlooked a clear tactical breakthrough."
+    if classification == "brilliant":
+        return f"{san} is a brilliant move! You found a deep, sacrifice-backed tactical shot that seized control."
+    elif classification == "great":
+        return f"{san} is a great move. It was the only move that maintained your advantage in a sharp position."
+    elif classification == "best":
+        if best_move and best_move == san:
+            return f"{san} is the top engine recommendation, maintaining the optimal course for your pieces."
+        return f"{san} is the best move in the position, efficiently improving piece harmony."
+    elif classification == "excellent":
+        return f"{san} is an excellent move, finding nearly all the benefits of the engine line."
+    elif classification == "good":
+        return f"{san} is a solid and natural move, keeping your position steady.{best_desc}"
+    elif classification == "book":
+        return f"{san} follows established opening theory."
+    elif classification == "inaccuracy":
+        if eval_drop and eval_drop > 0:
+            return f"{san} is a slight inaccuracy, conceding about {eval_drop:.1f} pawns of evaluation.{best_desc}"
+        return f"{san} is slightly inaccurate.{best_desc}"
+    elif classification == "mistake":
+        if best_move and best_move != san:
+            return f"{san} is a mistake that loses the initiative. Better was {best_move}."
+        return f"{san} is a mistake that gives the opponent an opening."
+    elif classification == "miss":
+        if best_move and best_move != san:
+            return f"You missed a winning opportunity with {best_move}, playing {san} instead."
+        return f"A tactical opportunity was missed with {san}."
+    elif classification == "blunder":
+        if best_move and best_move != san:
+            return f"{san} is a serious blunder that significantly alters the game. {best_move} was required here."
+        return f"{san} is a blunder that immediately surrenders material or position."
 
-    if cls == "mistake":
-        if best_move:
-            return f"A noticeable slip. {san} concedes the initiative. Better was {best_move} to keep pressure."
-        return f"{san} gives the opponent a chance to counter-attack."
-
-    if cls == "inaccuracy":
-        if best_move:
-            return f"{san} is slightly imprecise. {best_move} was a more active continuation."
-        return f"{san} is playable, but allows your opponent an easy defensive path."
-
-    if cls == "book":
-        return f"Standard opening theory. {san} establishes solid central coordination."
-
-    if cls == "best":
-        return f"The best move! {san} maintains optimal coordination and control."
-
-    if cls == "great":
-        return f"Great find! {san} was the only move to protect the position and keep the advantage."
-
-    if cls == "brilliant":
-        return f"Brilliant! {san} delivers a sharp tactical blow that decisively swings the game."
-
-    if cls == "excellent":
-        return f"An excellent continuation. {san} steadily develops active piece play."
-
-    # default / good
-    return f"A solid, sensible move. {san} keeps your pieces active and well-defended."
+    return f"{san} was played."
 
 
-def build_llm_prompt(
+def build_coach_prompt(
     fen_before: str,
     san: str,
     classification: str,
@@ -159,7 +184,7 @@ def build_llm_prompt(
     if eval_before is not None and eval_after is not None:
         eval_info = f"Eval before: {eval_before:+.2f}, Eval after: {eval_after:+.2f}."
 
-    pv_info = f"Top engine line: {' '.join(pv[:4])}." if pv else ""
+    pv_info = f"Top engine line: {' '.join(pv[:3])}." if pv else ""
     best_info = f"Engine best move: {best_move}." if best_move else ""
 
     return (
@@ -173,144 +198,214 @@ def build_llm_prompt(
         f"- {best_info}\n"
         f"- {pv_info}\n\n"
         f"Rules:\n"
-        f"1. Explain WHY the move is classified as {classification}.\n"
+        f"1. Explain WHY the move {san} is classified as {classification}.\n"
         f"2. Mention {san} and if relevant {best_move or 'the best move'}.\n"
-        f"3. Refer ONLY to legal moves and pieces that actually exist in the position.\n"
-        f"4. Do NOT hallucinate moves. Maximum 2 sentences. Friendly, instructive tone."
+        f"3. Do NOT invent other move names or squares unless they are in the Engine best move: {best_move}.\n"
+        f"4. Maximum 2 sentences. Friendly, instructive tone."
     )
 
 
-def try_gemini(
+async def try_gemini_async(
     prompt: str,
     fen_before: str,
     fen_after: Optional[str],
     pv: Optional[List[str]],
     best_move: Optional[str],
-    san: str
+    san: str,
+    client: httpx.AsyncClient,
 ) -> Optional[str]:
-    """Call Google Gemini API."""
+    """Call Google Gemini API with header-based key and key rotation."""
     keys = settings.gemini_keys
     if not keys:
         return None
 
-    # Use first available key
-    key = keys[0]
     model = "gemini-3.8-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 80},
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 100},
     }
-    try:
-        with httpx.Client(timeout=3.0) as client:
-            resp = client.post(url, json=payload)
+
+    for key_idx, key in enumerate(keys):
+        if is_key_on_cooldown(key):
+            continue
+
+        headers = {
+            "x-goog-api-key": key,
+            "Content-Type": "application/json",
+        }
+        try:
+            resp = await client.post(url, json=payload, headers=headers, timeout=2.0)
             if resp.status_code == 200:
                 data = resp.json()
                 candidates = data.get("candidates", [])
                 if candidates:
-                    text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                    parts = candidates[0].get("content", {}).get("parts", [{}])
+                    text = parts[0].get("text", "").strip() if parts else ""
                     if text and validate_move_legality(text, fen_before, fen_after, pv, best_move, san):
                         return text
-    except Exception as e:
-        logger.debug(f"[CoachService] Gemini attempt skipped: {e}")
+            elif resp.status_code in (429, 500, 502, 503, 504):
+                set_key_cooldown(key, seconds=60.0)
+                logger.warning(f"[CoachService] Gemini key {key_idx + 1} returned status {resp.status_code}, rotating key...")
+                continue
+            else:
+                set_key_cooldown(key, seconds=60.0)
+                logger.debug(f"[CoachService] Gemini key {key_idx + 1} returned {resp.status_code}")
+                continue
+        except Exception as e:
+            set_key_cooldown(key, seconds=30.0)
+            logger.debug(f"[CoachService] Gemini key {key_idx + 1} request error: {type(e).__name__}")
+            continue
 
     return None
 
 
-def try_groq(
+async def try_groq_async(
     prompt: str,
     fen_before: str,
     fen_after: Optional[str],
     pv: Optional[List[str]],
     best_move: Optional[str],
-    san: str
+    san: str,
+    client: httpx.AsyncClient,
 ) -> Optional[str]:
-    """Call Groq API as secondary fallback."""
+    """Call Groq API with Qwen3 and key rotation."""
     keys = settings.groq_keys
     if not keys:
         return None
 
-    key = keys[0]
     model = "qwen/qwen3.8-27b"
     url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json",
-    }
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": "You are Coach All-Chess, a concise grandmaster coach. Provide strictly accurate, 1-2 sentence feedback grounded in engine analysis."},
+            {
+                "role": "system",
+                "content": "You are Coach All-Chess, an encouraging grandmaster chess coach. Provide strictly accurate, 1-2 sentence feedback grounded in engine analysis.",
+            },
             {"role": "user", "content": prompt},
         ],
-        "max_tokens": 80,
+        "max_tokens": 200,
         "temperature": 0.2,
     }
-    try:
-        with httpx.Client(timeout=3.0) as client:
-            resp = client.post(url, headers=headers, json=payload)
+
+    for key_idx, key in enumerate(keys):
+        if is_key_on_cooldown(key):
+            continue
+
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        }
+        try:
+            resp = await client.post(url, json=payload, headers=headers, timeout=2.5)
             if resp.status_code == 200:
                 data = resp.json()
                 choices = data.get("choices", [])
                 if choices:
-                    text = choices[0].get("message", {}).get("content", "").strip()
-                    if text and validate_move_legality(text, fen_before, fen_after, pv, best_move, san):
-                        return text
-    except Exception as e:
-        logger.debug(f"[CoachService] Groq attempt skipped: {e}")
+                    content = choices[0].get("message", {}).get("content", "").strip()
+                    # Strip any reasoning or think tokens
+                    clean = re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
+                    clean = re.sub(r"</?think>", "", clean).strip()
+                    if clean and validate_move_legality(clean, fen_before, fen_after, pv, best_move, san):
+                        return clean
+            elif resp.status_code in (429, 500, 502, 503, 504):
+                set_key_cooldown(key, seconds=60.0)
+                logger.warning(f"[CoachService] Groq key {key_idx + 1} returned status {resp.status_code}, rotating key...")
+                continue
+            else:
+                logger.debug(f"[CoachService] Groq key {key_idx + 1} returned {resp.status_code}")
+                continue
+        except Exception as e:
+            logger.debug(f"[CoachService] Groq key {key_idx + 1} request error: {type(e).__name__}")
+            continue
 
     return None
+
+
+def get_cached_comment(db: Optional[Session], fen_before: str, san: str) -> Optional[Dict[str, str]]:
+    """Checks in-memory cache and coach_cache database table."""
+    mem_key = (fen_before, san)
+    if mem_key in _COMMENT_CACHE:
+        return _COMMENT_CACHE[mem_key]
+
+    if db:
+        try:
+            f_hash = hash_fen(fen_before)
+            entry = db.query(CoachCache).filter(CoachCache.fen_hash == f_hash, CoachCache.move_san == san).first()
+            if entry:
+                res = {"comment": entry.response_text, "provider": "cache"}
+                _COMMENT_CACHE[mem_key] = res
+                return res
+        except Exception as e:
+            logger.debug(f"[CoachService] Error reading coach_cache: {e}")
+
+    return None
+
+
+def save_cached_comment(
+    db: Optional[Session],
+    fen_before: str,
+    san: str,
+    comment: str,
+    provider: str,
+    expression: str = "neutral",
+) -> None:
+    """Stores comment in memory and coach_cache database table."""
+    mem_key = (fen_before, san)
+    _COMMENT_CACHE[mem_key] = {"comment": comment, "provider": provider}
+
+    if db:
+        try:
+            f_hash = hash_fen(fen_before)
+            entry = CoachCache(
+                fen_hash=f_hash,
+                move_san=san,
+                response_text=comment,
+                expression=expression,
+            )
+            db.add(entry)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.debug(f"[CoachService] Error saving to coach_cache: {e}")
 
 
 def generate_move_comment(
     fen_before: str,
     san: str,
-    classification: str,
+    classification: str = "good",
     fen_after: Optional[str] = None,
     eval_before: Optional[float] = None,
     eval_after: Optional[float] = None,
     best_move: Optional[str] = None,
     pv: Optional[List[str]] = None,
     color: str = "w",
-    force_llm: bool = False,
+    db: Optional[Session] = None,
 ) -> Dict[str, str]:
     """
-    Main entry point: generates coach comment following:
-    Gemini -> Groq -> Template fallback.
-    Returns {"comment": text, "provider": "gemini" | "groq" | "template"}.
+    Synchronous entrypoint for move explanation.
+    Checks cache -> Gemini -> Groq -> template.
     """
-    cache_key = (fen_before, san)
-    if cache_key in _COMMENT_CACHE:
-        return _COMMENT_CACHE[cache_key]
+    cached = get_cached_comment(db, fen_before, san)
+    if cached:
+        return cached
 
-    # In test environment, unless explicitly requested, use fast template fallback
-    if is_testing_environment() and not force_llm:
-        template_text = generate_template_comment(
+    # In unit tests, default to fast template generator to keep test execution rapid
+    if is_testing_environment():
+        tmpl = generate_template_comment(
             san=san,
             classification=classification,
             best_move=best_move,
             eval_before=eval_before,
             eval_after=eval_after,
+            pv=pv,
             color=color,
         )
-        return {"comment": template_text, "provider": "template"}
+        save_cached_comment(db, fen_before, san, tmpl, "template")
+        return {"comment": tmpl, "provider": "template"}
 
-    # For standard book and good moves, template commentary is fast and accurate
-    cls = classification.lower()
-    if cls in ("book", "good") and not force_llm:
-        template_text = generate_template_comment(
-            san=san,
-            classification=classification,
-            best_move=best_move,
-            eval_before=eval_before,
-            eval_after=eval_after,
-            color=color,
-        )
-        result = {"comment": template_text, "provider": "template"}
-        _COMMENT_CACHE[cache_key] = result
-        return result
-
-    prompt = build_llm_prompt(
+    prompt = build_coach_prompt(
         fen_before=fen_before,
         san=san,
         classification=classification,
@@ -320,29 +415,101 @@ def generate_move_comment(
         pv=pv,
     )
 
-    # 1. Try Gemini
-    gemini_text = try_gemini(prompt, fen_before, fen_after, pv, best_move, san)
-    if gemini_text:
-        result = {"comment": gemini_text, "provider": "gemini"}
-        _COMMENT_CACHE[cache_key] = result
-        return result
+    async def _call():
+        async with httpx.AsyncClient() as client:
+            text = await try_gemini_async(prompt, fen_before, fen_after, pv, best_move, san, client)
+            if text:
+                return text, "gemini"
+            text = await try_groq_async(prompt, fen_before, fen_after, pv, best_move, san, client)
+            if text:
+                return text, "groq"
+            return None, None
 
-    # 2. Try Groq
-    groq_text = try_groq(prompt, fen_before, fen_after, pv, best_move, san)
-    if groq_text:
-        result = {"comment": groq_text, "provider": "groq"}
-        _COMMENT_CACHE[cache_key] = result
-        return result
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                llm_text, provider = pool.submit(lambda: asyncio.run(_call())).result()
+        else:
+            llm_text, provider = loop.run_until_complete(_call())
+    except Exception:
+        llm_text, provider = None, None
 
-    # 3. Fallback to template
-    template_text = generate_template_comment(
+    if llm_text and provider:
+        save_cached_comment(db, fen_before, san, llm_text, provider)
+        return {"comment": llm_text, "provider": provider}
+
+    tmpl = generate_template_comment(
         san=san,
         classification=classification,
         best_move=best_move,
         eval_before=eval_before,
         eval_after=eval_after,
+        pv=pv,
         color=color,
     )
-    result = {"comment": template_text, "provider": "template"}
-    _COMMENT_CACHE[cache_key] = result
-    return result
+    save_cached_comment(db, fen_before, san, tmpl, "template")
+    return {"comment": tmpl, "provider": "template"}
+
+
+async def generate_batch_move_comments_async(
+    items: List[Dict[str, Any]],
+    db: Optional[Session] = None,
+    concurrency_limit: int = 2,
+) -> List[Dict[str, str]]:
+    """
+    Generates comments for multiple moves using an async concurrency pool (limit 2).
+    Respects provider rate limits, cooldowns, and persists results in coach_cache.
+    """
+    semaphore = asyncio.Semaphore(concurrency_limit)
+    results = [None] * len(items)
+
+    async with httpx.AsyncClient() as client:
+        async def _worker(idx: int, item: Dict[str, Any]):
+            fen_before = item["fen_before"]
+            san = item["san"]
+            classification = item.get("classification", "good")
+            fen_after = item.get("fen_after")
+            eval_before = item.get("eval_before")
+            eval_after = item.get("eval_after")
+            best_move = item.get("best_move")
+            pv = item.get("pv")
+            color = item.get("color", "w")
+
+            # Check cache
+            cached = get_cached_comment(db, fen_before, san)
+            if cached:
+                results[idx] = cached
+                return
+
+            if is_testing_environment():
+                tmpl = generate_template_comment(san, classification, best_move, eval_before, eval_after, pv, color)
+                save_cached_comment(db, fen_before, san, tmpl, "template")
+                results[idx] = {"comment": tmpl, "provider": "template"}
+                return
+
+            prompt = build_coach_prompt(fen_before, san, classification, eval_before, eval_after, best_move, pv)
+
+            async with semaphore:
+                # Try Gemini
+                text = await try_gemini_async(prompt, fen_before, fen_after, pv, best_move, san, client)
+                provider = "gemini"
+
+                # Fallback to Groq
+                if not text:
+                    text = await try_groq_async(prompt, fen_before, fen_after, pv, best_move, san, client)
+                    provider = "groq"
+
+                if text:
+                    save_cached_comment(db, fen_before, san, text, provider)
+                    results[idx] = {"comment": text, "provider": provider}
+                else:
+                    tmpl = generate_template_comment(san, classification, best_move, eval_before, eval_after, pv, color)
+                    save_cached_comment(db, fen_before, san, tmpl, "template")
+                    results[idx] = {"comment": tmpl, "provider": "template"}
+
+        tasks = [_worker(i, item) for i, item in enumerate(items)]
+        await asyncio.gather(*tasks)
+
+    return results

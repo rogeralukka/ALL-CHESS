@@ -215,7 +215,8 @@ async def run_game_analysis_task(
             is_user_white=game.is_user_white,
             white_rating=white_r,
             black_rating=black_r,
-            on_progress=update_progress
+            on_progress=update_progress,
+            db=db
         )
 
         # Cache in game_analysis

@@ -1,20 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 from typing import List, Optional
 from datetime import datetime, timezone
 import hashlib
 
-from app.database import get_db, utc_now
+from app.database import get_db
 from app.routers.auth import get_current_user
 from app.models.user import User
 from app.models.puzzle import Puzzle, PuzzleAttempt, UserPuzzleRating
 from app.services.seeder import seed_puzzles
+from app.schemas.common import CamelModel
 
 router = APIRouter(prefix="/puzzles", tags=["puzzles"])
 
 
-class PuzzleOut(BaseModel):
+class PuzzleOut(CamelModel):
     id: str
     fen: str
     solution: List[str]
@@ -25,12 +26,12 @@ class PuzzleOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PuzzleAttemptIn(BaseModel):
+class PuzzleAttemptIn(CamelModel):
     solved: bool
     time_seconds: int = 0
 
 
-class PuzzleAttemptOut(BaseModel):
+class PuzzleAttemptOut(CamelModel):
     solved: bool
     rating: int
     rating_delta: int
@@ -38,7 +39,7 @@ class PuzzleAttemptOut(BaseModel):
     best_streak: int
 
 
-class UserPuzzleRatingOut(BaseModel):
+class UserPuzzleRatingOut(CamelModel):
     rating: int
     streak: int
     best_streak: int
@@ -56,16 +57,42 @@ def get_puzzles(
 ):
     seed_puzzles(db)
 
-    query = db.query(Puzzle)
-    if min_rating is not None:
-        query = query.filter(Puzzle.rating >= min_rating)
-    if max_rating is not None:
-        query = query.filter(Puzzle.rating <= max_rating)
+    # Get already solved puzzle IDs to avoid repeating solved puzzles
+    solved_attempts = (
+        db.query(PuzzleAttempt.puzzle_id)
+        .filter(PuzzleAttempt.user_id == user.id, PuzzleAttempt.solved == True)
+        .all()
+    )
+    solved_ids = {a[0] for a in solved_attempts}
 
-    puzzles = query.order_by(Puzzle.rating.asc()).all()
+    # If rating range not specified, select near user's puzzle rating (±150)
+    user_rating_record = db.query(UserPuzzleRating).filter(UserPuzzleRating.user_id == user.id).first()
+    curr_rating = user_rating_record.rating if user_rating_record else 650
+
+    if min_rating is None and max_rating is None:
+        target_min = max(400, curr_rating - 150)
+        target_max = curr_rating + 150
+        query = db.query(Puzzle).filter(Puzzle.rating >= target_min, Puzzle.rating <= target_max)
+        if solved_ids:
+            query = query.filter(~Puzzle.id.in_(solved_ids))
+        puzzles = query.order_by(Puzzle.rating.asc()).all()
+        # If not enough unsolved puzzles in ±150, fallback to broader range
+        if len(puzzles) < limit:
+            fallback_query = db.query(Puzzle)
+            if solved_ids:
+                fallback_query = fallback_query.filter(~Puzzle.id.in_(solved_ids))
+            puzzles = fallback_query.order_by(Puzzle.rating.asc()).all()
+    else:
+        query = db.query(Puzzle)
+        if min_rating is not None:
+            query = query.filter(Puzzle.rating >= min_rating)
+        if max_rating is not None:
+            query = query.filter(Puzzle.rating <= max_rating)
+        if solved_ids:
+            query = query.filter(~Puzzle.id.in_(solved_ids))
+        puzzles = query.order_by(Puzzle.rating.asc()).all()
 
     if theme:
-        # Filter JSON array in Python
         puzzles = [p for p in puzzles if theme in (p.theme or [])]
 
     return puzzles[:limit]

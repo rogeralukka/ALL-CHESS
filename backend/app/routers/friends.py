@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -10,7 +10,6 @@ from app.models.user import User
 from app.models.friend import Friend
 from app.services.chesscom_client import ChesscomClient
 from app.services.lichess_client import LichessClient
-from app.services.seeder import seed_initial_friends_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,6 @@ def get_friends(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    seed_initial_friends_for_user(db, user.id)
     friends = db.query(Friend).filter(Friend.user_id == user.id).all()
 
     results = []
