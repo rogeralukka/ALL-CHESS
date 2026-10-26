@@ -11,8 +11,8 @@ interface LoginGateProps {
 export const LoginGate: React.FC<LoginGateProps> = ({ onSuccess }) => {
   const { login, error, clearError } = useAuthStore();
   const [passcode, setPasscode] = useState('');
-  const [username, setUsername] = useState('rogeralukka');
-  const [chesscomUsername, setChesscomUsername] = useState('rogeralukka');
+  const [username, setUsername] = useState('');
+  const [chesscomUsername, setChesscomUsername] = useState('');
   const [lichessUsername, setLichessUsername] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
