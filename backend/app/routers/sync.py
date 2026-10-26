@@ -58,7 +58,11 @@ async def run_sync_job_task(job_id: str, user_id: str) -> None:
         # 1. Sync Chess.com
         if user.chesscom_username:
             client = ChesscomClient()
-            archives = await client.fetch_archives(user.chesscom_username)
+            try:
+                archives = await client.fetch_archives(user.chesscom_username)
+            except Exception as e:
+                logger.error(f"Failed to fetch Chess.com archives for {user.chesscom_username}: {e}")
+                raise RuntimeError(f"Chess.com sync failed: {e}")
             total_archives = max(1, len(archives))
             full_walk_completed = True
 

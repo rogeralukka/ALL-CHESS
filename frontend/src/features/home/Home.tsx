@@ -15,19 +15,10 @@ import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { gameRepository, statsRepository, friendRepository, learnRepository, puzzleRepository, RatingSummary } from '@/data/repositories';
 import { Game, Friend, LessonStage, Puzzle } from '@/data/types';
-import { MOCK_GAMES } from '@/data/mock/mockGames';
-import { MOCK_FRIENDS } from '@/data/mock/mockFriends';
 import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
-import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
 import { storage } from '@/lib/storage';
 import { useMotion } from '@/lib/useMotion';
 import { Flame, ChevronRight, Sparkles, Users } from 'lucide-react';
-
-const DEFAULT_RATINGS: RatingSummary[] = [
-  { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
-  { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
-  { mode: 'Bullet', rating: 880, deltaWeekly: 5 },
-];
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -78,26 +69,41 @@ export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { isFull } = useMotion();
   const [coachDismissed, setCoachDismissed] = useState(false);
-  const [recentGames, setRecentGames] = useState<Game[]>(() => MOCK_GAMES.slice(0, 5));
-  const [ratings, setRatings] = useState<RatingSummary[]>(() => DEFAULT_RATINGS);
-  const [friends, setFriends] = useState<Friend[]>(() => MOCK_FRIENDS);
-  const [currentStage, setCurrentStage] = useState<LessonStage | null>(() => MOCK_LEARN_STAGES.find((s) => s.status === 'current') || MOCK_LEARN_STAGES[0]);
-  const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(() => MOCK_PUZZLES[0]);
+  const [recentGames, setRecentGames] = useState<Game[]>([]);
+  const [ratings, setRatings] = useState<RatingSummary[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [currentStage, setCurrentStage] = useState<LessonStage | null>(null);
+  const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([gameRepository.getGames(), statsRepository.getUserRatings(), friendRepository.getFriends(), learnRepository.getStages(), puzzleRepository.getDailyPuzzle()]).then(
-      ([games, userRatings, friendList, stages, puzzle]) => {
-        if (!mounted) return;
-        setRecentGames(games.slice(0, 5));
-        setRatings(userRatings);
-        setFriends(friendList);
-        setCurrentStage(stages.find((s) => s.status === 'current') || stages[0] || null);
-        setDailyPuzzle(puzzle);
-      }
-    );
+
+    const loadData = () => {
+      Promise.all([
+        gameRepository.getGames(),
+        statsRepository.getUserRatings(),
+        friendRepository.getFriends(),
+        learnRepository.getStages(),
+        puzzleRepository.getDailyPuzzle()
+      ]).then(
+        ([games, userRatings, friendList, stages, puzzle]) => {
+          if (!mounted) return;
+          setRecentGames(games.slice(0, 5));
+          setRatings(userRatings);
+          setFriends(friendList);
+          setCurrentStage(stages.find((s) => s.status === 'current') || stages[0] || null);
+          setDailyPuzzle(puzzle);
+        }
+      );
+    };
+
+    loadData();
+
+    const onRefresh = () => loadData();
+    window.addEventListener('chess-data-refresh', onRefresh);
     return () => {
       mounted = false;
+      window.removeEventListener('chess-data-refresh', onRefresh);
     };
   }, []);
 
@@ -226,7 +232,7 @@ export const Home: React.FC = () => {
           fen="r1bqk1nr/pppp1Bpp/2n5/4p3/1b2P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 6"
           icon="/assets/ui/icon_review.webp"
           title="Review your last game"
-          meta={recentGames[0] ? `vs ${recentGames[0].white.username === 'You' ? recentGames[0].black.username : recentGames[0].white.username}` : 'Latest game'}
+          meta={recentGames[0] ? `vs ${recentGames[0].white.username === 'You' ? recentGames[0].black.username : recentGames[0].white.username}` : 'No recent games'}
           action="Start review"
           onClick={() => navigate(recentGames[0] ? `/review/${recentGames[0].id}` : '/review')}
         />
@@ -255,7 +261,9 @@ export const Home: React.FC = () => {
                   <ModeIcon mode={r.mode.toLowerCase() as GameMode} size={34} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[12px] font-semibold text-theme-muted capitalize leading-4">{r.mode}</div>
-                    <div className="text-[22px] font-bold font-display tabular-nums text-theme-text leading-7">{r.rating}</div>
+                    <div className="text-[22px] font-bold font-display tabular-nums text-theme-text leading-7">
+                      {r.rating > 0 ? r.rating : '–'}
+                    </div>
                   </div>
                   {r.deltaWeekly !== 0 && (
                     <span className={`text-[13px] font-semibold tabular-nums ${r.deltaWeekly > 0 ? 'text-[var(--color-win)]' : 'text-[var(--color-loss)]'}`}>

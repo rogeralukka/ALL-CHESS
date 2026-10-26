@@ -1,7 +1,14 @@
+import logging
 import httpx
 import asyncio
 from typing import List, Dict, Any, Optional
 from app.config import settings
+
+logger = logging.getLogger("all_chess.chesscom_client")
+
+class ChesscomError(Exception):
+    """Exception raised when Chess.com API returns an error or is unreachable."""
+    pass
 
 class ChesscomClient:
     def __init__(self, contact_email: Optional[str] = None):
@@ -10,7 +17,7 @@ class ChesscomClient:
             "User-Agent": f"ChessGuideApp/1.0 ({email})",
             "Accept": "application/json"
         }
-        self.timeout = 15.0
+        self.timeout = 20.0
 
     async def fetch_archives(self, username: str) -> List[str]:
         """Fetches list of monthly archive URLs for a user (oldest to newest)."""
@@ -19,26 +26,46 @@ class ChesscomClient:
 
         async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
             resp = await self._get_with_retry(client, archives_url)
-            if not resp or resp.status_code != 200:
+            if resp.status_code == 404:
+                logger.warning(f"Chess.com user '{clean_user}' not found (404).")
                 return []
-            return resp.json().get("archives", [])
+            if resp.status_code != 200:
+                raise ChesscomError(
+                    f"Chess.com API returned status {resp.status_code} for user '{clean_user}' archives."
+                )
+            try:
+                data = resp.json()
+                return data.get("archives", [])
+            except Exception as e:
+                raise ChesscomError(f"Failed to parse Chess.com archives JSON: {e}")
 
     async def fetch_archive_games(self, archive_url: str) -> List[Dict[str, Any]]:
         """Fetches all games from a specific monthly archive URL."""
         async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
             resp = await self._get_with_retry(client, archive_url)
-            if not resp or resp.status_code != 200:
+            if resp.status_code != 200:
+                logger.warning(f"Could not fetch Chess.com archive {archive_url}: HTTP {resp.status_code}")
                 return []
-            return resp.json().get("games", [])
+            try:
+                data = resp.json()
+                return data.get("games", [])
+            except Exception as e:
+                logger.warning(f"Failed to parse Chess.com games in {archive_url}: {e}")
+                return []
 
     async def fetch_player_stats(self, username: str) -> Optional[Dict[str, Any]]:
         """Fetches current stats for player from /pub/player/{user}/stats."""
         clean_user = username.strip().lower()
         stats_url = f"https://api.chess.com/pub/player/{clean_user}/stats"
-        async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
-            resp = await self._get_with_retry(client, stats_url)
-            if resp and resp.status_code == 200:
-                return resp.json()
+        try:
+            async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
+                resp = await self._get_with_retry(client, stats_url)
+                if resp.status_code == 200:
+                    return resp.json()
+                logger.warning(f"Could not fetch Chess.com stats for {clean_user}: HTTP {resp.status_code}")
+                return None
+        except Exception as e:
+            logger.warning(f"Error fetching Chess.com stats for {clean_user}: {e}")
             return None
 
     async def fetch_recent_games(self, username: str, max_games: int = 50) -> List[Dict[str, Any]]:
@@ -60,8 +87,9 @@ class ChesscomClient:
 
         return collected_games
 
-    async def _get_with_retry(self, client: httpx.AsyncClient, url: str, max_retries: int = 3) -> Optional[httpx.Response]:
+    async def _get_with_retry(self, client: httpx.AsyncClient, url: str, max_retries: int = 3) -> httpx.Response:
         delay = 1.0
+        last_exc: Optional[Exception] = None
         for attempt in range(max_retries):
             try:
                 resp = await client.get(url)
@@ -70,9 +98,10 @@ class ChesscomClient:
                     delay *= 2.0
                     continue
                 return resp
-            except (httpx.RequestError, httpx.TimeoutException):
+            except (httpx.RequestError, httpx.TimeoutException) as exc:
+                last_exc = exc
                 if attempt == max_retries - 1:
-                    return None
+                    break
                 await asyncio.sleep(delay)
                 delay *= 2.0
-        return None
+        raise ChesscomError(f"Failed to connect to Chess.com ({url}): {last_exc}")

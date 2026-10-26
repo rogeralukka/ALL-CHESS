@@ -27,11 +27,14 @@ import {
   Layers,
   ChevronRight,
   ChevronLeft,
+  LogOut,
 } from 'lucide-react';
+import { useAuthStore } from '@/data/authStore';
 
 export const SettingsShell: React.FC = () => {
   const settings = useSettingsStore();
   const { systemPrefersReduced } = useMotion();
+  const { user, logout } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<'board' | 'gameplay' | 'coach' | 'appearance' | 'accounts' | 'byok'>('board');
   const [mobileSubpage, setMobileSubpage] = useState<string | null>(null);
@@ -776,6 +779,25 @@ export const SettingsShell: React.FC = () => {
                 />
                 <Button size="sm" variant="secondary">Update</Button>
               </div>
+            </div>
+
+            {/* Active Session & Logout */}
+            <div className="p-4 rounded-xl bg-theme-raised border border-theme-border flex items-center justify-between">
+              <div>
+                <div className="font-bold text-sm text-theme-text">Session Account</div>
+                <div className="text-xs text-theme-muted mt-0.5">
+                  Logged in as <span className="font-mono text-amber-500 font-bold">{user?.username || 'User'}</span>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="danger"
+                icon={<LogOut size={14} />}
+                onClick={() => logout()}
+                data-testid="logout-btn"
+              >
+                Log Out
+              </Button>
             </div>
 
             {/* Lichess */}
