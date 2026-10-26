@@ -6,9 +6,10 @@ export interface UserSession {
   username: string;
   chesscomUsername?: string | null;
   lichessUsername?: string | null;
-  /** Profile picture from the linked Chess.com / Lichess account, when the backend provides one. */
+  /** Profile picture from the linked Chess.com account, when the backend provides one. */
   avatarUrl?: string | null;
   countryCode?: string | null;
+  createdAt?: string | null;
 }
 
 interface AuthState {
