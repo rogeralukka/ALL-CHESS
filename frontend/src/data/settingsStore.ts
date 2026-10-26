@@ -36,7 +36,7 @@ export interface UserSettings {
 const DEFAULT_SETTINGS: UserSettings = {
   appTheme: 'dusk',
   motionLevel: 'full',
-  boardThemeId: 'sand-clay',
+  boardThemeId: 'classic-green',
   pieceSetId: 'staunty',
   background: 'standard',
   animationSpeed: 'medium',
@@ -62,7 +62,7 @@ interface SettingsStore extends UserSettings {
 }
 
 // Bump when a default changes in a way existing users should pick up once.
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 
 const getInitialSettings = (): UserSettings => {
   const stored = storage.get<Partial<UserSettings> & { settingsVersion?: number }>('all_chess_settings', {});
@@ -70,6 +70,11 @@ const getInitialSettings = (): UserSettings => {
   if ((stored.settingsVersion ?? 1) < 2) {
     // v2: the old default piece set (thin outline) is replaced by the shaded default.
     if (!stored.pieceSetId || stored.pieceSetId === 'cburnett') merged.pieceSetId = DEFAULT_SETTINGS.pieceSetId;
+    storage.set('all_chess_settings', { ...merged, settingsVersion: SETTINGS_VERSION });
+  }
+  if ((stored.settingsVersion ?? 1) < 3) {
+    // v3: the default board is the reference's green board. Only move people who never changed it.
+    if (!stored.boardThemeId || stored.boardThemeId === 'sand-clay') merged.boardThemeId = DEFAULT_SETTINGS.boardThemeId;
     storage.set('all_chess_settings', { ...merged, settingsVersion: SETTINGS_VERSION });
   }
   return merged;

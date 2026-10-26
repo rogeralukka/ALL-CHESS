@@ -9,6 +9,9 @@ import { PageContainer } from '@/components/PageHeader';
 import { GameHistoryTable } from '@/components/GameHistoryTable';
 import { ModeIcon, GameMode } from '@/components/ModeIcon';
 import { Sparkline } from '@/components/Charts';
+import { PlayerAvatar } from '@/components/Bits';
+import { useCurrentUser } from '@/lib/useCurrentUser';
+import { storage } from '@/lib/storage';
 import { Meter } from '@/components/Bits';
 import { StatsSections } from './StatsSections';
 import { gameRepository, statsRepository, friendRepository } from '@/data/repositories';
@@ -16,7 +19,7 @@ import { Friend, Game, RatingPoint } from '@/data/types';
 import { rankFor } from '@/lib/rank';
 import { useMotion } from '@/lib/useMotion';
 
-type Tab = 'overview' | 'games' | 'stats';
+type Tab = 'overview' | 'games' | 'stats' | 'friends';
 type Speed = 'rapid' | 'blitz' | 'bullet';
 
 /** Underlined text tabs, as on the reference profile. */
@@ -26,6 +29,7 @@ const Tabs: React.FC<{ value: Tab; onChange: (t: Tab) => void }> = ({ value, onC
     ['overview', 'Overview'],
     ['games', 'Games'],
     ['stats', 'Stats'],
+    ['friends', 'Friends'],
   ];
   return (
     <div className="flex gap-1 px-3 border-t border-theme-border" role="tablist">
@@ -70,6 +74,8 @@ const RatingTile: React.FC<{ mode: GameMode; label: string; rating: number; delt
 );
 
 export const Profile: React.FC = () => {
+  const me = useCurrentUser();
+  const puzzleRating = storage.get<number>('all_chess_puzzle_rating', 0);
   const [tab, setTab] = useState<Tab>('overview');
   const [speed, setSpeed] = useState<Speed>('rapid');
   const [range, setRange] = useState<'30d' | '90d' | 'all'>('all');
@@ -160,22 +166,19 @@ export const Profile: React.FC = () => {
       {/* ---------------- header card */}
       <section className="panel overflow-hidden" data-testid="profile-hero">
         <div className="p-5 flex flex-col sm:flex-row gap-5">
-          <div className="w-[136px] h-[136px] rounded-[4px] overflow-hidden flex-shrink-0 bg-gradient-to-b from-[#4a4642] to-[#2d2a27] flex items-end justify-center">
-            <img src="/assets/coach/coach_wave_full.webp" alt="Your avatar" className="h-[128px] object-contain object-bottom" />
+          <div className="flex-shrink-0 self-start" data-testid="profile-avatar">
+            <PlayerAvatar name="You" size={168} square />
           </div>
           <div className="flex-1 min-w-0 flex flex-col">
             <div className="flex items-start gap-3">
-              <h1 className="text-[24px] font-display font-bold text-theme-text leading-8">Master</h1>
-              <img src={rank.tier.icon} alt={`${rank.tier.name} rank`} title={`${rank.tier.name} rank`} className="w-8 h-8 object-contain" />
+              <h1 className="text-[28px] font-display font-bold text-theme-text leading-9 truncate" data-testid="profile-name">{me.username}</h1>
+              <img src={rank.tier.icon} alt={`${rank.tier.name} rank`} title={`${rank.tier.name} rank`} className="w-8 h-8 object-contain mt-0.5" />
               <Link to="/settings" className="btn-secondary ml-auto inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[3px] text-[14px] font-semibold text-theme-text">
                 <Pencil size={14} /> Edit Profile
               </Link>
             </div>
             <div className="text-[14px] text-theme-muted mt-1">Training to reach {rank.next ? rank.next.name : 'King'} rank</div>
             <div className="mt-auto pt-4 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-theme-muted">
-              <span>
-                <b className="text-theme-text font-semibold">Oct 2026</b> Joined
-              </span>
               <span>
                 <b className="text-theme-text font-semibold">{friends.length}</b> Friends
               </span>
@@ -196,16 +199,16 @@ export const Profile: React.FC = () => {
               <RatingTile mode="rapid" label="Rapid" rating={ratingOf('rapid')} delta={deltaOf('rapid')} trend={trendOf('rapid')} onClick={() => openStats('rapid')} />
               <RatingTile mode="blitz" label="Blitz" rating={ratingOf('blitz')} delta={deltaOf('blitz')} trend={trendOf('blitz')} onClick={() => openStats('blitz')} />
               <RatingTile mode="bullet" label="Bullet" rating={ratingOf('bullet')} delta={deltaOf('bullet')} trend={trendOf('bullet')} onClick={() => openStats('bullet')} />
-              <Link to="/puzzles" className="panel panel-hover p-3 flex flex-col gap-2 min-w-0">
+              <Link to="/puzzles" className="panel panel-hover p-3 flex flex-col gap-2 min-w-0" data-testid="rating-tile-puzzles">
                 <div className="flex items-start gap-2.5">
                   <ModeIcon mode="puzzles" size={36} />
                   <div>
                     <div className="text-[12px] font-semibold text-theme-muted leading-4">Puzzles</div>
-                    <div className="text-[22px] font-bold font-display text-theme-text leading-6 tabular-nums">1200</div>
+                    <div className="text-[22px] font-bold font-display text-theme-text leading-6 tabular-nums">{puzzleRating > 0 ? puzzleRating : '–'}</div>
                   </div>
                 </div>
                 <div className="rounded-[3px] overflow-hidden bg-black/[0.06] dark:bg-black/20">
-                  <Sparkline values={[1120, 1150, 1140, 1170, 1185, 1200]} height={40} />
+                  <Sparkline values={[0, 0]} height={40} />
                 </div>
               </Link>
             </div>
@@ -254,6 +257,35 @@ export const Profile: React.FC = () => {
             </h2>
           </div>
           <GameHistoryTable games={games} />
+        </Card>
+      )}
+
+      {tab === 'friends' && (
+        <Card className="!p-0 overflow-hidden" data-testid="profile-friends">
+          <div className="px-5 py-3.5 flex items-center">
+            <h2 className="text-[17px] font-display font-bold text-theme-text">
+              Friends <span className="text-theme-muted">({friends.length})</span>
+            </h2>
+            <Link to="/leaderboard" className="ml-auto text-[14px] font-semibold text-theme-muted hover:text-theme-text">
+              Leaderboard
+            </Link>
+          </div>
+          {friends.length === 0 ? (
+            <p className="px-5 pb-6 text-[14px] text-theme-muted">No friends yet. Add a friend on the Leaderboard page to compare ratings.</p>
+          ) : (
+            <ul className="divide-y divide-theme-border">
+              {friends.map((f) => (
+                <li key={f.id} className="flex items-center gap-4 px-5 py-3">
+                  <PlayerAvatar name={f.username} src={f.avatarUrl} size={56} square />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[16px] font-bold text-theme-text truncate">{f.username}</div>
+                    <div className="text-[13px] text-theme-muted">{f.lastActive ?? (f.online ? 'Online now' : 'Offline')}</div>
+                  </div>
+                  <div className="text-[18px] font-display font-bold text-theme-text tabular-nums">{f.rating > 0 ? f.rating : '–'}</div>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       )}
 

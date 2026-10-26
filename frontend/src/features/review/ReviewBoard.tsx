@@ -7,6 +7,7 @@ import { EvalGraph } from '@/features/board/EvalGraph';
 import { MoveList } from '@/features/board/MoveList';
 import { PlayerBar } from '@/components/PlayerBar';
 import { PlayerAvatar } from '@/components/Bits';
+import { useCurrentUser } from '@/lib/useCurrentUser';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { Button } from '@/components/Button';
@@ -119,6 +120,7 @@ function getMaterialState(fen: string) {
 }
 
 export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary }) => {
+  const me = useCurrentUser();
   const navigate = useNavigate();
   const {
     boardThemeId,
@@ -491,9 +493,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           {/* Top Player Row + Material Tally */}
           <PlayerBar
             testId="player-top"
-            name={topPlayer.username}
+            name={me.label(topPlayer.username)}
             rating={topPlayer.rating}
-            avatar={<PlayerAvatar name={topPlayer.username === 'You' ? 'Master' : topPlayer.username} size={40} className="!rounded-none" />}
+            avatar={<PlayerAvatar name={topPlayer.username} size={40} className="!rounded-none" />}
             captured={
               <>
                 {topCaptured.map((p, i) => (
@@ -532,9 +534,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           {/* Bottom Player Row + Material Tally */}
           <PlayerBar
             testId="player-bottom"
-            name={bottomPlayer.username}
+            name={me.label(bottomPlayer.username)}
             rating={bottomPlayer.rating}
-            avatar={<PlayerAvatar name={bottomPlayer.username === 'You' ? 'Master' : bottomPlayer.username} size={40} className="!rounded-none" />}
+            avatar={<PlayerAvatar name={bottomPlayer.username} size={40} className="!rounded-none" />}
             captured={
               <>
                 {bottomCaptured.map((p, i) => (

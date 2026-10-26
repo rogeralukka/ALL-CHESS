@@ -49,8 +49,8 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
     pathD += ` L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
   });
 
-  // Area path closing back to zero line
-  const areaD = `${pathD} L ${width} ${zeroY} L 0 ${zeroY} Z`;
+  // White's share sits under the curve (like the eval bar turned on its side); the rest is dark.
+  const areaD = `${pathD} L ${width} ${h} L 0 ${h} Z`;
 
   // Determine current cursor position and color
   const activeIdx = hoveredIndex !== null ? hoveredIndex : currentMoveIndex;
@@ -62,7 +62,7 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
 
   return (
     <div
-      className={`relative select-none ${className}`}
+      className={`relative select-none rounded-[3px] ${className}`}
       style={{ height: `${h}px` }}
     >
       <svg
@@ -85,29 +85,19 @@ export const EvalGraph: React.FC<EvalGraphProps> = ({
         }}
         onMouseLeave={() => setHoveredIndex(null)}
       >
-        {/* Background zero axis */}
-        <line
-          x1="0"
-          y1={zeroY}
-          x2={width}
-          y2={zeroY}
-          stroke="rgba(255, 255, 255, 0.15)"
-          strokeWidth="1"
-          strokeDasharray="4 4"
-        />
-
-        {/* Shaded Area for advantage */}
-        <path d={areaD} fill="rgba(245, 158, 11, 0.15)" />
-
-        {/* Advantage curve line */}
-        <path
-          d={pathD}
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.7)"
-          strokeWidth={mini ? 1.5 : 2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
+        <defs>
+          <clipPath id="eval-graph-clip">
+            <rect x="0" y="0" width={width} height={h} rx="6" />
+          </clipPath>
+        </defs>
+        <g clipPath="url(#eval-graph-clip)">
+          {/* dark field = Black's side */}
+          <rect x="0" y="0" width={width} height={h} fill="var(--graph-dark)" />
+          {/* white field = White's side */}
+          <path d={areaD} fill="var(--color-eval-white)" />
+          {/* centre line */}
+          <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="rgba(128,128,128,0.55)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        </g>
 
         {/* Key move colored dots (brilliant, blunder, great, mistake, miss) */}
         {points.map((p) => {

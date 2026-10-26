@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Game } from '@/data/types';
 import { PlayerAvatar } from './Bits';
+import { useCurrentUser } from '@/lib/useCurrentUser';
 import { ModeIcon, GameMode } from './ModeIcon';
 
 const accTone = (v?: number) => (v === undefined ? 'text-theme-muted' : v >= 85 ? 'text-[var(--color-win)]' : v >= 70 ? 'text-theme-text' : 'text-[#e6912c]');
@@ -31,6 +32,7 @@ const ResultMark: React.FC<{ kind: 'win' | 'loss' | 'draw' }> = ({ kind }) => {
  * moves, date and a Review button. The whole row opens the review.
  */
 export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; analyzingId?: string }> = ({ games, compact, analyzingId }) => {
+  const me = useCurrentUser();
   const navigate = useNavigate();
   return (
     <div className="w-full overflow-x-auto" data-testid="game-history">
@@ -83,7 +85,7 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
                           <PlayerAvatar name={p.username} size={20} square />
                         </span>
                         <span className={`w-[10px] h-[10px] rounded-[2px] flex-shrink-0 ${i === 0 ? 'bg-white' : 'bg-[#5a5754] border border-white/20'}`} />
-                        <span className="text-[14px] font-semibold text-theme-text truncate">{p.username}</span>
+                        <span className="text-[14px] font-semibold text-theme-text truncate">{me.label(p.username)}</span>
                         <span className="text-[14px] text-theme-muted tabular-nums">({p.rating > 0 ? p.rating : '–'})</span>
                       </div>
                     ))}

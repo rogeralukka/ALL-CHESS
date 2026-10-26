@@ -1,4 +1,5 @@
 import { ModeIcon, GameMode } from '@/components/ModeIcon';
+import { useCurrentUser } from '@/lib/useCurrentUser';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -66,6 +67,7 @@ const LaunchCard: React.FC<{
 };
 
 export const Home: React.FC = () => {
+  const me = useCurrentUser();
   const navigate = useNavigate();
   const { isFull } = useMotion();
   const [coachDismissed, setCoachDismissed] = useState(false);
@@ -121,12 +123,10 @@ export const Home: React.FC = () => {
       {/* Greeting row */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="rounded-xl bg-black/20 border border-theme-border overflow-hidden">
-            <CoachAvatar expression="wave" size={48} />
-          </div>
+          <PlayerAvatar name="You" size={52} square />
           <div className="min-w-0">
             <div className="text-[13px] font-semibold text-theme-muted">{greeting()},</div>
-            <div className="text-[22px] font-black font-display text-theme-text leading-tight">Master</div>
+            <div className="text-[22px] font-black font-display text-theme-text leading-tight">{me.username}</div>
           </div>
         </div>
         <div className="flex items-center gap-3" data-testid="streak">

@@ -1,41 +1,43 @@
-import React from "react";
+import React, { useState } from "react";
+import { useAuthStore } from "@/data/authStore";
 import { motion } from "framer-motion";
 import { useMotion } from "@/lib/useMotion";
 
-const hash = (s: string) =>
-  [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
-
-const MUTED = ["#7c7a77", "#6f8a5b", "#5b7f99", "#9a6c62", "#7d6a9a", "#5c8f88", "#9a8456"];
-
 /**
- * Player avatar. "You" shows the coach portrait; everyone else gets the default-avatar look of
- * the reference (a white pawn silhouette on a muted tile), tinted per name so rows stay distinct.
+ * Player avatar. Uses the account's own picture when we have one (the signed-in user's Chess.com /
+ * Lichess photo), otherwise the neutral grey pawn tile that Chess.com shows for players without a photo.
  */
 export const PlayerAvatar: React.FC<{
   name: string;
   size?: number;
   className?: string;
   square?: boolean;
-}> = ({ name, size = 44, className = "", square }) => {
+  /** explicit picture URL (e.g. a friend's Chess.com avatar) */
+  src?: string | null;
+}> = ({ name, size = 44, className = "", square, src }) => {
+  const me = useAuthStore((s) => s.user);
+  const [broken, setBroken] = useState(false);
+  const isMe = name === "You" || (!!me && name === me.username);
+  const url = !broken ? (src ?? (isMe ? me?.avatarUrl : null)) : null;
   const radius = square ? (size >= 40 ? 4 : 3) : 999;
-  if (name === "You") {
+  if (url) {
     return (
-      <span className={`inline-block overflow-hidden flex-shrink-0 bg-[#4a4642] ${className}`} style={{ width: size, height: size, borderRadius: radius }} aria-hidden="true">
-        <img src="/assets/coach/coach_neutral.webp" alt="" className="w-full h-full object-cover object-top" />
+      <span className={`inline-block overflow-hidden flex-shrink-0 bg-[#3a3835] ${className}`} style={{ width: size, height: size, borderRadius: radius }} aria-hidden="true">
+        <img src={url} alt="" className="w-full h-full object-cover" onError={() => setBroken(true)} referrerPolicy="no-referrer" />
       </span>
     );
   }
-  const bg = MUTED[Math.abs(hash(name)) % MUTED.length];
   return (
     <span
       className={`inline-flex items-end justify-center overflow-hidden flex-shrink-0 select-none ${className}`}
-      style={{ width: size, height: size, borderRadius: radius, background: `linear-gradient(180deg, ${bg}, color-mix(in srgb, ${bg} 70%, black))` }}
+      style={{ width: size, height: size, borderRadius: radius, background: "linear-gradient(180deg, #e2e2df 0%, #cfcfcb 100%)" }}
       aria-hidden="true"
     >
       <svg viewBox="0 0 40 40" width={size * 0.86} height={size * 0.86}>
-        <circle cx="20" cy="12" r="6.4" fill="#fff" fillOpacity=".92" />
-        <path d="M14.5 19.5 H25.5 L24 22.5 C25.8 25.5 27 29 27.5 32 H12.5 C13 29 14.2 25.5 16 22.5 Z" fill="#fff" fillOpacity=".92" />
-        <rect x="9.5" y="32.5" width="21" height="5" rx="2" fill="#fff" fillOpacity=".92" />
+        <circle cx="20" cy="12" r="6.4" fill="#9d9c99" />
+        <path d="M14.5 19.5 H25.5 L24 22.5 C25.8 25.5 27 29 27.5 32 H12.5 C13 29 14.2 25.5 16 22.5 Z" fill="#9d9c99" />
+        <rect x="9.5" y="32.5" width="21" height="5" rx="2" fill="#9d9c99" />
+        <circle cx="18" cy="10.5" r="2.2" fill="#fff" fillOpacity=".45" />
       </svg>
     </span>
   );

@@ -32,6 +32,14 @@
   --btn-secondary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.25);
   --btn-secondary-border: transparent;
   
+  --color-text-strong: rgba(255, 255, 255, 0.92);
+  --side-panel-bg: #262522;
+  --side-header-bg: rgba(0, 0, 0, 0.14);
+  --input-bg: #302e2b;
+  --tile-bg: #302e2b;
+  --graph-dark: #403d39;
+  --color-orange: #fa742c;
+
   --color-eval-white: #ffffff;
   --color-eval-black: #1a1918;
   --color-eval-draw: #73706b;
@@ -80,6 +88,14 @@
   --btn-secondary-shadow-hover: inset 0 -1px 0 rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.14);
   --btn-secondary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.12);
   --btn-secondary-border: rgba(0, 0, 0, 0.08);
+
+  --color-text-strong: #1e1b18;
+  --side-panel-bg: #ffffff;
+  --side-header-bg: rgba(0, 0, 0, 0.04);
+  --input-bg: #f1f0ee;
+  --tile-bg: #f1f0ee;
+  --graph-dark: #8c8984;
+  --color-orange: #f06a1e;
 
   --color-eval-white: #ffffff;
   --color-eval-black: #2b2824;
