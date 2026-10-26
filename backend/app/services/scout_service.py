@@ -1,12 +1,14 @@
 import logging
 import asyncio
+import httpx
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List, Tuple
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.scout import ScoutCache
 from app.database import utc_now
-from app.services.chesscom_client import ChesscomClient
-from app.services.lichess_client import LichessClient
+from app.services.chesscom_client import ChesscomClient, ChesscomError
+from app.services.lichess_client import LichessClient, LichessError
 from app.services.pgn_parser import parse_pgn_game
 from app.schemas.stats import OpeningStat
 from app.schemas.game import Game
@@ -20,12 +22,18 @@ async def get_or_fetch_scout_profile(
     db: Session
 ) -> Optional[Dict[str, Any]]:
     clean_user = username.strip().lower()
-    platform = platform.strip().lower() if platform else "chesscom"
+    clean_platform = platform.strip().lower() if platform else "chesscom"
 
-    # 1. Check database cache
+    if clean_platform not in ("chesscom", "lichess"):
+        raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
+
+    # 1. Check database cache (keyed by platform AND username)
     cached = (
         db.query(ScoutCache)
-        .filter(ScoutCache.username == clean_user)
+        .filter(
+            ScoutCache.platform == clean_platform,
+            ScoutCache.username == clean_user
+        )
         .first()
     )
     def is_not_expired(dt: datetime) -> bool:
@@ -42,9 +50,9 @@ async def get_or_fetch_scout_profile(
     profile: Optional[Dict[str, Any]] = None
     display_name = username.strip()
     title: Optional[str] = None
-    rating = 1000
+    rating: Optional[int] = None
 
-    if platform == "chesscom":
+    if clean_platform == "chesscom":
         client = ChesscomClient()
         try:
             profile = await client.fetch_player_profile(clean_user)
@@ -57,13 +65,16 @@ async def get_or_fetch_scout_profile(
                 rapid_st = stats.get("chess_rapid", {}).get("last", {})
                 blitz_st = stats.get("chess_blitz", {}).get("last", {})
                 bullet_st = stats.get("chess_bullet", {}).get("last", {})
-                rating = rapid_st.get("rating") or blitz_st.get("rating") or bullet_st.get("rating") or rating
+                found_r = rapid_st.get("rating") or blitz_st.get("rating") or bullet_st.get("rating")
+                if found_r:
+                    rating = int(found_r)
 
             raw_games = await client.fetch_recent_games(clean_user, max_games=50)
-        except Exception as e:
-            logger.warning(f"Failed to fetch Chess.com data for scout {clean_user}: {e}")
+        except (ChesscomError, httpx.RequestError, httpx.TimeoutException) as e:
+            logger.error(f"Failed to fetch Chess.com data for scout {clean_user}: {e}")
+            raise HTTPException(status_code=502, detail=f"Could not reach Chess.com: {e}")
 
-    elif platform == "lichess":
+    elif clean_platform == "lichess":
         lclient = LichessClient()
         try:
             stats = await lclient.fetch_player_stats(clean_user)
@@ -71,16 +82,18 @@ async def get_or_fetch_scout_profile(
                 display_name = stats.get("username", display_name)
                 title = stats.get("title")
                 perfs = stats.get("perfs", {})
-                rating = (
+                found_r = (
                     perfs.get("rapid", {}).get("rating")
                     or perfs.get("blitz", {}).get("rating")
                     or perfs.get("bullet", {}).get("rating")
-                    or rating
                 )
+                if found_r:
+                    rating = int(found_r)
 
             raw_games = await lclient.fetch_games(clean_user, max_games=50)
-        except Exception as e:
-            logger.warning(f"Failed to fetch Lichess data for scout {clean_user}: {e}")
+        except (LichessError, httpx.RequestError, httpx.TimeoutException) as e:
+            logger.error(f"Failed to fetch Lichess data for scout {clean_user}: {e}")
+            raise HTTPException(status_code=502, detail=f"Could not reach Lichess: {e}")
 
     # If nothing was found and no games exist, player doesn't exist
     if not raw_games and not stats and not profile:
@@ -99,7 +112,7 @@ async def get_or_fetch_scout_profile(
             continue
 
         ext_id = None
-        if platform == "chesscom":
+        if clean_platform == "chesscom":
             ext_id = g.get("url", "").split("/")[-1] if g.get("url") else None
         else:
             ext_id = g.get("id")
@@ -109,7 +122,7 @@ async def get_or_fetch_scout_profile(
                 pgn_text=pgn,
                 target_user_names=user_aliases,
                 source="online",
-                platform=platform,
+                platform=clean_platform,
                 external_id=ext_id
             )
             if not parsed.get("id"):
@@ -160,8 +173,37 @@ async def get_or_fetch_scout_profile(
             logger.debug(f"Error parsing game for scout: {e}")
             continue
 
+    # If rating wasn't in stats, try to find it in the raw games
+    if rating is None and raw_games:
+        for g in raw_games:
+            w = g.get("white") or {}
+            b = g.get("black") or {}
+            if isinstance(w, dict) and w.get("username", "").lower() == clean_user:
+                r = w.get("rating")
+                if r:
+                    rating = int(r)
+                    break
+            elif isinstance(b, dict) and b.get("username", "").lower() == clean_user:
+                r = b.get("rating")
+                if r:
+                    rating = int(r)
+                    break
+            players = g.get("players") or {}
+            w_li = players.get("white") or {}
+            b_li = players.get("black") or {}
+            if isinstance(w_li, dict) and (w_li.get("user", {}).get("id") == clean_user or w_li.get("user", {}).get("name", "").lower() == clean_user):
+                r = w_li.get("rating")
+                if r:
+                    rating = int(r)
+                    break
+            elif isinstance(b_li, dict) and (b_li.get("user", {}).get("id") == clean_user or b_li.get("user", {}).get("name", "").lower() == clean_user):
+                r = b_li.get("rating")
+                if r:
+                    rating = int(r)
+                    break
+
     total_games = len(parsed_games)
-    win_rate = round((total_wins / total_games) * 100, 1) if total_games > 0 else 50.0
+    win_rate = round((total_wins / total_games) * 100, 1) if total_games > 0 else None
 
     # Build mostPlayed OpeningStat list
     most_played: List[Dict[str, Any]] = []
@@ -170,7 +212,7 @@ async def get_or_fetch_scout_profile(
         w_pct = round((s["wins"] / g_count) * 100, 1) if g_count > 0 else 0.0
         d_pct = round((s["draws"] / g_count) * 100, 1) if g_count > 0 else 0.0
         l_pct = round((s["losses"] / g_count) * 100, 1) if g_count > 0 else 0.0
-        avg_acc = round(sum(s["accuracies"]) / len(s["accuracies"]), 1) if s["accuracies"] else 78.5
+        avg_acc = round(sum(s["accuracies"]) / len(s["accuracies"]), 1) if s["accuracies"] else None
 
         most_played.append({
             "eco": eco,
@@ -182,21 +224,9 @@ async def get_or_fetch_scout_profile(
             "avgAccuracy": avg_acc
         })
 
-    # Fallback opening stat if no games were parsed
-    if not most_played:
-        most_played.append({
-            "eco": "C50",
-            "name": "Italian Game",
-            "games": 1,
-            "winRate": 50.0,
-            "drawRate": 10.0,
-            "lossRate": 40.0,
-            "avgAccuracy": 80.0
-        })
-
     profile_result: Dict[str, Any] = {
         "username": display_name,
-        "rating": int(rating),
+        "rating": rating,
         "title": title,
         "winRate": win_rate,
         "mostPlayed": most_played,
@@ -211,6 +241,7 @@ async def get_or_fetch_scout_profile(
         cached.expires_at = expires_at
     else:
         new_cache = ScoutCache(
+            platform=clean_platform,
             username=clean_user,
             profile_json=profile_result,
             cached_at=utc_now(),
@@ -225,15 +256,15 @@ async def get_or_fetch_scout_profile(
 def search_cached_scout_profiles(
     query: str,
     db: Session,
-    limit: int = 10
+    limit: int = 10,
+    platform: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     clean_q = query.strip().lower()
     now = utc_now()
-    rows = (
-        db.query(ScoutCache)
-        .filter(ScoutCache.expires_at > now.replace(tzinfo=None))
-        .all()
-    )
+    q = db.query(ScoutCache).filter(ScoutCache.expires_at > now.replace(tzinfo=None))
+    if platform:
+        q = q.filter(ScoutCache.platform == platform.strip().lower())
+    rows = q.all()
     results: List[Dict[str, Any]] = []
     for r in rows:
         if clean_q in r.username.lower():

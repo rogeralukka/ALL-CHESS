@@ -6,6 +6,7 @@ class ScoutCache(Base):
     __tablename__ = "scout_cache"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    platform = Column(String(16), nullable=False, default="chesscom", server_default="chesscom", index=True)
     username = Column(String(64), nullable=False, index=True)
     profile_json = Column(JSON, nullable=False)
     cached_at = Column(DateTime, default=utc_now, nullable=False)

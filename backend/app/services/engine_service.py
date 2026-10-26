@@ -196,7 +196,8 @@ def generate_line_why_template(board: chess.Board, move: chess.Move) -> str:
         return ""
 
     if piece_type == chess.KING:
-        if len(board.piece_map()) <= 10:
+        central_squares = {"d4", "e4", "d5", "e5", "c4", "c5", "f4", "f5", "d3", "e3", "d6", "e6"}
+        if len(board.piece_map()) <= 10 and to_sq_name in central_squares:
             return f"Centralizes the king on {to_sq_name} for the endgame."
         return ""
 
