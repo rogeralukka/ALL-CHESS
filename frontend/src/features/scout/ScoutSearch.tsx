@@ -133,12 +133,14 @@ export const ScoutSearch: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    <div className="hidden sm:block w-[200px] flex-shrink-0">
-                      <div className="flex justify-between text-[12px] font-semibold mb-1.5">
-                        <span className="text-theme-muted uppercase tracking-wide">Results</span>
-                        <span className="text-[#81b64c] tabular-nums">{p.winRate}% wins</span>
+                    <div className="hidden sm:block w-[232px] flex-shrink-0">
+                      <div className="flex items-baseline justify-between mb-2">
+                        <span className="text-[12px] font-bold uppercase tracking-wide text-theme-muted">Results</span>
+                        <span className="text-[18px] leading-5 font-display font-extrabold text-theme-text tabular-nums">
+                          {p.winRate}%<span className="ml-1 text-[12px] font-semibold text-theme-muted">wins</span>
+                        </span>
                       </div>
-                      <WDLBar win={p.winRate} draw={draw} loss={Math.max(0, 100 - p.winRate - draw)} height={8} />
+                      <WDLBar win={p.winRate} draw={draw} loss={Math.max(0, 100 - p.winRate - draw)} height={10} showLabels />
                     </div>
                     <ChevronRight size={22} className="text-theme-muted group-hover:text-theme-text flex-shrink-0" />
                   </button>

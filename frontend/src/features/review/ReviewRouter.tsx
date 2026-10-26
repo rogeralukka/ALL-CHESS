@@ -8,6 +8,7 @@ import { GameList } from './GameList';
 import { GameSummary } from './GameSummary';
 import { ReviewBoard } from './ReviewBoard';
 import { Skeleton } from '@/components/Skeleton';
+import { PieceHopper } from '@/components/LoadingScreen';
 
 export const ReviewRouter: React.FC = () => {
   const params = useParams();
@@ -124,39 +125,38 @@ export const ReviewRouter: React.FC = () => {
   // Loading state with layout matching board + right panel exactly
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden animate-pulse">
+      <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden" data-testid="review-loading">
         {/* Left Board Zone */}
         <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0">
           <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <div className="h-6 w-48 bg-theme-raised/60 rounded" />
+              <div className="h-6 w-48 bg-theme-raised/60 rounded animate-pulse" />
               {analysisProgress !== null && (
-                <span className="text-xs font-mono font-bold text-amber-500">
-                  Stockfish Review: {analysisProgress}%
+                <span className="text-[13px] font-bold text-[#81b64c] tabular-nums">
+                  Stockfish review: {analysisProgress}%
                 </span>
               )}
             </div>
-            <div className="aspect-square w-full rounded-sm bg-theme-raised/70 border border-theme-border/40 shadow-2xl flex items-center justify-center">
-              {analysisProgress !== null && (
-                <div className="text-center space-y-2 p-4">
-                  <div className="text-base font-display font-black text-theme-text">
-                    Analyzing moves with Stockfish...
-                  </div>
-                  <div className="w-48 h-2 bg-black/30 rounded-full mx-auto overflow-hidden">
-                    <div
-                      className="h-full bg-amber-500 transition-all duration-300 rounded-full"
-                      style={{ width: `${analysisProgress}%` }}
-                    />
-                  </div>
+            <div className="aspect-square w-full rounded-[5px] bg-theme-raised/70 shadow-[0_3px_0_rgba(0,0,0,0.2)] flex items-center justify-center">
+              <div className="flex flex-col items-center text-center gap-3 p-4 select-none" role="status" aria-live="polite">
+                <PieceHopper size={200} />
+                <div className="text-[22px] leading-7 font-display font-extrabold text-theme-text">
+                  {analysisProgress !== null ? 'Analyzing your game…' : 'Opening your game…'}
                 </div>
-              )}
+                {analysisProgress !== null && <div className="text-[14px] text-theme-muted -mt-1.5">Stockfish is checking every move</div>}
+                {analysisProgress !== null && (
+                  <div className="w-56 h-2.5 bg-black/30 rounded-full overflow-hidden" aria-hidden="true">
+                    <div className="h-full bg-[#81b64c] transition-all duration-300 rounded-full" style={{ width: `${analysisProgress}%` }} />
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="h-6 w-36 bg-theme-raised/60 rounded" />
+            <div className="h-6 w-36 bg-theme-raised/60 rounded animate-pulse" />
           </div>
         </div>
 
         {/* Right Panel Zone (480-500px) */}
-        <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border p-4 space-y-4">
+        <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border p-4 space-y-4 animate-pulse">
           <div className="flex items-center gap-3">
             <Skeleton circle width={84} height={84} />
             <div className="flex-1 space-y-2">
