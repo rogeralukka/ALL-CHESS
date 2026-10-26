@@ -53,45 +53,53 @@ export const WDLBar: React.FC<{
 }> = ({ win, draw, loss, height = 10, showLabels }) => {
   const { isOff } = useMotion();
   const total = win + draw + loss || 1;
+  // flat segments with thin gaps, like the reference results bars: green, light grey, red
   const parts = [
-    { v: win, c: "var(--class-best)", l: "W" },
-    { v: draw, c: "#8b8987", l: "D" },
-    { v: loss, c: "var(--class-blunder)", l: "L" },
+    { v: win, c: "#81b64c", l: "W", name: "Wins" },
+    { v: draw, c: "#a7a6a2", l: "D", name: "Draws" },
+    { v: loss, c: "#e0523f", l: "L", name: "Losses" },
   ];
   return (
-    <div className="space-y-1">
-      <div className="well p-[3px]" style={{ borderRadius: 999 }}>
-        <div
-          className="flex w-full overflow-hidden rounded-full gap-[2px]"
-          style={{ height }}
-        >
-          {parts.map((p, i) => (
+    <div className="space-y-1.5">
+      <div
+        className="flex w-full gap-[2px]"
+        style={{ height }}
+        role="img"
+        aria-label={`${Math.round(win)}% wins, ${Math.round(draw)}% draws, ${Math.round(loss)}% losses`}
+      >
+        {parts.map((p, i) =>
+          p.v > 0 ? (
             <motion.div
               key={p.l}
               className="h-full"
               style={{
                 background: p.c,
-                boxShadow:
-                  "inset 0 2px 0 rgba(255,255,255,.3), inset 0 -2px 0 rgba(0,0,0,.18)",
+                borderRadius: 2,
+                borderTopLeftRadius: i === 0 ? 4 : 2,
+                borderBottomLeftRadius: i === 0 ? 4 : 2,
+                borderTopRightRadius: i === 2 || (i === 1 && loss <= 0) ? 4 : 2,
+                borderBottomRightRadius: i === 2 || (i === 1 && loss <= 0) ? 4 : 2,
+                boxShadow: "inset 0 -2px 0 rgba(0,0,0,.2)",
               }}
               initial={isOff ? false : { width: 0 }}
               animate={{ width: `${(p.v / total) * 100}%` }}
               transition={{
-                duration: isOff ? 0 : 0.7,
-                delay: isOff ? 0 : 0.1 + i * 0.08,
+                duration: isOff ? 0 : 0.6,
+                delay: isOff ? 0 : 0.05 + i * 0.07,
                 ease: [0.16, 1, 0.3, 1],
               }}
             />
-          ))}
-        </div>
+          ) : null
+        )}
       </div>
       {showLabels && (
-        <div className="flex justify-between text-[12px] font-bold tabular-nums">
-          <span className="text-[var(--class-best)]">{Math.round(win)}% W</span>
-          <span className="text-theme-muted">{Math.round(draw)}% D</span>
-          <span className="text-[var(--class-blunder)]">
-            {Math.round(loss)}% L
-          </span>
+        <div className="flex items-center gap-3.5 text-[12px] font-semibold tabular-nums text-theme-muted">
+          {parts.map((p) => (
+            <span key={p.l} className="inline-flex items-center gap-1.5" title={p.name}>
+              <span className="w-2 h-2 rounded-[2px]" style={{ background: p.c }} />
+              <b className="text-theme-text">{Math.round(p.v)}%</b> {p.l}
+            </span>
+          ))}
         </div>
       )}
     </div>
