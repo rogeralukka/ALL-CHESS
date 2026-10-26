@@ -138,6 +138,7 @@ def get_games(
                 platform=dg.platform,
                 opening=dg.opening,
                 moves=dg.moves,
+                is_user_white=dg.is_user_white,
                 accuracy=dg.accuracy,
                 estimated_rating=dg.estimated_rating,
                 phase_grades=dg.phase_grades
@@ -173,6 +174,7 @@ def get_game_by_id(
         platform=dg.platform,
         opening=dg.opening,
         moves=dg.moves,
+        is_user_white=dg.is_user_white,
         accuracy=dg.accuracy,
         estimated_rating=dg.estimated_rating,
         phase_grades=dg.phase_grades
@@ -203,11 +205,16 @@ async def run_game_analysis_task(
             job.progress = min(95, 5 + int(pct * 0.9))
             db.commit()
 
+        white_r = game.white.get("rating") if isinstance(game.white, dict) else None
+        black_r = game.black.get("rating") if isinstance(game.black, dict) else None
+
         analysis_result = await analyze_game_moves_full(
             moves_list=game.moves or [],
             depth=depth,
             time_per_move=0.3,
             is_user_white=game.is_user_white,
+            white_rating=white_r,
+            black_rating=black_r,
             on_progress=update_progress
         )
 

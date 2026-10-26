@@ -25,11 +25,29 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
-  // Listen for 401 auth-required events
+  // Multi-tab session synchronization
   if (typeof window !== 'undefined') {
     window.addEventListener('auth-required', () => {
       if (get().isAuthenticated) {
         set({ isAuthenticated: false, user: null });
+      }
+    });
+
+    // Listen for login/logout in other tabs via storage events
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'all_chess_auth_sync') {
+        get().checkSession();
+      }
+    });
+
+    // Re-verify session when returning focus to this tab
+    window.addEventListener('focus', () => {
+      get().checkSession();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        get().checkSession();
       }
     });
   }
@@ -68,6 +86,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         if (res && res.user) {
           set({ user: res.user, isAuthenticated: true, error: null });
+          try {
+            localStorage.setItem('all_chess_auth_sync', Date.now().toString());
+          } catch {
+            // ignore localStorage quota errors
+          }
           return res.user;
         }
         throw new Error('No user returned from session endpoint');
@@ -90,6 +113,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
         // ignore errors on logout
       } finally {
         set({ user: null, isAuthenticated: false, error: null });
+        try {
+          localStorage.setItem('all_chess_auth_sync', Date.now().toString());
+        } catch {
+          // ignore
+        }
       }
     },
 

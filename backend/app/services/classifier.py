@@ -16,16 +16,15 @@ MoveClassificationType = Literal[
 ]
 
 CLASSIFICATION_THRESHOLDS: Dict[str, float] = {
-    "best_max_drop": 0.5,
-    "excellent_max_drop": 2.0,
-    "good_max_drop": 5.0,
-    "inaccuracy_max_drop": 10.0,
-    "mistake_max_drop": 20.0,
-    "miss_min_drop": 5.0,
-    "miss_min_best_win_pct": 65.0,
-    "great_min_gap_win_pct": 10.0,
+    "best_max_drop": 0.0,  # Dropped drop <= 0.5 rule; only engine top move/equal is best
+    "excellent_max_drop": 1.5,
+    "good_max_drop": 4.0,
+    "inaccuracy_max_drop": 13.0,
+    "mistake_max_drop": 25.0,
+    "miss_min_drop": 14.0,
+    "great_min_gap_win_pct": 6.5,
     "great_min_after_win_pct": 40.0,
-    "great_max_before_win_pct": 90.0,
+    "great_max_before_win_pct": 95.0,
     "brilliant_max_drop": 1.0,
     "brilliant_min_after_win_pct": 45.0,
     "brilliant_max_before_win_pct": 90.0,
@@ -120,6 +119,10 @@ def classify_move(
     opponent_just_made_mistake: bool = False,
     is_top_engine_move: bool = False,
     is_checkmate: bool = False,
+    is_recapture: bool = False,
+    num_legal_moves: int = 2,
+    best_wins_material_or_mate: bool = False,
+    best_eval_gap: float = 0.0,
 ) -> MoveClassificationType:
     """
     Classifies a move based on win% drop from the mover's point of view.
@@ -132,7 +135,7 @@ def classify_move(
     if is_checkmate or mate_after == 0:
         if is_sacrifice:
             return 'brilliant'
-        if gap_to_second_win_pct >= CLASSIFICATION_THRESHOLDS["great_min_gap_win_pct"]:
+        if gap_to_second_win_pct >= CLASSIFICATION_THRESHOLDS["great_min_gap_win_pct"] and not is_recapture and num_legal_moves > 1:
             return 'great'
         return 'best'
 
@@ -151,51 +154,62 @@ def classify_move(
     # Drop in mover's winning chances
     drop = max(0.0, mover_before - mover_after)
 
-    # 1. Brilliant: near-best move (drop <= 1.0), material sacrifice, stays good (>= 45%), wasn't already >= 90%
+    # 1. Brilliant: top move, genuine material sacrifice, stays winning/good, wasn't trivially winning
     if (
         is_sacrifice
-        and drop <= CLASSIFICATION_THRESHOLDS["brilliant_max_drop"]
+        and is_top_engine_move
         and mover_after >= CLASSIFICATION_THRESHOLDS["brilliant_min_after_win_pct"]
         and mover_before < CLASSIFICATION_THRESHOLDS["brilliant_max_before_win_pct"]
     ):
         return 'brilliant'
 
-    # 2. Great: only good move (2nd-best line is 10+ win% worse) and saved or progressed game
+    # 2. Great: top engine move, NOT a recapture, more than 1 legal move,
+    # large gap to 2nd move, and saved or progressed game
     if (
-        (is_top_engine_move or drop <= CLASSIFICATION_THRESHOLDS["best_max_drop"])
+        is_top_engine_move
+        and not is_recapture
+        and num_legal_moves > 1
         and gap_to_second_win_pct >= CLASSIFICATION_THRESHOLDS["great_min_gap_win_pct"]
         and mover_after >= CLASSIFICATION_THRESHOLDS["great_min_after_win_pct"]
-        and mover_before < CLASSIFICATION_THRESHOLDS["great_max_before_win_pct"]
+        and (mover_before < CLASSIFICATION_THRESHOLDS["great_max_before_win_pct"] or opponent_just_made_mistake)
     ):
         return 'great'
 
-    # 3. Best: engine top move or drop <= 0.5
-    if is_top_engine_move or drop <= CLASSIFICATION_THRESHOLDS["best_max_drop"]:
+    # 3. Best: ONLY the engine top move (or equal eval to it)
+    if is_top_engine_move:
         return 'best'
 
-    # 4. Excellent: drop <= 2.0
+    # 4. Miss: Player had a clearly winning or tactical continuation available
+    # (the best line's win% is >= 14-15 points above move played, or eval gap >= 3 pawns,
+    # and best line wins material or mates), usually right after opponent's error.
+    # Takes priority over mistake/blunder.
+    # Must NOT be given when player was already worse and best line only held equality.
+    # Must NOT be given when player is still comfortably winning (> 85%).
+    is_miss = (
+        best_wins_material_or_mate
+        and (drop >= CLASSIFICATION_THRESHOLDS["miss_min_drop"] or best_eval_gap >= 3.0)
+        and not (mover_before < 45.0 and mover_before + drop < 55.0 and best_eval_gap < 3.0)
+        and (opponent_just_made_mistake or drop >= 20.0 or best_eval_gap >= 3.0)
+        and mover_after < 85.0
+    )
+    if is_miss:
+        return 'miss'
+
+    # 5. Excellent: drop <= 1.5%
     if drop <= CLASSIFICATION_THRESHOLDS["excellent_max_drop"]:
         return 'excellent'
 
-    # 5. Miss: opponent just made mistake or blunder (NOT inaccuracy), and player dropped >= 5% while a winning chance existed
-    if (
-        opponent_just_made_mistake
-        and drop >= CLASSIFICATION_THRESHOLDS["miss_min_drop"]
-        and mover_before >= CLASSIFICATION_THRESHOLDS["miss_min_best_win_pct"]
-    ):
-        return 'miss'
-
-    # 6. Good: drop <= 5.0
+    # 6. Good: drop <= 4.0%
     if drop <= CLASSIFICATION_THRESHOLDS["good_max_drop"]:
         return 'good'
 
-    # 7. Inaccuracy: drop <= 10.0
+    # 7. Inaccuracy: drop <= 13.0%
     if drop <= CLASSIFICATION_THRESHOLDS["inaccuracy_max_drop"]:
         return 'inaccuracy'
 
-    # 8. Mistake: drop <= 20.0
+    # 8. Mistake: drop <= 25.0%
     if drop <= CLASSIFICATION_THRESHOLDS["mistake_max_drop"]:
         return 'mistake'
 
-    # 9. Blunder: drop > 20.0
+    # 9. Blunder: drop > 25.0%
     return 'blunder'

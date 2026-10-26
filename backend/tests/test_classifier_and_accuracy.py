@@ -35,10 +35,11 @@ def test_classify_move():
     # Book move
     assert classify_move(0.2, 0.2, 'w', is_book=True) == 'book'
 
-    # Best move (small or zero drop)
-    assert classify_move(0.5, 0.5, 'w') == 'best'
+    # Best move: top engine move is 'best'
+    assert classify_move(0.5, 0.5, 'w', is_top_engine_move=True) == 'best'
 
-    # Excellent move (drop ~ 2%)
+    # Non-top move with small drop is 'excellent'
+    assert classify_move(0.5, 0.5, 'w', is_top_engine_move=False) == 'excellent'
     assert classify_move(1.0, 0.9, 'w') == 'excellent'
 
     # Inaccuracy

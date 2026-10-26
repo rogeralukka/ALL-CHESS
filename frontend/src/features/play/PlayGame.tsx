@@ -106,6 +106,7 @@ export const PlayGame: React.FC = () => {
   const [fen, setFen] = useState<string>(chess.fen());
   const [moves, setMoves] = useState<Move[]>([]);
   const movesRef = useRef<Move[]>([]);
+  const [userColor, setUserColor] = useState<'white' | 'black'>('white');
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
   const [arrows, setArrows] = useState<Arrow[]>([]);
   const [highlights, setHighlights] = useState<string[]>([]);
@@ -200,6 +201,7 @@ export const PlayGame: React.FC = () => {
       chosenColor = cfg.userColor;
     }
 
+    setUserColor(chosenColor);
     setOrientation(chosenColor);
     setActiveConfig(cfg);
     setCoachExpression('wave');
@@ -218,12 +220,24 @@ export const PlayGame: React.FC = () => {
     }
   };
 
+  // Flip board on 'F' key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key.toLowerCase() === 'f') {
+        setOrientation((o) => (o === 'white' ? 'black' : 'white'));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const triggerGameOver = useCallback((winner: 'user' | 'coach' | 'draw', reason: string) => {
     sound.gameEnd();
     setGameOver({ winner, reason });
 
     const { whiteKing, blackKing } = findKingSquares(chess);
-    const userIsWhite = orientation === 'white';
+    const userIsWhite = userColor === 'white';
 
     if (winner === 'draw') {
       setTippingSquare(null);
@@ -267,17 +281,18 @@ export const PlayGame: React.FC = () => {
     setTimeout(() => {
       setShowGameOverModal(true);
     }, 300);
-  }, [chess, orientation, pushCoachMessage, isFull]);
+  }, [chess, userColor, pushCoachMessage, isFull]);
 
   const checkGameStatus = useCallback(() => {
     if (chess.isCheckmate()) {
       const turn = chess.turn();
-      const userWon = (orientation === 'white' && turn === 'b') || (orientation === 'black' && turn === 'w');
+      const userIsWhite = userColor === 'white';
+      const userWon = (userIsWhite && turn === 'b') || (!userIsWhite && turn === 'w');
       triggerGameOver(userWon ? 'user' : 'coach', 'by checkmate');
     } else if (chess.isDraw()) {
       triggerGameOver('draw', 'by draw / stalemate');
     }
-  }, [chess, orientation, triggerGameOver]);
+  }, [chess, userColor, triggerGameOver]);
 
   // Coach Move Execution via search engine
   const makeCoachMove = useCallback(async () => {
@@ -390,7 +405,8 @@ export const PlayGame: React.FC = () => {
 
     // Check turn
     const turn = chess.turn();
-    const isUserTurn = (orientation === 'white' && turn === 'w') || (orientation === 'black' && turn === 'b');
+    const userIsWhite = userColor === 'white';
+    const isUserTurn = (userIsWhite && turn === 'w') || (!userIsWhite && turn === 'b');
     if (!isUserTurn) return false;
 
     try {
@@ -621,29 +637,78 @@ export const PlayGame: React.FC = () => {
     [fen]
   );
 
-  const userIsWhite = orientation === 'white';
-  const userCaptured = userIsWhite ? capturedByWhite : capturedByBlack;
-  const userAdvantage = userIsWhite ? whiteAdvantage : blackAdvantage;
-  const coachCaptured = userIsWhite ? capturedByBlack : capturedByWhite;
-  const coachAdvantage = userIsWhite ? blackAdvantage : whiteAdvantage;
+  const isUserBottom = orientation === userColor;
+
+  const topColor = orientation === 'white' ? 'black' : 'white';
+  const bottomColor = orientation === 'white' ? 'white' : 'black';
+
+  const topCaptured = topColor === 'white' ? capturedByWhite : capturedByBlack;
+  const topAdvantage = topColor === 'white' ? whiteAdvantage : blackAdvantage;
+  const bottomCaptured = bottomColor === 'white' ? capturedByWhite : capturedByBlack;
+  const bottomAdvantage = bottomColor === 'white' ? whiteAdvantage : blackAdvantage;
+
+  const turnChar = fen.split(' ')[1]; // 'w' or 'b'
+  const isTopActive = !!activeConfig && !gameOver && turnChar === (topColor === 'white' ? 'w' : 'b');
+  const isBottomActive = !!activeConfig && !gameOver && turnChar === (bottomColor === 'white' ? 'w' : 'b');
+
+  const coachInfo = {
+    name: "Coach All-Chess",
+    rating: activeConfig ? activeConfig.levelRating : lobbyLevel,
+    avatar: <img src="/assets/coach/coach_neutral.webp" alt="Coach" className="w-full h-full object-cover" />,
+    right: <span className="px-2.5 py-1 rounded-md bg-black/[0.06] dark:bg-black/25 text-[13px] font-bold text-theme-muted">{activeConfig ? activeConfig.levelName : `Rated ${lobbyLevel}`}</span>,
+  };
+
+  const userInfo = {
+    name: "You",
+    rating: 905,
+    avatar: <PlayerAvatar name="Master" size={40} className="!rounded-none" />,
+    right: (
+      <>
+        {activeConfig && (
+          <button
+            type="button"
+            onClick={() => {
+              setActiveConfig(null);
+              chess.reset();
+              setFen(chess.fen());
+              setMoves([]);
+              setArrows([]);
+              setHighlights([]);
+              setGameOver(null);
+              setTippingSquare(null);
+              setKingBadges([]);
+              setShowGameOverModal(false);
+            }}
+            className="text-xs font-semibold text-theme-muted hover:text-theme-text flex items-center gap-1 transition-colors"
+          >
+            <ArrowLeft size={13} />
+            <span>Exit to Lobby</span>
+          </button>
+        )}
+      </>
+    ),
+  };
+
+  const topPlayerInfo = isUserBottom ? coachInfo : userInfo;
+  const bottomPlayerInfo = isUserBottom ? userInfo : coachInfo;
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
       {/* Center Zone: Board & Eval Bar */}
       <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 min-w-0 lg:!p-0 lg:h-full relative">
         <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
-          {/* Top Player (Coach) */}
+          {/* Top Player */}
           <PlayerBar
             testId="player-top"
-            name="Coach All-Chess"
-            rating={activeConfig ? activeConfig.levelRating : lobbyLevel}
-            avatar={<img src="/assets/coach/coach_neutral.webp" alt="Coach" className="w-full h-full object-cover" />}
-            captured={coachCaptured.map((p, idx) => (
+            name={topPlayerInfo.name}
+            rating={topPlayerInfo.rating}
+            avatar={topPlayerInfo.avatar}
+            captured={topCaptured.map((p, idx) => (
               <span key={idx}>{PIECE_FIGURINES[p]}</span>
             ))}
-            advantage={coachAdvantage}
-            active={!!activeConfig && !gameOver && fen.split(' ')[1] !== (userIsWhite ? 'w' : 'b')}
-            right={<span className="px-2.5 py-1 rounded-md bg-black/[0.06] dark:bg-black/25 text-[13px] font-bold text-theme-muted">{activeConfig ? activeConfig.levelName : `Rated ${lobbyLevel}`}</span>}
+            advantage={topAdvantage}
+            active={isTopActive}
+            right={topPlayerInfo.right}
           />
 
           {/* Board + Eval Bar */}
@@ -733,42 +798,18 @@ export const PlayGame: React.FC = () => {
             </div>
           </div>
 
-          {/* Bottom Player (User) */}
+          {/* Bottom Player */}
           <PlayerBar
             testId="player-bottom"
-            name="You"
-            rating={905}
-            avatar={<PlayerAvatar name="Master" size={40} className="!rounded-none" />}
-            captured={userCaptured.map((p, idx) => (
+            name={bottomPlayerInfo.name}
+            rating={bottomPlayerInfo.rating}
+            avatar={bottomPlayerInfo.avatar}
+            captured={bottomCaptured.map((p, idx) => (
               <span key={idx}>{PIECE_FIGURINES[p]}</span>
             ))}
-            advantage={userAdvantage}
-            active={!!activeConfig && !gameOver && fen.split(' ')[1] === (userIsWhite ? 'w' : 'b')}
-            right={
-              <>
-                {activeConfig && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveConfig(null);
-                      chess.reset();
-                      setFen(chess.fen());
-                      setMoves([]);
-                      setArrows([]);
-                      setHighlights([]);
-                      setGameOver(null);
-    setTippingSquare(null);
-                      setKingBadges([]);
-                      setShowGameOverModal(false);
-                    }}
-                    className="text-xs font-semibold text-theme-muted hover:text-theme-text flex items-center gap-1 transition-colors"
-                  >
-                    <ArrowLeft size={13} />
-                    <span>Exit to Lobby</span>
-                  </button>
-                )}
-              </>
-            }
+            advantage={bottomAdvantage}
+            active={isBottomActive}
+            right={bottomPlayerInfo.right}
           />
         </div>
       </div>
@@ -900,6 +941,15 @@ export const PlayGame: React.FC = () => {
 
                   {/* Sub-action row underneath */}
                   <div className="flex items-center justify-between px-1 text-xs text-theme-muted">
+                    <button
+                      type="button"
+                      onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
+                      className="flex items-center gap-1 hover:text-theme-text transition-colors p-1"
+                      title="Flip Board (F)"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Flip</span>
+                    </button>
                     <button
                       type="button"
                       onClick={handleDownloadPgn}

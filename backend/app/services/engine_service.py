@@ -242,6 +242,8 @@ def _run_single_pass_review_sync(
     depth: int = 16,
     time_per_move: float = 0.3,
     is_user_white: bool = True,
+    white_rating: Optional[int] = None,
+    black_rating: Optional[int] = None,
     on_progress: Optional[Callable[[int], None]] = None
 ) -> Dict[str, Any]:
     """
@@ -413,8 +415,62 @@ def _run_single_pass_review_sync(
             else:
                 is_in_book = False
 
+        board_before = positions[idx]
+        n_legal = len(list(board_before.legal_moves))
+
+        # Check recapture: opponent captured on S, current move captures back on S
+        is_recap = False
+        if board_before.move_stack:
+            prev_m = board_before.peek()
+            cur_m = played_chess_moves[idx]
+            if cur_m and cur_m.to_square == prev_m.to_square:
+                b_copy = board_before.copy()
+                b_copy.pop()
+                if b_copy.is_capture(prev_m) and board_before.is_capture(cur_m):
+                    is_recap = True
+
+        # Check if played move is top move OR has equal eval/mate to top line
         is_top = (san_move == pos_before["best_move_san"])
+        if not is_top and pos_before.get("top_lines"):
+            top_line = pos_before["top_lines"][0]
+            for line in pos_before["top_lines"][1:]:
+                if line.get("move") == san_move:
+                    if line.get("eval") == top_line.get("eval") and line.get("mate") == top_line.get("mate"):
+                        is_top = True
+                    break
+
         is_cm = (pos_after["mate"] == 0)
+
+        # Detect if best line wins material or delivers mate
+        best_wins_material_or_mate = False
+        best_eval_gap = 0.0
+        if pos_before.get("top_lines"):
+            top_l = pos_before["top_lines"][0]
+            b_ev = top_l.get("eval", pos_after["eval"])
+            b_m = top_l.get("mate")
+            if color == 'w':
+                best_eval_gap = b_ev - pos_after["eval"]
+            else:
+                best_eval_gap = pos_after["eval"] - b_ev
+
+            if b_m is not None:
+                best_wins_material_or_mate = True
+            else:
+                tb = board_before.copy()
+                mover_color = chess.WHITE if color == 'w' else chess.BLACK
+                opp_color = chess.BLACK if color == 'w' else chess.WHITE
+                init_mat = sum([1, 3, 3, 5, 9][p-1] * len(tb.pieces(p, mover_color)) for p in range(1, 6)) - \
+                           sum([1, 3, 3, 5, 9][p-1] * len(tb.pieces(p, opp_color)) for p in range(1, 6))
+                for psan in top_l.get("pv", [])[:4]:
+                    try:
+                        tb.push_san(psan)
+                    except Exception:
+                        break
+                    cur_mat = sum([1, 3, 3, 5, 9][p-1] * len(tb.pieces(p, mover_color)) for p in range(1, 6)) - \
+                              sum([1, 3, 3, 5, 9][p-1] * len(tb.pieces(p, opp_color)) for p in range(1, 6))
+                    if cur_mat - init_mat >= 2:
+                        best_wins_material_or_mate = True
+                        break
 
         classification = classify_move(
             eval_before_pawns=pos_before["eval"],
@@ -427,11 +483,14 @@ def _run_single_pass_review_sync(
             gap_to_second_win_pct=pos_before["gap_to_second"],
             opponent_just_made_mistake=last_mover_made_mistake,
             is_top_engine_move=is_top,
-            is_checkmate=is_cm
+            is_checkmate=is_cm,
+            is_recapture=is_recap,
+            num_legal_moves=n_legal,
+            best_wins_material_or_mate=best_wins_material_or_mate,
+            best_eval_gap=best_eval_gap
         )
 
-        # Miss can only occur after opponent mistake or blunder (NOT inaccuracy)
-        last_mover_made_mistake = (classification in ("mistake", "blunder"))
+        last_mover_made_mistake = (classification in ("inaccuracy", "mistake", "blunder"))
 
         # Win% calculation
         played_win_pct = eval_to_win_pct(pos_after["eval"], pos_after["mate"])
@@ -450,9 +509,13 @@ def _run_single_pass_review_sync(
         }
         analyzed_moves.append(updated_m)
 
-    # Compute game-level accuracy using the Lichess method
-    accuracy = calculate_game_accuracy(analyzed_moves)
-    est_ratings = estimate_performance_ratings(accuracy)
+    # Compute game-level accuracy using the Chess.com calibrated method
+    accuracy = calculate_game_accuracy(analyzed_moves, method="chesscom")
+    est_ratings = estimate_performance_ratings(
+        accuracy,
+        white_base_rating=white_rating,
+        black_base_rating=black_rating
+    )
     phase_grades = calculate_phase_grades(analyzed_moves, is_user_white=is_user_white)
 
     return {
@@ -469,6 +532,8 @@ async def analyze_game_moves_full(
     depth: int = 16,
     time_per_move: float = 0.3,
     is_user_white: bool = True,
+    white_rating: Optional[int] = None,
+    black_rating: Optional[int] = None,
     on_progress: Optional[Callable[[int], None]] = None
 ) -> Dict[str, Any]:
     """
@@ -484,5 +549,7 @@ async def analyze_game_moves_full(
             depth,
             time_per_move,
             is_user_white,
+            white_rating,
+            black_rating,
             on_progress
         )
