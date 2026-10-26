@@ -124,6 +124,9 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
     [coachText, isWhiteWin, isBlackWin]
   );
 
+  const topPlayer = orientation === 'white' ? game.black : game.white;
+  const bottomPlayer = orientation === 'white' ? game.white : game.black;
+
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
       {/* --- LEFT ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile, desktop flex-1) --- */}
@@ -131,9 +134,10 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
         <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
           {/* Top Player Row */}
           <PlayerBar
-            name={game.black.username}
-            rating={game.black.rating}
-            avatar={<PlayerAvatar name={game.black.username === 'You' ? 'Master' : game.black.username} size={40} className="!rounded-none" />}
+            testId="player-top"
+            name={topPlayer.username}
+            rating={topPlayer.rating}
+            avatar={<PlayerAvatar name={topPlayer.username === 'You' ? 'Master' : topPlayer.username} size={40} className="!rounded-none" />}
             right={<span className="px-2.5 py-1 rounded-md bg-black/[0.06] dark:bg-black/25 text-[13px] font-bold text-theme-muted capitalize">{game.speed} · {game.timeControl}</span>}
           />
 
@@ -170,9 +174,10 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
 
           {/* Bottom Player Row */}
           <PlayerBar
-            name={game.white.username}
-            rating={game.white.rating}
-            avatar={<PlayerAvatar name={game.white.username === 'You' ? 'Master' : game.white.username} size={40} className="!rounded-none" />}
+            testId="player-bottom"
+            name={bottomPlayer.username}
+            rating={bottomPlayer.rating}
+            avatar={<PlayerAvatar name={bottomPlayer.username === 'You' ? 'Master' : bottomPlayer.username} size={40} className="!rounded-none" />}
             right={
               <button
                 type="button"

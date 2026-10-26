@@ -476,22 +476,30 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
   };
 
+  const topPlayer = orientation === 'white' ? game.black : game.white;
+  const bottomPlayer = orientation === 'white' ? game.white : game.black;
+  const topCaptured = orientation === 'white' ? materialState.blackCaptured : materialState.whiteCaptured;
+  const topDiff = orientation === 'white' ? materialState.blackDiff : materialState.whiteDiff;
+  const bottomCaptured = orientation === 'white' ? materialState.whiteCaptured : materialState.blackCaptured;
+  const bottomDiff = orientation === 'white' ? materialState.whiteDiff : materialState.blackDiff;
+
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
       {/* --- CENTER ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile) --- */}
       <div className="sticky top-0 z-20 w-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page border-b lg:border-b-0 border-theme-border/60 flex-shrink-0 lg:flex-1 min-w-0">
         <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
-          {/* Top Player Row (Black) + Material Tally */}
+          {/* Top Player Row + Material Tally */}
           <PlayerBar
-            name={game.black.username}
-            rating={game.black.rating}
-            avatar={<PlayerAvatar name={game.black.username === 'You' ? 'Master' : game.black.username} size={40} className="!rounded-none" />}
+            testId="player-top"
+            name={topPlayer.username}
+            rating={topPlayer.rating}
+            avatar={<PlayerAvatar name={topPlayer.username === 'You' ? 'Master' : topPlayer.username} size={40} className="!rounded-none" />}
             captured={
               <>
-                {materialState.blackCaptured.map((p, i) => (
-                  <span key={`bc-${i}`}>{PIECE_FIGURINES[p]}</span>
+                {topCaptured.map((p, i) => (
+                  <span key={`tc-${i}`}>{PIECE_FIGURINES[p]}</span>
                 ))}
-                {materialState.blackDiff && <span className="ml-1 text-[13px] font-bold">{materialState.blackDiff}</span>}
+                {topDiff && <span className="ml-1 text-[13px] font-bold">{topDiff}</span>}
               </>
             }
             right={<span className="px-2.5 py-1 rounded-md bg-black/[0.06] dark:bg-black/25 text-[13px] font-bold text-theme-muted capitalize">{game.speed} · {game.timeControl}</span>}
@@ -521,17 +529,18 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             </div>
           </div>
 
-          {/* Bottom Player Row (White) + Material Tally */}
+          {/* Bottom Player Row + Material Tally */}
           <PlayerBar
-            name={game.white.username}
-            rating={game.white.rating}
-            avatar={<PlayerAvatar name={game.white.username === 'You' ? 'Master' : game.white.username} size={40} className="!rounded-none" />}
+            testId="player-bottom"
+            name={bottomPlayer.username}
+            rating={bottomPlayer.rating}
+            avatar={<PlayerAvatar name={bottomPlayer.username === 'You' ? 'Master' : bottomPlayer.username} size={40} className="!rounded-none" />}
             captured={
               <>
-                {materialState.whiteCaptured.map((p, i) => (
-                  <span key={`wc-${i}`}>{PIECE_FIGURINES[p]}</span>
+                {bottomCaptured.map((p, i) => (
+                  <span key={`bc-${i}`}>{PIECE_FIGURINES[p]}</span>
                 ))}
-                {materialState.whiteDiff && <span className="ml-1 text-[13px] font-bold">{materialState.whiteDiff}</span>}
+                {bottomDiff && <span className="ml-1 text-[13px] font-bold">{bottomDiff}</span>}
               </>
             }
             right={
