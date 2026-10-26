@@ -16,7 +16,7 @@ from alembic import command
 from app.config import settings
 from app.database import engine as db_engine, Base
 import app.models  # registers models with Base
-from app.routers import auth, games, sync, stats, jobs, engine as engine_router, puzzles, learn, friends, coach
+from app.routers import auth, games, sync, stats, jobs, engine as engine_router, puzzles, learn, friends, coach, scout
 from app.services.seeder import seed_puzzles
 from app.database import SessionLocal
 
@@ -112,3 +112,4 @@ app.include_router(puzzles.router, prefix="/api/v1")
 app.include_router(learn.router, prefix="/api/v1")
 app.include_router(friends.router, prefix="/api/v1")
 app.include_router(coach.router, prefix="/api/v1")
+app.include_router(scout.router, prefix="/api/v1")
