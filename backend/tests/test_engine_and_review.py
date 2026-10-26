@@ -7,6 +7,7 @@ from app.services.engine_service import (
     analyze_position,
     analyze_game_moves_full,
     get_stockfish_executable_path,
+    generate_line_why_template,
     BOOK_PREFIXES,
     BOOK_POSITION_EPDS
 )
@@ -270,3 +271,35 @@ async def test_real_engine_smoke():
         assert m["classification"] is not None
         assert m["eval"] is not None
         assert -10.0 <= m["eval"]["eval"] <= 10.0
+
+
+def test_generate_line_why_piece_aware():
+    # 1. Bishop development preparing castling
+    board_e4e5 = chess.Board("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
+    why_be2 = generate_line_why_template(board_e4e5, chess.Move.from_uci("f1e2"))
+    assert why_be2.lower() == "develops the bishop to e2 and prepares castling."
+
+    # 2. Knight development preparing castling
+    why_nf3 = generate_line_why_template(board_e4e5, chess.Move.from_uci("g1f3"))
+    assert why_nf3.lower() == "develops the knight to f3 and prepares castling."
+
+    # 3. Central pawn move
+    board_init = chess.Board()
+    why_e4 = generate_line_why_template(board_init, chess.Move.from_uci("e2e4"))
+    assert why_e4 == "Claims central space with the pawn on e4."
+
+    # 4. Castling move
+    board_ready_castle = chess.Board("rnbqk2r/pppp1ppp/5n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4")
+    why_castle = generate_line_why_template(board_ready_castle, chess.Move.from_uci("e1g1"))
+    assert "castle" in why_castle.lower()
+
+    # 5. Capture move
+    board_cap = chess.Board("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
+    why_cap = generate_line_why_template(board_cap, chess.Move.from_uci("e4d5"))
+    assert "captures pawn on d5" in why_cap.lower()
+
+    # 6. Quiet move without concrete theme returns empty string
+    board_quiet = chess.Board("rnbqkbnr/pppppppp/8/8/8/7P/PPPPPPP1/RNBQKBNR b KQkq - 0 1")
+    # Black pushes h6
+    why_quiet = generate_line_why_template(board_quiet, chess.Move.from_uci("h7h6"))
+    assert why_quiet == ""

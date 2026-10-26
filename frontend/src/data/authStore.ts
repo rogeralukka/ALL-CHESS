@@ -6,6 +6,9 @@ export interface UserSession {
   username: string;
   chesscomUsername?: string | null;
   lichessUsername?: string | null;
+  avatarUrl?: string | null;
+  countryCode?: string | null;
+  createdAt?: string | null;
 }
 
 interface AuthState {

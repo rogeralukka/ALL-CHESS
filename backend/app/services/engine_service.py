@@ -78,19 +78,129 @@ def get_stockfish_executable_path() -> str:
 
 
 def generate_line_why_template(board: chess.Board, move: chess.Move) -> str:
-    """Generates a human-friendly template reason for the suggested line."""
+    """Generates a human-friendly, piece-aware concrete reason for the suggested line."""
     to_sq_name = chess.square_name(move.to_square)
+    from_sq_name = chess.square_name(move.from_square)
+
+    # 1. Castling
+    if board.is_castling(move) or move in (
+        chess.Move.from_uci("e1g1"), chess.Move.from_uci("e1c1"),
+        chess.Move.from_uci("e8g8"), chess.Move.from_uci("e8c8")
+    ):
+        side = "kingside" if chess.square_file(move.to_square) > chess.square_file(move.from_square) else "queenside"
+        return f"Castles {side} to secure king safety and activate the rook."
+
+    piece = board.piece_at(move.from_square)
+    if not piece:
+        return ""
+
+    piece_type = piece.piece_type
+    color = piece.color
+    mover_name = chess.piece_name(piece_type)
+
+    # 2. Captures
     if board.is_capture(move):
         captured = board.piece_at(move.to_square)
-        cap_name = chess.piece_name(captured.piece_type) if captured else "piece"
-        return f"Captures {cap_name} on {to_sq_name}, winning material or relieving tactical tension."
+        cap_name = chess.piece_name(captured.piece_type) if captured else ("pawn" if board.is_en_passant(move) else "piece")
+        return f"Captures {cap_name} on {to_sq_name} with the {mover_name}."
+
+    # 3. Check / Checkmate
     if board.gives_check(move):
+        b_after = board.copy()
+        b_after.push(move)
+        if b_after.is_checkmate():
+            return f"Delivers checkmate on {to_sq_name}."
         return f"Delivers check on {to_sq_name}, disrupting opponent coordination."
-    if move in (chess.Move.from_uci("e1g1"), chess.Move.from_uci("e1c1"), chess.Move.from_uci("e8g8"), chess.Move.from_uci("e8c8")):
-        return "Castles to secure king safety and activate the rook on an open file."
-    if to_sq_name in ("e4", "d4", "e5", "d5", "c4", "c5"):
-        return f"Stakes a central claim on {to_sq_name} and expands board influence."
-    return f"Advances to {to_sq_name}, coordinating pieces and maintaining pressure."
+
+    # 4. Piece-specific concrete logic
+    if piece_type == chess.BISHOP:
+        is_white_starting = (color == chess.WHITE and from_sq_name in ("c1", "f1"))
+        is_black_starting = (color == chess.BLACK and from_sq_name in ("c8", "f8"))
+        if is_white_starting or is_black_starting:
+            prepares_castling = False
+            if color == chess.WHITE:
+                if from_sq_name == "f1" and board.has_kingside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+                elif from_sq_name == "c1" and board.has_queenside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+            else:
+                if from_sq_name == "f8" and board.has_kingside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+                elif from_sq_name == "c8" and board.has_queenside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+
+            if prepares_castling:
+                return f"Develops the bishop to {to_sq_name} and prepares castling."
+            return f"Develops the bishop to {to_sq_name}."
+
+        if to_sq_name in ("b2", "g2", "b7", "g7"):
+            return f"Fianchettos the bishop on {to_sq_name} along the long diagonal."
+        return ""
+
+    if piece_type == chess.KNIGHT:
+        is_white_starting = (color == chess.WHITE and from_sq_name in ("b1", "g1"))
+        is_black_starting = (color == chess.BLACK and from_sq_name in ("b8", "g8"))
+        if is_white_starting or is_black_starting:
+            prepares_castling = False
+            if color == chess.WHITE:
+                if from_sq_name == "g1" and board.has_kingside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+                elif from_sq_name == "b1" and board.has_queenside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+            else:
+                if from_sq_name == "g8" and board.has_kingside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+                elif from_sq_name == "b8" and board.has_queenside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+
+            if prepares_castling:
+                return f"Develops the knight to {to_sq_name} and prepares castling."
+            return f"Develops the knight to {to_sq_name}."
+
+        if to_sq_name in ("d5", "e5", "d4", "e4", "f5", "c5", "f4", "c4"):
+            return f"Posts the knight on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.PAWN:
+        if move.promotion:
+            return f"Promotes pawn to {chess.piece_name(move.promotion)} on {to_sq_name}."
+        if (color == chess.WHITE and chess.square_rank(move.to_square) == 6) or            (color == chess.BLACK and chess.square_rank(move.to_square) == 1):
+            return f"Advances dangerous passed pawn to {to_sq_name}."
+        if to_sq_name in ("e4", "d4", "e5", "d5"):
+            return f"Claims central space with the pawn on {to_sq_name}."
+        if to_sq_name in ("c4", "c5", "f4", "f5"):
+            return f"Challenges the center with {to_sq_name}."
+        if to_sq_name in ("c3", "c6", "e3", "e6", "d3", "d6"):
+            return f"Solidifies pawn structure with {to_sq_name}."
+        return ""
+
+    if piece_type == chess.ROOK:
+        file_idx = chess.square_file(move.to_square)
+        pawns_on_file = [
+            sq for sq in chess.SQUARES
+            if chess.square_file(sq) == file_idx and board.piece_at(sq) and board.piece_at(sq).piece_type == chess.PAWN
+        ]
+        if len(pawns_on_file) == 0:
+            file_letter = chr(ord('a') + file_idx)
+            return f"Places the rook on the open {file_letter}-file."
+        if len(pawns_on_file) == 1 and board.piece_at(pawns_on_file[0]).color != color:
+            file_letter = chr(ord('a') + file_idx)
+            return f"Positions the rook on the semi-open {file_letter}-file."
+        if (color == chess.WHITE and chess.square_rank(move.to_square) == 6) or            (color == chess.BLACK and chess.square_rank(move.to_square) == 1):
+            return f"Infiltrates the 7th rank with the rook on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.QUEEN:
+        if to_sq_name in ("d4", "e4", "d5", "e5", "c4", "f4", "c5", "f5"):
+            return f"Centralizes the queen on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.KING:
+        if len(board.piece_map()) <= 10:
+            return f"Centralizes the king on {to_sq_name} for the endgame."
+        return ""
+
+    return ""
 
 
 def _analyse_fen_sync(
