@@ -6,6 +6,7 @@ import { PlayerAvatar, WDLBar } from '@/components/Bits';
 import { scoutRepository } from '@/data/repositories';
 import { ScoutProfile as ScoutProfileType } from '@/data/types';
 import { ScoutProfile } from './ScoutProfile';
+import { overallResults } from './stats';
 
 const PLATFORMS = ['Chess.com', 'Lichess'] as const;
 
@@ -57,7 +58,8 @@ export const ScoutSearch: React.FC = () => {
     }
   };
   const games = profiles.reduce((n, p) => n + p.mostPlayed.reduce((m, o) => m + o.games, 0), 0);
-  const avgWin = profiles.length ? Math.round(profiles.reduce((n, p) => n + p.winRate, 0) / profiles.length) : 0;
+  const rated = profiles.filter((p) => p.winRate != null);
+  const avgWin = rated.length ? Math.round(rated.reduce((n, p) => n + (p.winRate as number), 0) / rated.length) : null;
 
   return (
     <PageContainer className="!max-w-[980px]">
@@ -116,7 +118,7 @@ export const ScoutSearch: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatTile icon={<Swords size={24} className="text-[#81b64c]" />} value={profiles.length} label="Opponents" />
         <StatTile icon={<BookOpen size={24} className="text-[#f7c631]" />} value={games} label="Games studied" />
-        <StatTile icon={<Percent size={24} className="text-[#5ec1e6]" />} value={profiles.length ? `${avgWin}%` : '–'} label="Average win rate" />
+        <StatTile icon={<Percent size={24} className="text-[#5ec1e6]" />} value={avgWin != null ? `${avgWin}%` : '–'} label="Average win rate" />
       </div>
 
       <SectionCard
@@ -136,7 +138,7 @@ export const ScoutSearch: React.FC = () => {
         ) : (
           <ul className="divide-y divide-white/[0.06]">
             {profiles.map((p) => {
-              const draw = p.mostPlayed[0]?.drawRate ?? 10;
+              const results = overallResults(p);
               return (
                 <li key={p.username}>
                   <button
@@ -152,7 +154,7 @@ export const ScoutSearch: React.FC = () => {
                         <span className="text-[17px] font-bold text-theme-text truncate">{p.username}</span>
                       </div>
                       <div className="text-[14px] text-theme-muted">
-                        Rapid <b className="text-theme-text tabular-nums">{p.rating}</b> · {p.recentGames.length} games scouted
+                        Rating <b className="text-theme-text tabular-nums">{p.rating ?? '–'}</b> · {p.recentGames.length} games scouted
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {p.mostPlayed.slice(0, 2).map((op) => (
@@ -166,11 +168,17 @@ export const ScoutSearch: React.FC = () => {
                     <div className="hidden sm:block w-[232px] flex-shrink-0">
                       <div className="flex items-baseline justify-between mb-2">
                         <span className="text-[12px] font-bold uppercase tracking-wide text-theme-muted">Results</span>
-                        <span className="text-[18px] leading-5 font-display font-extrabold text-theme-text tabular-nums">
-                          {p.winRate}%<span className="ml-1 text-[12px] font-semibold text-theme-muted">wins</span>
-                        </span>
+                        {results && (
+                          <span className="text-[18px] leading-5 font-display font-extrabold text-theme-text tabular-nums">
+                            {Math.round(results.win)}%<span className="ml-1 text-[12px] font-semibold text-theme-muted">wins</span>
+                          </span>
+                        )}
                       </div>
-                      <WDLBar win={p.winRate} draw={draw} loss={Math.max(0, 100 - p.winRate - draw)} height={10} showLabels />
+                      {results ? (
+                        <WDLBar win={results.win} draw={results.draw} loss={results.loss} height={10} showLabels />
+                      ) : (
+                        <p className="text-[13px] text-theme-muted">No public games yet</p>
+                      )}
                     </div>
                     <ChevronRight size={22} className="text-theme-muted group-hover:text-theme-text flex-shrink-0" />
                   </button>

@@ -6,6 +6,7 @@ import { SectionCard, StatTile } from '@/components/ListUI';
 import { PlayerAvatar, WDLBar } from '@/components/Bits';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { ScoutProfile as ScoutProfileType } from '@/data/types';
+import { overallAccuracy, overallResults } from './stats';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 
 interface ScoutProfileProps {
@@ -18,8 +19,8 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
   const me = useCurrentUser();
 
   const games = profile.mostPlayed.reduce((n, o) => n + o.games, 0);
-  const acc = profile.mostPlayed.length ? profile.mostPlayed.reduce((n, o) => n + o.avgAccuracy * o.games, 0) / Math.max(1, games) : 0;
-  const draw = profile.mostPlayed[0]?.drawRate ?? 10;
+  const acc = overallAccuracy(profile);
+  const results = overallResults(profile);
 
   // strongest and weakest opening, from their own results (only openings with at least 5 games)
   const sample = profile.mostPlayed.filter((o) => o.games >= 5);
@@ -48,27 +49,34 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
             <h1 className="cc-title text-[28px] leading-9 truncate">{profile.username}</h1>
           </div>
           <div className="max-w-sm">
-            <WDLBar win={profile.winRate} draw={draw} loss={Math.max(0, 100 - profile.winRate - draw)} height={10} showLabels />
+            {results ? (
+              <WDLBar win={results.win} draw={results.draw} loss={results.loss} height={10} showLabels />
+            ) : (
+              <p className="text-[14px] text-theme-muted">No public games to read yet.</p>
+            )}
           </div>
+          {results && (
           <div className="mt-auto">
             <button type="button" onClick={() => navigate('/play')} className="btn-primary h-12 px-5 rounded-[5px] text-[17px] font-extrabold font-display inline-flex items-center gap-2">
               <Swords size={19} /> Practise against this style
             </button>
           </div>
+          )}
         </div>
       </section>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatTile icon={<Crown size={22} className="text-[#f7c631]" />} value={profile.rating} label="Rapid rating" />
-        <StatTile icon={<Trophy size={22} className="text-[#81b64c]" />} value={`${profile.winRate}%`} label="Win rate" />
+        <StatTile icon={<Crown size={22} className="text-[#f7c631]" />} value={profile.rating ?? '–'} label="Rating" />
+        <StatTile icon={<Trophy size={22} className="text-[#81b64c]" />} value={profile.winRate != null ? `${Math.round(profile.winRate)}%` : '–'} label="Win rate" />
         <StatTile icon={<BookOpen size={22} className="text-[#5ec1e6]" />} value={games} label="Games studied" />
-        <StatTile icon={<Target size={22} className="text-[#f7a531]" />} value={`${acc.toFixed(1)}%`} label="Avg accuracy" />
+        <StatTile icon={<Target size={22} className="text-[#f7a531]" />} value={acc != null ? `${acc.toFixed(1)}%` : '–'} label="Avg accuracy" />
       </div>
 
       <SectionCard title="Coach's game plan" bodyClassName="p-5">
         <CoachSpeech expression="thinking" size={80} text={plan} />
       </SectionCard>
 
+      {profile.mostPlayed.length > 0 && (
       <SectionCard title="Opening repertoire">
         <ul className="divide-y divide-white/[0.06]">
           {profile.mostPlayed.map((op) => (
@@ -82,13 +90,14 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
                 <WDLBar win={op.winRate} draw={op.drawRate} loss={op.lossRate} height={8} />
               </div>
               <div className="hidden sm:block text-right">
-                <div className="text-[15px] font-extrabold tabular-nums text-theme-text">{op.avgAccuracy}%</div>
+                <div className="text-[15px] font-extrabold tabular-nums text-theme-text">{op.avgAccuracy != null ? `${op.avgAccuracy}%` : '–'}</div>
                 <div className="text-[12px] text-theme-muted">accuracy</div>
               </div>
             </li>
           ))}
         </ul>
       </SectionCard>
+      )}
 
       {(best || worst) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -96,7 +105,7 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
             <SectionCard title="Where they're strong" bodyClassName="p-5 flex items-start gap-3">
               <Trophy size={22} className="text-[#81b64c] flex-shrink-0 mt-0.5" />
               <p className="text-[14px] text-theme-text/85">
-                <b>{best.name}</b>: {best.winRate}% wins over {best.games} games, {best.avgAccuracy}% accuracy.
+                <b>{best.name}</b>: {best.winRate}% wins over {best.games} games{best.avgAccuracy != null ? `, ${best.avgAccuracy}% accuracy` : ''}.
               </p>
             </SectionCard>
           )}
@@ -104,13 +113,14 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
             <SectionCard title="Where they crack" bodyClassName="p-5 flex items-start gap-3">
               <ShieldAlert size={22} className="text-[#fa412d] flex-shrink-0 mt-0.5" />
               <p className="text-[14px] text-theme-text/85">
-                <b>{worst.name}</b>: only {worst.winRate}% wins over {worst.games} games, {worst.avgAccuracy}% accuracy.
+                <b>{worst.name}</b>: only {worst.winRate}% wins over {worst.games} games{worst.avgAccuracy != null ? `, ${worst.avgAccuracy}% accuracy` : ''}.
               </p>
             </SectionCard>
           )}
         </div>
       )}
 
+      {profile.recentGames.length > 0 && (
       <SectionCard title="Recent games">
         <ul className="divide-y divide-white/[0.06]">
           {profile.recentGames.map((g) => (
@@ -130,6 +140,7 @@ export const ScoutProfile: React.FC<ScoutProfileProps> = ({ profile, onBack }) =
           ))}
         </ul>
       </SectionCard>
+      )}
     </PageContainer>
   );
 };
