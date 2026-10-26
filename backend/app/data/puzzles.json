@@ -1,0 +1,604 @@
+[
+  {
+    "id": "puz-01",
+    "fen": "6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1",
+    "solution": [
+      "Rd8#"
+    ],
+    "rating": 650,
+    "theme": [
+      "mateIn1",
+      "backRank"
+    ],
+    "goal": "White to move — Deliver back-rank checkmate in 1!"
+  },
+  {
+    "id": "puz-02",
+    "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1",
+    "solution": [
+      "Qxf7#"
+    ],
+    "rating": 700,
+    "theme": [
+      "mateIn1",
+      "queenAndBishop"
+    ],
+    "goal": "White to move — Strike the weak f7 square for mate!"
+  },
+  {
+    "id": "puz-03",
+    "fen": "r1b1k2r/pp1p1ppp/4p3/8/1n2n3/2N5/PPPN1PPP/R3KB1R w KQkq - 0 1",
+    "solution": [
+      "Nd5",
+      "exd5"
+    ],
+    "rating": 800,
+    "theme": [
+      "fork"
+    ],
+    "goal": "White to move — Find the tactical fork!"
+  },
+  {
+    "id": "puz-04",
+    "fen": "5rk1/5ppp/8/8/8/8/1Q3PPP/4R1K1 w - - 0 1",
+    "solution": [
+      "Qb8",
+      "Rxb8",
+      "Re8#"
+    ],
+    "rating": 850,
+    "theme": [
+      "mateIn2",
+      "backRank",
+      "deflection"
+    ],
+    "goal": "White to move — Deflect the defender and mate in 2!"
+  },
+  {
+    "id": "puz-05",
+    "fen": "r1b2rk1/pp3ppp/2n5/3p4/8/1P1B1Q2/P1P2PPP/R1B1R1K1 w - - 0 1",
+    "solution": [
+      "Bxh7+",
+      "Kxh7",
+      "Qh5+"
+    ],
+    "rating": 920,
+    "theme": [
+      "greekGift",
+      "sacrifice"
+    ],
+    "goal": "White to move — Initiate the Greek Gift sacrifice!"
+  },
+  {
+    "id": "puz-06",
+    "fen": "6k1/5ppp/8/8/8/4N3/1Q6/6K1 w - - 0 1",
+    "solution": [
+      "Qb8#"
+    ],
+    "rating": 750,
+    "theme": [
+      "mateIn1",
+      "backRank"
+    ],
+    "goal": "White to move — Win immediately!"
+  },
+  {
+    "id": "puz-07",
+    "fen": "r3kb1r/pp2pppp/2n5/3q4/3P4/5B2/PP3PPP/R1BQK2R b KQkq - 0 1",
+    "solution": [
+      "Qxd4",
+      "Bxc6+"
+    ],
+    "rating": 950,
+    "theme": [
+      "pin",
+      "discoveredAttack"
+    ],
+    "goal": "Black to move — Watch out for tactical pins!"
+  },
+  {
+    "id": "puz-08",
+    "fen": "8/8/4k3/8/8/2B5/8/r3K3 w - - 0 1",
+    "solution": [
+      "Bxa1"
+    ],
+    "rating": 680,
+    "theme": [
+      "skewer",
+      "hangingPiece"
+    ],
+    "goal": "White to move — Capture the hanging rook!"
+  },
+  {
+    "id": "puz-09",
+    "fen": "5rk1/1p3ppp/8/8/4N3/8/5PPP/R5K1 w - - 0 1",
+    "solution": [
+      "Nf6+",
+      "Kh8"
+    ],
+    "rating": 1000,
+    "theme": [
+      "knightCheck",
+      "anastasia"
+    ],
+    "goal": "White to move — Penetrate the castled defenses!"
+  },
+  {
+    "id": "puz-10",
+    "fen": "rn2k2r/pp3ppp/2p5/3p4/3P4/1B3P2/PP1q1PPP/R4RK1 w kq - 0 1",
+    "solution": [
+      "Rfe1+",
+      "Kd8"
+    ],
+    "rating": 900,
+    "theme": [
+      "openFile",
+      "check"
+    ],
+    "goal": "White to move — Seize the e-file with check!"
+  },
+  {
+    "id": "puz-11",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 975,
+    "theme": [
+      "fork",
+      "doubleAttack"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-12",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1000,
+    "theme": [
+      "pin",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-13",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1025,
+    "theme": [
+      "skewer",
+      "endgame"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-14",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1050,
+    "theme": [
+      "mateIn1",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-15",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1075,
+    "theme": [
+      "mateIn2",
+      "sacrifice"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-16",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1100,
+    "theme": [
+      "discoveredAttack",
+      "hangingPiece"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-17",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1125,
+    "theme": [
+      "backRank",
+      "tactics"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-18",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1150,
+    "theme": [
+      "clearance",
+      "attraction"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-19",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1175,
+    "theme": [
+      "fork",
+      "doubleAttack"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-20",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1200,
+    "theme": [
+      "pin",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-21",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1225,
+    "theme": [
+      "skewer",
+      "endgame"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-22",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1250,
+    "theme": [
+      "mateIn1",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-23",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1275,
+    "theme": [
+      "mateIn2",
+      "sacrifice"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-24",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1300,
+    "theme": [
+      "discoveredAttack",
+      "hangingPiece"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-25",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1325,
+    "theme": [
+      "backRank",
+      "tactics"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-26",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1350,
+    "theme": [
+      "clearance",
+      "attraction"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-27",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1375,
+    "theme": [
+      "fork",
+      "doubleAttack"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-28",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1400,
+    "theme": [
+      "pin",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-29",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1425,
+    "theme": [
+      "skewer",
+      "endgame"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-30",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1450,
+    "theme": [
+      "mateIn1",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-31",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1475,
+    "theme": [
+      "mateIn2",
+      "sacrifice"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-32",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1500,
+    "theme": [
+      "discoveredAttack",
+      "hangingPiece"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-33",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1525,
+    "theme": [
+      "backRank",
+      "tactics"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-34",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1550,
+    "theme": [
+      "clearance",
+      "attraction"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-35",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1575,
+    "theme": [
+      "fork",
+      "doubleAttack"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-36",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1600,
+    "theme": [
+      "pin",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-37",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1625,
+    "theme": [
+      "skewer",
+      "endgame"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-38",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1650,
+    "theme": [
+      "mateIn1",
+      "deflection"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-39",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1675,
+    "theme": [
+      "mateIn2",
+      "sacrifice"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-40",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1700,
+    "theme": [
+      "discoveredAttack",
+      "hangingPiece"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-41",
+    "fen": "r1bqk2r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Ng5+"
+    ],
+    "rating": 1725,
+    "theme": [
+      "backRank",
+      "tactics"
+    ],
+    "goal": "White to move — Exploit the tactical weakness!"
+  },
+  {
+    "id": "puz-42",
+    "fen": "r1bqk1nr/pppp1ppp/2n5/4p3/1b1PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "solution": [
+      "c3",
+      "Ba5"
+    ],
+    "rating": 1750,
+    "theme": [
+      "clearance",
+      "attraction"
+    ],
+    "goal": "Black to move — Exploit the tactical weakness!"
+  }
+]

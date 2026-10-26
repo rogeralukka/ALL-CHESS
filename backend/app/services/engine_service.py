@@ -15,6 +15,7 @@ from app.services.accuracy import (
     estimate_performance_ratings,
     calculate_phase_grades
 )
+from app.services.coach_service import generate_move_comment
 from app.schemas.game import TopEngineLine
 
 logger = logging.getLogger("all_chess.engine")
@@ -497,14 +498,29 @@ def _run_single_pass_review_sync(
         if color == 'b':
             played_win_pct = round(100.0 - played_win_pct, 1)
 
+        # Generate coach commentary grounded in engine facts
+        top_pv = pos_before["top_lines"][0].get("pv", []) if pos_before["top_lines"] else []
+        comment_info = generate_move_comment(
+            fen_before=board_before.fen(),
+            san=raw_move["san"],
+            classification=classification,
+            fen_after=positions[idx + 1].fen(),
+            eval_before=pos_before["eval"],
+            eval_after=pos_after["eval"],
+            best_move=pos_before["best_move_san"],
+            pv=top_pv,
+            color=color,
+        )
+
         updated_m = dict(raw_move)
         updated_m["classification"] = classification
+        updated_m["coachComment"] = comment_info["comment"]
         updated_m["eval"] = {
             "eval": pos_after["eval"],
             "mate": pos_after["mate"],
             "bestMove": pos_before["best_move_san"],
             "winPct": played_win_pct,
-            "why": pos_before["top_lines"][0]["why"] if pos_before["top_lines"] else "",
+            "why": comment_info["comment"],
             "lines": pos_before["top_lines"]
         }
         analyzed_moves.append(updated_m)

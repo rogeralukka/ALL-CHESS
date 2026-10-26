@@ -62,7 +62,8 @@ export const Leaderboard: React.FC = () => {
         const total = 40 + seeded(f.username, 7);
         const won = Math.round(total * (0.42 + seeded(f.username, 3) / 500));
         const draw = Math.round(total * 0.08);
-        return { name: f.username, rating: f.rating + (speed === 'blitz' ? -30 : speed === 'bullet' ? -55 : 0), won, draw, lost: total - won - draw, friend: true, online: f.online };
+        const friendRating = f.ratings?.[speed] ?? (f.rating + (speed === 'blitz' ? -30 : speed === 'bullet' ? -55 : 0));
+        return { name: f.username, rating: friendRating, won, draw, lost: total - won - draw, friend: true, online: f.online };
       });
       return [...fr, you].sort((a, b) => b.rating - a.rating);
     }

@@ -70,12 +70,12 @@ export interface ICoachNarrator {
   getWelcomeLine(): string;
 }
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
+const isMockMode = () => import.meta.env.VITE_USE_MOCKS === 'true';
 
 // --- GAME REPOSITORY ---
 export const gameRepository: IGameRepository = {
   async getGames(filter) {
-    if (USE_MOCKS) {
+    if (isMockMode()) {
       let result = [...MOCK_GAMES];
       if (!filter) return result;
 
@@ -129,7 +129,7 @@ export const gameRepository: IGameRepository = {
   },
 
   async getGameById(id: string) {
-    if (USE_MOCKS) {
+    if (isMockMode()) {
       return MOCK_GAMES.find((g) => g.id === id) || null;
     }
 
@@ -147,7 +147,7 @@ export const gameRepository: IGameRepository = {
 // --- STATS REPOSITORY ---
 export const statsRepository: IStatsRepository = {
   async getRatingHistory(range) {
-    if (USE_MOCKS) {
+    if (isMockMode()) {
       return MOCK_RATING_HISTORY;
     }
     try {
@@ -161,7 +161,7 @@ export const statsRepository: IStatsRepository = {
   },
 
   async getUserRatings() {
-    if (USE_MOCKS) {
+    if (isMockMode()) {
       return [
         { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
         { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
@@ -183,7 +183,7 @@ export const statsRepository: IStatsRepository = {
   },
 
   async getOpeningStats() {
-    if (USE_MOCKS) {
+    if (isMockMode()) {
       return MOCK_OPENING_STATS;
     }
     try {
@@ -197,7 +197,7 @@ export const statsRepository: IStatsRepository = {
   },
 
   async getPhasePointsLost() {
-    if (USE_MOCKS) {
+    if (isMockMode()) {
       return MOCK_PHASE_POINTS_LOST;
     }
     try {
@@ -211,7 +211,7 @@ export const statsRepository: IStatsRepository = {
   },
 
   async getStrengthsAndWeaknesses() {
-    if (USE_MOCKS) {
+    if (isMockMode()) {
       return { strengths: MOCK_STRENGTHS, weaknesses: MOCK_WEAKNESSES };
     }
     try {
@@ -225,47 +225,89 @@ export const statsRepository: IStatsRepository = {
   },
 };
 
-// --- MOCK FALLBACKS (PHASE 3 ENPOINTS) ---
-console.info('[ALL-CHESS] friendRepository: using mock fallback (Phase 3)');
-console.info('[ALL-CHESS] puzzleRepository: using mock fallback (Phase 3)');
-console.info('[ALL-CHESS] learnRepository: using mock fallback (Phase 3)');
-console.info('[ALL-CHESS] scoutRepository: using mock fallback (Phase 3)');
+console.info('[ALL-CHESS] scoutRepository: using mock fallback');
 
+// --- PUZZLE REPOSITORY ---
 export const puzzleRepository: IPuzzleRepository = {
   async getPuzzles() {
-    return MOCK_PUZZLES;
+    if (isMockMode()) return MOCK_PUZZLES;
+    try {
+      return await api.get<Puzzle[]>('/puzzles');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return [];
+      return MOCK_PUZZLES;
+    }
   },
   async getPuzzleById(id: string) {
-    return MOCK_PUZZLES.find((p) => p.id === id) || null;
+    if (isMockMode()) return MOCK_PUZZLES.find((p) => p.id === id) || null;
+    try {
+      return await api.get<Puzzle>(`/puzzles/${id}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return null;
+      return MOCK_PUZZLES.find((p) => p.id === id) || null;
+    }
   },
   async getDailyPuzzle() {
-    return MOCK_PUZZLES[0];
+    if (isMockMode()) return MOCK_PUZZLES[0];
+    try {
+      return await api.get<Puzzle>('/puzzles/daily');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return MOCK_PUZZLES[0];
+      return MOCK_PUZZLES[0];
+    }
   },
 };
 
+// --- LEARN REPOSITORY ---
 export const learnRepository: ILearnRepository = {
   async getStages(category) {
-    if (!category) return MOCK_LEARN_STAGES;
-    return MOCK_LEARN_STAGES.filter((s) => s.category === category);
+    if (isMockMode()) {
+      if (!category) return MOCK_LEARN_STAGES;
+      return MOCK_LEARN_STAGES.filter((s) => s.category === category);
+    }
+    try {
+      const url = category ? `/learn/stages?category=${category}` : '/learn/stages';
+      return await api.get<LessonStage[]>(url);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return [];
+      return !category ? MOCK_LEARN_STAGES : MOCK_LEARN_STAGES.filter((s) => s.category === category);
+    }
   },
   async getStageById(id: string) {
-    return MOCK_LEARN_STAGES.find((s) => s.id === id) || null;
+    if (isMockMode()) return MOCK_LEARN_STAGES.find((s) => s.id === id) || null;
+    try {
+      return await api.get<LessonStage>(`/learn/stages/${id}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return null;
+      return MOCK_LEARN_STAGES.find((s) => s.id === id) || null;
+    }
   },
 };
 
+// --- FRIEND REPOSITORY ---
 export const friendRepository: IFriendRepository = {
   async getFriends() {
-    return MOCK_FRIENDS;
+    if (isMockMode()) return MOCK_FRIENDS;
+    try {
+      return await api.get<Friend[]>('/friends');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return [];
+      return MOCK_FRIENDS;
+    }
   },
   async addFriend(username: string) {
-    const newFriend: Friend = {
-      id: `f-${Date.now()}`,
-      username,
-      rating: 900,
-      online: true,
-      lastActive: 'Just now',
-    };
-    return newFriend;
+    if (isMockMode()) {
+      const newFriend: Friend = {
+        id: `f-${Date.now()}`,
+        username,
+        rating: 900,
+        ratings: { rapid: 900, blitz: 870, bullet: 850 },
+        online: true,
+        lastActive: 'Just now',
+      };
+      return newFriend;
+    }
+    return await api.post<Friend>('/friends', { username, platform: 'chesscom' });
   },
 };
 

@@ -147,6 +147,11 @@ export interface Friend {
   id: string;
   username: string;
   rating: number;
+  ratings?: {
+    rapid?: number;
+    blitz?: number;
+    bullet?: number;
+  };
   online: boolean;
   avatarUrl?: string;
   lastActive?: string;
