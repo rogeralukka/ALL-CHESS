@@ -20,9 +20,12 @@ export const ScoutSearch: React.FC = () => {
   const [platform, setPlatform] = useState<(typeof PLATFORMS)[number]>('Chess.com');
   const [profiles, setProfiles] = useState<ScoutProfileType[]>([]);
   const [selected, setSelected] = useState<ScoutProfileType | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let alive = true;
+    setNotice('');
     scoutRepository.searchProfiles(query.trim()).then((p) => alive && setProfiles(p));
     return () => {
       alive = false;
@@ -32,6 +35,27 @@ export const ScoutSearch: React.FC = () => {
   if (selected) return <ScoutProfile profile={selected} onBack={() => setSelected(null)} />;
 
   const exact = profiles.find((p) => p.username.toLowerCase() === query.trim().toLowerCase());
+
+  const scout = async () => {
+    const name = query.trim();
+    if (!name || busy) return;
+    if (exact) return setSelected(exact);
+    setBusy(true);
+    setNotice('');
+    try {
+      const found = await scoutRepository.getProfile(name, platform === 'Lichess' ? 'lichess' : 'chesscom');
+      if (found) {
+        setProfiles((list) => [found, ...list.filter((p) => p.username.toLowerCase() !== found.username.toLowerCase())]);
+        setSelected(found);
+      } else {
+        setNotice(`No public games found for “${name}” on ${platform}.`);
+      }
+    } catch {
+      setNotice(`Couldn't reach ${platform} right now. Try again in a moment.`);
+    } finally {
+      setBusy(false);
+    }
+  };
   const games = profiles.reduce((n, p) => n + p.mostPlayed.reduce((m, o) => m + o.games, 0), 0);
   const avgWin = profiles.length ? Math.round(profiles.reduce((n, p) => n + p.winRate, 0) / profiles.length) : 0;
 
@@ -47,7 +71,7 @@ export const ScoutSearch: React.FC = () => {
         className="cc-card p-3 flex flex-col sm:flex-row gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (exact) setSelected(exact);
+          void scout();
         }}
       >
         <div className="relative flex-1">
@@ -77,11 +101,17 @@ export const ScoutSearch: React.FC = () => {
               </button>
             ))}
           </div>
-          <button type="submit" disabled={!exact} className="btn-primary h-12 px-6 rounded-[5px] text-[17px] font-extrabold font-display inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-            Scout
+          <button type="submit" disabled={!query.trim() || busy} className="btn-primary h-12 px-6 rounded-[5px] text-[17px] font-extrabold font-display inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+            {busy ? 'Scouting…' : 'Scout'}
           </button>
         </div>
       </form>
+
+      {notice && (
+        <div role="status" className="cc-card px-5 py-3.5 text-[15px] text-theme-text" data-testid="scout-notice">
+          {notice}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatTile icon={<Swords size={24} className="text-[#81b64c]" />} value={profiles.length} label="Opponents" />
@@ -100,8 +130,8 @@ export const ScoutSearch: React.FC = () => {
         {profiles.length === 0 ? (
           <div className="flex flex-col items-center text-center py-12 px-6 gap-3">
             <img src="/assets/ui/icon_scout.webp" alt="" className="w-20 h-20 object-contain opacity-90" />
-            <p className="text-[16px] font-bold text-theme-text">{query ? `No one called “${query}” yet` : 'No opponents scouted yet'}</p>
-            <p className="text-[14px] text-theme-muted max-w-sm">Search for a Chess.com or Lichess username to see their openings and results.</p>
+            <p className="text-[16px] font-bold text-theme-text">{query.trim() ? `Press Scout to look up “${query.trim()}” on ${platform}` : 'No opponents scouted yet'}</p>
+            <p className="text-[14px] text-theme-muted max-w-sm">Type a Chess.com or Lichess username to see their openings and results. Reports are saved for 24 hours.</p>
           </div>
         ) : (
           <ul className="divide-y divide-white/[0.06]">
