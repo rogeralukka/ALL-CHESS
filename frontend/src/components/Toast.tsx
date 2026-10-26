@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { create } from 'zustand';
-import { X, Trophy, Info, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, Trophy, Info, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 
 export interface ToastItem {
   id: string;
   title: string;
   subtitle?: string;
-  type?: 'success' | 'achievement' | 'info' | 'warning';
+  type?: 'success' | 'achievement' | 'info' | 'warning' | 'error';
   duration?: number;
 }
 
@@ -42,6 +42,8 @@ export const toast = {
     useToastStore.getState().addToast({ title, subtitle, type: 'info' }),
   warning: (title: string, subtitle?: string) =>
     useToastStore.getState().addToast({ title, subtitle, type: 'warning' }),
+  error: (title: string, subtitle?: string) =>
+    useToastStore.getState().addToast({ title, subtitle, type: 'error' }),
 };
 
 export const ToastContainer: React.FC = () => {
@@ -55,6 +57,8 @@ export const ToastContainer: React.FC = () => {
         return <CheckCircle className="text-emerald-500" size={20} />;
       case 'warning':
         return <AlertTriangle className="text-orange-500" size={20} />;
+      case 'error':
+        return <AlertCircle className="text-red-500" size={20} />;
       default:
         return <Info className="text-sky-500" size={20} />;
     }

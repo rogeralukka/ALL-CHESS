@@ -8,6 +8,7 @@ import { MOCK_SCOUT_PROFILES } from '../mock/mockScout';
 import { getRandomCoachLine, ILLEGAL_MOVE_TEACHING_LINES } from '@/features/coach/coachLines';
 import { getExpressionForEvent } from '@/features/coach/expressionMap';
 import { wasmEngineService } from '@/services/wasmEngineService';
+import { api, ApiError } from '../api';
 
 export interface GameFilter {
   opening?: string;
@@ -69,69 +70,166 @@ export interface ICoachNarrator {
   getWelcomeLine(): string;
 }
 
-// --- MOCK IMPLEMENTATIONS (Phase 1) ---
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
+// --- GAME REPOSITORY ---
 export const gameRepository: IGameRepository = {
   async getGames(filter) {
-    let result = [...MOCK_GAMES];
-    if (!filter) return result;
+    if (USE_MOCKS) {
+      let result = [...MOCK_GAMES];
+      if (!filter) return result;
 
-    if (filter.speed && filter.speed !== 'all') {
-      result = result.filter((g) => g.speed === filter.speed);
+      if (filter.speed && filter.speed !== 'all') {
+        result = result.filter((g) => g.speed === filter.speed);
+      }
+      if (filter.source && filter.source !== 'all') {
+        result = result.filter((g) => g.source === filter.source);
+      }
+      if (filter.color && filter.color !== 'all') {
+        result = result.filter((g) => (filter.color === 'white' ? g.white.username === 'You' : g.black.username === 'You'));
+      }
+      if (filter.result && filter.result !== 'all') {
+        result = result.filter((g) => {
+          const isWhite = g.white.username === 'You';
+          if (filter.result === 'win') return (isWhite && g.result === '1-0') || (!isWhite && g.result === '0-1');
+          if (filter.result === 'loss') return (isWhite && g.result === '0-1') || (!isWhite && g.result === '1-0');
+          if (filter.result === 'draw') return g.result === '1/2-1/2';
+          return true;
+        });
+      }
+      if (filter.searchQuery) {
+        const q = filter.searchQuery.toLowerCase();
+        result = result.filter(
+          (g) =>
+            g.white.username.toLowerCase().includes(q) ||
+            g.black.username.toLowerCase().includes(q) ||
+            g.opening.name.toLowerCase().includes(q)
+        );
+      }
+      return result;
     }
-    if (filter.source && filter.source !== 'all') {
-      result = result.filter((g) => g.source === filter.source);
+
+    const params = new URLSearchParams();
+    if (filter?.speed && filter.speed !== 'all') params.set('speed', filter.speed);
+    if (filter?.source && filter.source !== 'all') params.set('source', filter.source);
+    if (filter?.color && filter.color !== 'all') params.set('color', filter.color);
+    if (filter?.result && filter.result !== 'all') params.set('result', filter.result);
+    if (filter?.opening) params.set('opening', filter.opening);
+    if (filter?.searchQuery) params.set('search_query', filter.searchQuery);
+
+    const qs = params.toString();
+    try {
+      return await api.get<Game[]>(`/games${qs ? `?${qs}` : ''}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        return [];
+      }
+      throw err;
     }
-    if (filter.color && filter.color !== 'all') {
-      result = result.filter((g) => (filter.color === 'white' ? g.white.username === 'You' : g.black.username === 'You'));
-    }
-    if (filter.result && filter.result !== 'all') {
-      result = result.filter((g) => {
-        const isWhite = g.white.username === 'You';
-        if (filter.result === 'win') return (isWhite && g.result === '1-0') || (!isWhite && g.result === '0-1');
-        if (filter.result === 'loss') return (isWhite && g.result === '0-1') || (!isWhite && g.result === '1-0');
-        if (filter.result === 'draw') return g.result === '1/2-1/2';
-        return true;
-      });
-    }
-    if (filter.searchQuery) {
-      const q = filter.searchQuery.toLowerCase();
-      result = result.filter(
-        (g) =>
-          g.white.username.toLowerCase().includes(q) ||
-          g.black.username.toLowerCase().includes(q) ||
-          g.opening.name.toLowerCase().includes(q)
-      );
-    }
-    return result;
   },
 
   async getGameById(id: string) {
-    return MOCK_GAMES.find((g) => g.id === id) || null;
+    if (USE_MOCKS) {
+      return MOCK_GAMES.find((g) => g.id === id) || null;
+    }
+
+    try {
+      return await api.get<Game>(`/games/${id}`);
+    } catch (err: unknown) {
+      if (err instanceof ApiError && (err.status === 404 || err.status === 401)) {
+        return null;
+      }
+      throw err;
+    }
   },
 };
 
+// --- STATS REPOSITORY ---
 export const statsRepository: IStatsRepository = {
-  async getRatingHistory() {
-    return MOCK_RATING_HISTORY;
+  async getRatingHistory(range) {
+    if (USE_MOCKS) {
+      return MOCK_RATING_HISTORY;
+    }
+    try {
+      return await api.get<RatingPoint[]>(`/stats/rating-history?range=${range || '90d'}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        return [];
+      }
+      throw err;
+    }
   },
+
   async getUserRatings() {
-    return [
-      { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
-      { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
-      { mode: 'Bullet', rating: 880, deltaWeekly: 5 },
-    ];
+    if (USE_MOCKS) {
+      return [
+        { mode: 'Rapid', rating: 905, deltaWeekly: 15 },
+        { mode: 'Blitz', rating: 870, deltaWeekly: 5 },
+        { mode: 'Bullet', rating: 880, deltaWeekly: 5 },
+      ];
+    }
+    try {
+      return await api.get<RatingSummary[]>('/stats/ratings');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        return [
+          { mode: 'Rapid', rating: 0, deltaWeekly: 0 },
+          { mode: 'Blitz', rating: 0, deltaWeekly: 0 },
+          { mode: 'Bullet', rating: 0, deltaWeekly: 0 },
+        ];
+      }
+      throw err;
+    }
   },
+
   async getOpeningStats() {
-    return MOCK_OPENING_STATS;
+    if (USE_MOCKS) {
+      return MOCK_OPENING_STATS;
+    }
+    try {
+      return await api.get<OpeningStat[]>('/stats/openings');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        return [];
+      }
+      throw err;
+    }
   },
+
   async getPhasePointsLost() {
-    return MOCK_PHASE_POINTS_LOST;
+    if (USE_MOCKS) {
+      return MOCK_PHASE_POINTS_LOST;
+    }
+    try {
+      return await api.get<{ opening: number; middlegame: number; endgame: number }>('/stats/phases');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        return { opening: 0, middlegame: 0, endgame: 0 };
+      }
+      throw err;
+    }
   },
+
   async getStrengthsAndWeaknesses() {
-    return { strengths: MOCK_STRENGTHS, weaknesses: MOCK_WEAKNESSES };
+    if (USE_MOCKS) {
+      return { strengths: MOCK_STRENGTHS, weaknesses: MOCK_WEAKNESSES };
+    }
+    try {
+      return await api.get<{ strengths: typeof MOCK_STRENGTHS; weaknesses: typeof MOCK_WEAKNESSES }>('/stats/insights');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        return { strengths: [], weaknesses: [] };
+      }
+      throw err;
+    }
   },
 };
+
+// --- MOCK FALLBACKS (PHASE 3 ENPOINTS) ---
+console.info('[ALL-CHESS] friendRepository: using mock fallback (Phase 3)');
+console.info('[ALL-CHESS] puzzleRepository: using mock fallback (Phase 3)');
+console.info('[ALL-CHESS] learnRepository: using mock fallback (Phase 3)');
+console.info('[ALL-CHESS] scoutRepository: using mock fallback (Phase 3)');
 
 export const puzzleRepository: IPuzzleRepository = {
   async getPuzzles() {

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Game } from '@/data/types';
 import { gameRepository } from '@/data/repositories';
+import { api } from '@/data/api';
 import { GameList } from './GameList';
 import { GameSummary } from './GameSummary';
 import { ReviewBoard } from './ReviewBoard';
@@ -18,6 +19,7 @@ export const ReviewRouter: React.FC = () => {
 
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<number | null>(null);
   const [activeView, setActiveView] = useState<'summary' | 'board'>('summary');
 
   useEffect(() => {
@@ -26,12 +28,92 @@ export const ReviewRouter: React.FC = () => {
       return;
     }
 
+    let active = true;
     setLoading(true);
-    gameRepository.getGameById(gameId).then((g) => {
-      setCurrentGame(g);
-      setLoading(false);
-      setActiveView('summary');
-    });
+    setAnalysisProgress(null);
+
+    const loadAndAnalyze = async () => {
+      try {
+        let game = await gameRepository.getGameById(gameId);
+        if (!active || !game) {
+          if (active) {
+            setCurrentGame(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Check if game has analysis (accuracy and move evals)
+        const isAnalyzed =
+          game.accuracy !== undefined &&
+          game.accuracy !== null &&
+          game.moves &&
+          game.moves.length > 0 &&
+          game.moves[0].eval !== undefined;
+
+        if (!isAnalyzed && import.meta.env.VITE_USE_MOCKS !== 'true') {
+          // Trigger analysis on the backend
+          try {
+            const analyzeRes = await api.post<{ jobId: string }>(`/games/${gameId}/analyze`);
+            const jobId = analyzeRes?.jobId;
+            if (jobId) {
+              let done = false;
+              let attempts = 0;
+              while (!done && attempts < 120 && active) {
+                await new Promise((r) => setTimeout(r, 800));
+                attempts++;
+                try {
+                  const job = await api.get<{
+                    id: string;
+                    status: 'queued' | 'processing' | 'done' | 'failed';
+                    progress: number;
+                    error?: string;
+                  }>(`/jobs/${jobId}`);
+
+                  if (job.status === 'done') {
+                    done = true;
+                    // Reload analyzed game from repo
+                    const analyzed = await gameRepository.getGameById(gameId);
+                    if (active && analyzed) {
+                      game = analyzed;
+                    }
+                    break;
+                  } else if (job.status === 'failed') {
+                    done = true;
+                    break;
+                  } else {
+                    if (active) {
+                      setAnalysisProgress(job.progress);
+                    }
+                  }
+                } catch {
+                  // transient error during polling
+                }
+              }
+            }
+          } catch (analyzeErr) {
+            console.error('Failed to analyze game:', analyzeErr);
+          }
+        }
+
+        if (active) {
+          setCurrentGame(game);
+          setLoading(false);
+          setActiveView('summary');
+        }
+      } catch {
+        if (active) {
+          setCurrentGame(null);
+          setLoading(false);
+        }
+      }
+    };
+
+    loadAndAnalyze();
+
+    return () => {
+      active = false;
+    };
   }, [gameId]);
 
   // If no gameId, render the games list
@@ -46,8 +128,29 @@ export const ReviewRouter: React.FC = () => {
         {/* Left Board Zone */}
         <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0">
           <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
-            <div className="h-6 w-48 bg-theme-raised/60 rounded" />
-            <div className="aspect-square w-full rounded-sm bg-theme-raised/70 border border-theme-border/40 shadow-2xl" />
+            <div className="flex items-center justify-between">
+              <div className="h-6 w-48 bg-theme-raised/60 rounded" />
+              {analysisProgress !== null && (
+                <span className="text-xs font-mono font-bold text-amber-500">
+                  Stockfish Review: {analysisProgress}%
+                </span>
+              )}
+            </div>
+            <div className="aspect-square w-full rounded-sm bg-theme-raised/70 border border-theme-border/40 shadow-2xl flex items-center justify-center">
+              {analysisProgress !== null && (
+                <div className="text-center space-y-2 p-4">
+                  <div className="text-base font-display font-black text-theme-text">
+                    Analyzing moves with Stockfish...
+                  </div>
+                  <div className="w-48 h-2 bg-black/30 rounded-full mx-auto overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-300 rounded-full"
+                      style={{ width: `${analysisProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="h-6 w-36 bg-theme-raised/60 rounded" />
           </div>
         </div>

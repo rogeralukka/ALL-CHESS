@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronsLeft, ChevronsRight, RefreshCw, Sun, Moon, Settings as SettingsIcon } from 'lucide-react';
 import { useSettingsStore } from '@/data/settingsStore';
+import { useAuthStore } from '@/data/authStore';
+import { LoginGate } from '@/components/LoginGate';
 import { ToastContainer, toast } from '@/components/Toast';
 import { useMotion } from '@/lib/useMotion';
 import { storage } from '@/lib/storage';
+import { api } from '@/data/api';
+import { gameRepository } from '@/data/repositories';
 
 /** 3D section icons, rendered from scripts/map-art/render_ui_art.py */
 export const SECTION_ICON: Record<string, string> = {
@@ -50,13 +54,105 @@ const NavIcon: React.FC<{ name: string; size?: number; active?: boolean }> = ({ 
 export const Layout: React.FC = () => {
   const { appTheme, setAppTheme } = useSettingsStore();
   const { isOff } = useMotion();
+  const { isAuthenticated, isLoading, checkSession } = useAuthStore();
   const [isSyncing, setIsSyncing] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => storage.get('all_chess_sidebar_collapsed', false));
+  const autoSyncedRef = useRef(false);
   const location = useLocation();
 
   useEffect(() => {
     storage.set('all_chess_sidebar_collapsed', collapsed);
   }, [collapsed]);
+
+  const handleSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    toast.info('Starting sync...', 'Connecting to Chess.com & Lichess');
+    try {
+      const res = await api.post<{ jobId: string }>('/sync');
+      const jobId = res?.jobId;
+      if (!jobId) {
+        throw new Error('No job ID returned from sync endpoint');
+      }
+
+      let completed = false;
+      let attempts = 0;
+      while (!completed && attempts < 60) {
+        await new Promise((r) => setTimeout(r, 1000));
+        attempts++;
+        try {
+          const job = await api.get<{
+            id: string;
+            status: 'queued' | 'processing' | 'done' | 'failed';
+            progress: number;
+            error?: string;
+            result?: {
+              syncedCount: number;
+              chesscom: number;
+              lichess: number;
+              skipped: number;
+              message: string;
+            };
+          }>(`/jobs/${jobId}`);
+
+          if (job.status === 'done') {
+            completed = true;
+            setIsSyncing(false);
+            const msg = job.result?.message || 'Games up to date';
+            toast.success('Sync complete', msg);
+            window.dispatchEvent(new CustomEvent('chess-data-refresh'));
+            break;
+          } else if (job.status === 'failed') {
+            completed = true;
+            setIsSyncing(false);
+            toast.error('Sync failed', job.error || 'Unknown sync error');
+            break;
+          }
+        } catch {
+          // ignore transient poll error
+        }
+      }
+      if (!completed) {
+        setIsSyncing(false);
+        toast.warning('Sync taking longer than expected', 'Check back in a moment');
+      }
+    } catch (err: unknown) {
+      setIsSyncing(false);
+      let msg = 'Failed to start sync';
+      if (err instanceof Error) {
+        msg = err.message;
+      }
+      toast.error('Sync error', msg);
+    }
+  };
+
+  const checkGamesAndAutoSync = async () => {
+    if (autoSyncedRef.current) return;
+    try {
+      const games = await gameRepository.getGames();
+      if (games.length === 0) {
+        autoSyncedRef.current = true;
+        handleSync();
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    checkSession().then((authenticated) => {
+      if (authenticated) {
+        checkGamesAndAutoSync();
+      }
+    });
+
+    const triggerListener = () => handleSync();
+    window.addEventListener('trigger-chess-sync', triggerListener);
+    return () => {
+      window.removeEventListener('trigger-chess-sync', triggerListener);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // One-time notice when system reports reduced motion while defaulting to Full
   useEffect(() => {
@@ -71,22 +167,38 @@ export const Layout: React.FC = () => {
     }
   }, []);
 
-  const handleSync = () => {
-    if (isSyncing) return;
-    setIsSyncing(true);
-    toast.info('Checking Chess.com & Lichess...', 'Syncing recent games without auth');
-    setTimeout(() => {
-      setIsSyncing(false);
-      toast.success('Sync complete', '1 new game found & imported');
-    }, 1800);
-  };
-
   // labels show when the sidebar is expanded on large screens
   const labelCls = collapsed ? 'hidden' : 'hidden lg:inline';
   const widthCls = collapsed ? 'sm:w-[68px]' : 'sm:w-[68px] lg:w-[200px]';
 
   const utilBtn =
     'group flex items-center justify-center w-10 h-10 rounded-[5px] text-theme-muted hover:text-theme-text hover:bg-black/[0.05] dark:hover:bg-black/20 transition-colors';
+
+  if (isLoading) {
+    return (
+      <div className="app-bg flex h-screen w-screen items-center justify-center text-theme-text font-sans">
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="/assets/ui/logo_king.webp"
+            alt="ALL-CHESS"
+            className="w-14 h-16 object-contain animate-pulse"
+          />
+          <div className="text-xs font-display font-bold text-theme-muted tracking-wider uppercase">
+            Loading ALL-CHESS...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="app-bg flex h-screen w-screen items-center justify-center text-theme-text font-sans">
+        <LoginGate onSuccess={checkGamesAndAutoSync} />
+        <ToastContainer />
+      </div>
+    );
+  }
 
   return (
     <div className="app-bg flex h-screen w-screen overflow-hidden text-theme-text font-sans relative">

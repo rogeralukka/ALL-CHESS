@@ -47,71 +47,79 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
           </tr>
         </thead>
         <tbody>
-          {games.map((g) => {
-            const youWhite = g.white.username === 'You';
-            const won = (youWhite && g.result === '1-0') || (!youWhite && g.result === '0-1');
-            const lost = (youWhite && g.result === '0-1') || (!youWhite && g.result === '1-0');
-            const kind = won ? 'win' : lost ? 'loss' : 'draw';
-            const moves = Math.ceil(g.moves.length / 2);
-            const date = new Date(g.date);
-            const mode: GameMode = g.source === 'vs_coach' ? 'coach' : (g.speed as GameMode);
-            const [ws, bs] = g.result === '1/2-1/2' ? ['½', '½'] : g.result.split('-');
-            return (
-              <tr
-                key={g.id}
-                onClick={() => navigate(`/review/${g.id}`)}
-                className="row-stripe group cursor-pointer hover:!bg-white/[0.05] transition-colors"
-                data-testid={`game-row-${g.id}`}
-              >
-                <td className="py-3 pl-4 pr-1 text-center align-middle">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <ModeIcon mode={mode} size={22} title={g.source === 'vs_coach' ? 'Coach game' : g.speed} />
-                    <span className="text-[12px] text-theme-muted whitespace-nowrap">{g.source === 'vs_coach' ? 'Coach' : g.timeControl}</span>
-                  </div>
-                </td>
-                <td className="py-3 px-2 min-w-[200px]">
-                  {[g.white, g.black].map((p, i) => (
-                    <div key={i} className="flex items-center gap-2 leading-6">
-                      <span className="rounded-[3px] overflow-hidden flex-shrink-0">
-                        <PlayerAvatar name={p.username} size={20} square />
-                      </span>
-                      <span className={`w-[10px] h-[10px] rounded-[2px] flex-shrink-0 ${i === 0 ? 'bg-white' : 'bg-[#5a5754] border border-white/20'}`} />
-                      <span className="text-[14px] font-semibold text-theme-text truncate">{p.username}</span>
-                      <span className="text-[14px] text-theme-muted tabular-nums">({p.rating})</span>
+          {games.length === 0 ? (
+            <tr>
+              <td colSpan={compact ? 5 : 7} className="py-8 text-center text-[14px] text-theme-muted font-medium">
+                No games found.
+              </td>
+            </tr>
+          ) : (
+            games.map((g) => {
+              const youWhite = g.white.username === 'You';
+              const won = (youWhite && g.result === '1-0') || (!youWhite && g.result === '0-1');
+              const lost = (youWhite && g.result === '0-1') || (!youWhite && g.result === '1-0');
+              const kind = won ? 'win' : lost ? 'loss' : 'draw';
+              const moves = Math.ceil(g.moves.length / 2);
+              const date = new Date(g.date);
+              const mode: GameMode = g.source === 'vs_coach' ? 'coach' : (g.speed as GameMode);
+              const [ws, bs] = g.result === '1/2-1/2' ? ['½', '½'] : g.result.split('-');
+              return (
+                <tr
+                  key={g.id}
+                  onClick={() => navigate(`/review/${g.id}`)}
+                  className="row-stripe group cursor-pointer hover:!bg-white/[0.05] transition-colors"
+                  data-testid={`game-row-${g.id}`}
+                >
+                  <td className="py-3 pl-4 pr-1 text-center align-middle">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <ModeIcon mode={mode} size={22} title={g.source === 'vs_coach' ? 'Coach game' : g.speed} />
+                      <span className="text-[12px] text-theme-muted whitespace-nowrap">{g.source === 'vs_coach' ? 'Coach' : g.timeControl}</span>
                     </div>
-                  ))}
-                </td>
-                <td className="py-3 px-2">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="flex flex-col text-[14px] font-semibold tabular-nums text-theme-text leading-6 text-center w-3">
-                      <span>{ws}</span>
-                      <span>{bs}</span>
-                    </div>
-                    <ResultMark kind={kind} />
-                  </div>
-                </td>
-                {!compact && (
-                  <td className="py-3 px-2 text-center hidden md:table-cell">
-                    {analyzingId === g.id ? (
-                      <span className="text-[12px] font-semibold text-theme-muted animate-pulse">Analysing…</span>
-                    ) : (
-                      <div className="flex flex-col text-[14px] font-semibold tabular-nums leading-6">
-                        <span className={accTone(g.accuracy?.white)}>{g.accuracy?.white ?? '–'}</span>
-                        <span className={accTone(g.accuracy?.black)}>{g.accuracy?.black ?? '–'}</span>
-                      </div>
-                    )}
                   </td>
-                )}
-                <td className="py-3 px-2 text-center text-[14px] font-semibold tabular-nums text-theme-text hidden sm:table-cell">{moves}</td>
-                <td className="py-3 px-2 text-center text-[14px] text-theme-text tabular-nums whitespace-nowrap hidden sm:table-cell">
-                  {isNaN(date.getTime()) ? g.date : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                </td>
-                <td className="py-3 pr-4 pl-2 text-right">
-                  <span className="btn-secondary inline-flex items-center h-8 px-4 rounded-[3px] text-[14px] font-semibold text-theme-text">Review</span>
-                </td>
-              </tr>
-            );
-          })}
+                  <td className="py-3 px-2 min-w-[200px]">
+                    {[g.white, g.black].map((p, i) => (
+                      <div key={i} className="flex items-center gap-2 leading-6">
+                        <span className="rounded-[3px] overflow-hidden flex-shrink-0">
+                          <PlayerAvatar name={p.username} size={20} square />
+                        </span>
+                        <span className={`w-[10px] h-[10px] rounded-[2px] flex-shrink-0 ${i === 0 ? 'bg-white' : 'bg-[#5a5754] border border-white/20'}`} />
+                        <span className="text-[14px] font-semibold text-theme-text truncate">{p.username}</span>
+                        <span className="text-[14px] text-theme-muted tabular-nums">({p.rating > 0 ? p.rating : '–'})</span>
+                      </div>
+                    ))}
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="flex flex-col text-[14px] font-semibold tabular-nums text-theme-text leading-6 text-center w-3">
+                        <span>{ws}</span>
+                        <span>{bs}</span>
+                      </div>
+                      <ResultMark kind={kind} />
+                    </div>
+                  </td>
+                  {!compact && (
+                    <td className="py-3 px-2 text-center hidden md:table-cell">
+                      {analyzingId === g.id ? (
+                        <span className="text-[12px] font-semibold text-theme-muted animate-pulse">Analysing…</span>
+                      ) : (
+                        <div className="flex flex-col text-[14px] font-semibold tabular-nums leading-6">
+                          <span className={accTone(g.accuracy?.white)}>{g.accuracy?.white ?? '–'}</span>
+                          <span className={accTone(g.accuracy?.black)}>{g.accuracy?.black ?? '–'}</span>
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  <td className="py-3 px-2 text-center text-[14px] font-semibold tabular-nums text-theme-text hidden sm:table-cell">{moves}</td>
+                  <td className="py-3 px-2 text-center text-[14px] text-theme-text tabular-nums whitespace-nowrap hidden sm:table-cell">
+                    {isNaN(date.getTime()) ? g.date : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </td>
+                  <td className="py-3 pr-4 pl-2 text-right">
+                    <span className="btn-secondary inline-flex items-center h-8 px-4 rounded-[3px] text-[14px] font-semibold text-theme-text">Review</span>
+                  </td>
+                </tr>
+              );
+            })
+          )}
         </tbody>
       </table>
     </div>
