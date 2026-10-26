@@ -303,3 +303,10 @@ def test_generate_line_why_piece_aware():
     # Black pushes h6
     why_quiet = generate_line_why_template(board_quiet, chess.Move.from_uci("h7h6"))
     assert why_quiet == ""
+
+    # 7. King moves in endgame: central squares vs back-rank / flank squares
+    board_endgame = chess.Board("8/8/4k3/8/8/8/4K3/8 w - - 0 1")
+    why_kf1 = generate_line_why_template(board_endgame, chess.Move.from_uci("e2f1"))
+    assert why_kf1 == ""  # Moving to f1/g1 is NOT centralizing
+    why_kd3 = generate_line_why_template(board_endgame, chess.Move.from_uci("e2d3"))
+    assert why_kd3 == "Centralizes the king on d3 for the endgame."

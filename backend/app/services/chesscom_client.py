@@ -57,31 +57,25 @@ class ChesscomClient:
         """Fetches current stats for player from /pub/player/{user}/stats."""
         clean_user = username.strip().lower()
         stats_url = f"https://api.chess.com/pub/player/{clean_user}/stats"
-        try:
-            async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
-                resp = await self._get_with_retry(client, stats_url)
-                if resp.status_code == 200:
-                    return resp.json()
-                logger.warning(f"Could not fetch Chess.com stats for {clean_user}: HTTP {resp.status_code}")
+        async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
+            resp = await self._get_with_retry(client, stats_url)
+            if resp.status_code == 200:
+                return resp.json()
+            if resp.status_code == 404:
                 return None
-        except Exception as e:
-            logger.warning(f"Error fetching Chess.com stats for {clean_user}: {e}")
-            return None
+            raise ChesscomError(f"Chess.com returned status {resp.status_code} for user '{clean_user}' stats.")
 
     async def fetch_player_profile(self, username: str) -> Optional[Dict[str, Any]]:
         """Fetches public player profile from https://api.chess.com/pub/player/{username}."""
         clean_user = username.strip().lower()
         profile_url = f"https://api.chess.com/pub/player/{clean_user}"
-        try:
-            async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
-                resp = await self._get_with_retry(client, profile_url)
-                if resp.status_code == 200:
-                    return resp.json()
-                logger.warning(f"Could not fetch Chess.com profile for {clean_user}: HTTP {resp.status_code}")
+        async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
+            resp = await self._get_with_retry(client, profile_url)
+            if resp.status_code == 200:
+                return resp.json()
+            if resp.status_code == 404:
                 return None
-        except Exception as e:
-            logger.warning(f"Error fetching Chess.com profile for {clean_user}: {e}")
-            return None
+            raise ChesscomError(f"Chess.com returned status {resp.status_code} for user '{clean_user}' profile.")
 
     def get_player_profile(self, username: str) -> Optional[Dict[str, Any]]:
         """Synchronous fetch for public player profile."""

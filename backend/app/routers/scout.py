@@ -13,11 +13,12 @@ router = APIRouter(prefix="/scout", tags=["Scout"])
 @router.get("", response_model=List[ScoutProfile])
 def search_scout(
     query: str = Query("", description="Opponent username search query"),
+    platform: Optional[str] = Query(None, description="Platform: chesscom or lichess"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Searches previously scouted opponent profiles from cache."""
-    return search_cached_scout_profiles(query, db)
+    return search_cached_scout_profiles(query, db, platform=platform)
 
 
 @router.get("/{username}", response_model=ScoutProfile)
