@@ -1,55 +1,75 @@
 import math
 from typing import List, Dict, Any, Optional
 from app.services.win_pct import eval_to_win_pct
+from app.config import settings
 
-def move_accuracy(win_pct_drop: float) -> float:
+def move_accuracy(win_pct_drop: float, method: str = "chesscom") -> float:
     """
-    Lichess-style exponential accuracy formula from win% drop:
-    accuracy = 103.1668 * exp(-0.04354 * win_pct_drop) - 3.1669
+    Computes per-move accuracy from win% drop.
+    Supports:
+      - 'chesscom': Softer power-exponential curve (default)
+        acc = 100 * exp(- (win_pct_drop / scale) ** power)
+      - 'lichess': Classical Lichess exponential formula
+        acc = 103.1668 * exp(-0.04354 * win_pct_drop) - 3.1669
     Clamped to [0.0, 100.0].
     """
     if win_pct_drop <= 0.0:
         return 100.0
-    acc = 103.1668 * math.exp(-0.04354 * win_pct_drop) - 3.1669
+
+    if method == "lichess":
+        acc = 103.1668 * math.exp(-0.04354 * win_pct_drop) - 3.1669
+        return min(100.0, max(0.0, round(acc, 1)))
+
+    # Chess.com CAPS-style soft curve
+    scale = getattr(settings, "accuracy_chesscom_scale", 8.0)
+    power = getattr(settings, "accuracy_chesscom_power", 1.1)
+    
+    acc = 100.0 * math.exp(-((win_pct_drop / scale) ** power))
     return min(100.0, max(0.0, round(acc, 1)))
 
 
 def calculate_player_accuracy(
     move_accuracies: List[float],
-    win_pct_drops: List[float]
+    win_pct_drops: List[float],
+    method: str = "chesscom"
 ) -> Optional[float]:
     """
-    Lichess accuracy method:
-    Combines a volatility-weighted arithmetic mean and a weighted harmonic mean.
-    - Volatility weight w_i = max(0.5, min(10.0, win_pct_drop + 1.0))
-    - Harmonic mean heavily penalizes major blunders, preventing a 99-move solid game
-      with 1 catastrophic blunder from showing 98% accuracy.
-    - Combined accuracy = 0.5 * weighted_arithmetic + 0.5 * weighted_harmonic
-    Returns None if there are no moves (no default 80.0).
+    Calculates overall player accuracy for a game.
+    - 'chesscom': Softly weighted arithmetic mean that does NOT let 2-3 blunders sink the whole game.
+    - 'lichess': Combines volatility-weighted arithmetic and harmonic mean.
+    Returns None if there are no moves.
     """
     if not move_accuracies:
         return None
 
+    if method == "chesscom":
+        w_power = getattr(settings, "accuracy_chesscom_weight_power", 0.4)
+        weights = [(1.0 + drop / 5.0) ** w_power for drop in win_pct_drops]
+        total_weight = sum(weights)
+        if total_weight <= 0:
+            return 100.0
+        weighted_avg = sum(w * a for w, a in zip(weights, move_accuracies)) / total_weight
+        return round(min(100.0, max(0.0, weighted_avg)), 1)
+
+    # Lichess harmonic + arithmetic mean
     weights = [max(0.5, min(10.0, drop + 1.0)) for drop in win_pct_drops]
     total_weight = sum(weights)
     if total_weight <= 0:
         return 100.0
 
-    # 1. Weighted arithmetic mean
     weighted_arith = sum(w * a for w, a in zip(weights, move_accuracies)) / total_weight
-
-    # 2. Weighted harmonic mean (floor accuracy at 1.0 to prevent division by zero)
     weighted_harm = total_weight / sum(w / max(1.0, a) for w, a in zip(weights, move_accuracies))
-
-    # 3. Combined Lichess accuracy
     combined = 0.5 * weighted_arith + 0.5 * weighted_harm
     return round(min(100.0, max(0.0, combined)), 1)
 
 
-def calculate_game_accuracy(moves: List[Dict[str, Any]]) -> Dict[str, Optional[float]]:
+def calculate_game_accuracy(
+    moves: List[Dict[str, Any]],
+    method: str = "chesscom"
+) -> Dict[str, Optional[float]]:
     """
-    Calculates overall game accuracy for White and Black using the Lichess method.
-    Returns None for a side if no moves exist.
+    Calculates overall game accuracy for White and Black.
+    Defaults to 'chesscom' method.
     """
     white_accuracies: List[float] = []
     white_drops: List[float] = []
@@ -72,16 +92,15 @@ def calculate_game_accuracy(moves: List[Dict[str, Any]]) -> Dict[str, Optional[f
             mover_before = white_before
             mover_after = white_after
             drop = max(0.0, mover_before - mover_after)
-            acc = move_accuracy(drop)
+            acc = move_accuracy(drop, method=method)
             white_accuracies.append(acc)
             white_drops.append(drop)
-            # Store computed accuracy on the move dict
             m["accuracy"] = acc
         else:
             mover_before = 100.0 - white_before
             mover_after = 100.0 - white_after
             drop = max(0.0, mover_before - mover_after)
-            acc = move_accuracy(drop)
+            acc = move_accuracy(drop, method=method)
             black_accuracies.append(acc)
             black_drops.append(drop)
             m["accuracy"] = acc
@@ -90,8 +109,8 @@ def calculate_game_accuracy(moves: List[Dict[str, Any]]) -> Dict[str, Optional[f
         last_mate = curr_mate
 
     return {
-        "white": calculate_player_accuracy(white_accuracies, white_drops),
-        "black": calculate_player_accuracy(black_accuracies, black_drops)
+        "white": calculate_player_accuracy(white_accuracies, white_drops, method=method),
+        "black": calculate_player_accuracy(black_accuracies, black_drops, method=method)
     }
 
 
@@ -101,18 +120,28 @@ def estimate_performance_ratings(
     black_base_rating: Optional[int] = None
 ) -> Dict[str, Optional[int]]:
     """
-    Calibrated performance rating lookup table matching requirement:
-      - 50% accuracy -> ~500
-      - 75% accuracy -> ~1200
-      - 90% accuracy -> ~2000
-      - 98% accuracy -> ~2700
-      - 100% accuracy -> ~2850
-    Uses monotonic piecewise linear interpolation between calibrated anchors.
+    Maps accuracy to estimated performance rating relative to player's rating:
+      estimated = clamp(100, 3000, player_rating + (accuracy - expected_accuracy) * sensitivity_k)
+      expected_accuracy = base + (player_rating / 3000) * slope
+
+    Fallback (if base_rating is None or 0) uses calibrated anchor interpolation.
     """
-    def acc_to_rating(acc: Optional[float], base: Optional[int]) -> Optional[int]:
+    base_acc = getattr(settings, "rating_expected_acc_base", 60.0)
+    slope = getattr(settings, "rating_expected_acc_slope", 35.0)
+    k = getattr(settings, "rating_sensitivity_k", 45.0)
+
+    def calc_rating(acc: Optional[float], base: Optional[int]) -> Optional[int]:
         if acc is None:
             return None
         acc = max(0.0, min(100.0, acc))
+
+        if base is not None and base > 0:
+            expected = base_acc + (base / 3000.0) * slope
+            diff = acc - expected
+            est = round(base + diff * k)
+            return max(100, min(3000, int(est)))
+
+        # Fallback piecewise lookup
         if acc <= 50.0:
             rating = 100.0 + (acc / 50.0) * 400.0
         elif acc <= 75.0:
@@ -124,14 +153,11 @@ def estimate_performance_ratings(
         else:
             rating = 2700.0 + ((acc - 98.0) / 2.0) * 150.0
 
-        int_rating = int(round(rating))
-        if base and base > 0:
-            return max(100, min(2900, int(round(0.7 * int_rating + 0.3 * base))))
-        return max(100, min(2900, int_rating))
+        return max(100, min(3000, int(round(rating))))
 
     return {
-        "white": acc_to_rating(accuracy.get("white"), white_base_rating),
-        "black": acc_to_rating(accuracy.get("black"), black_base_rating)
+        "white": calc_rating(accuracy.get("white"), white_base_rating),
+        "black": calc_rating(accuracy.get("black"), black_base_rating)
     }
 
 
@@ -167,7 +193,6 @@ def calculate_phase_grades_for_player(player_moves: List[Dict[str, Any]]) -> Dic
         san = m.get("san", "")
         cls_name = m.get("classification", "")
 
-        # Phase assignment
         if move_num <= 10:
             opening_accs.append(acc)
         elif move_num <= 30:
@@ -175,7 +200,6 @@ def calculate_phase_grades_for_player(player_moves: List[Dict[str, Any]]) -> Dic
         else:
             endgame_accs.append(acc)
 
-        # Tactical detection
         is_tactical = (
             "x" in san
             or "+" in san

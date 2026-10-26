@@ -82,6 +82,7 @@ class Game(CamelModel):
     platform: Optional[Literal['chesscom', 'lichess', 'coach']] = None
     opening: Opening
     moves: List[Move]
+    is_user_white: Optional[bool] = None
     accuracy: Optional[Accuracy] = None
     estimated_rating: Optional[EstimatedRating] = None
     phase_grades: Optional[PhaseGrade] = None

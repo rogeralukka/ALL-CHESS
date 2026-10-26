@@ -56,7 +56,8 @@ def test_move_classification_known_positions():
         eval_before_pawns=3.0,
         eval_after_pawns=0.5,
         color='w',
-        opponent_just_made_mistake=True
+        opponent_just_made_mistake=True,
+        best_wins_material_or_mate=True
     )
     assert miss_cls == 'miss'
 
@@ -152,7 +153,8 @@ def test_engine_position_rate_limiting(auth_client, monkeypatch):
 
 
 def test_game_analyze_flow_mocked(auth_client, test_user, db_session, monkeypatch):
-    async def mock_analyze_game(moves_list, depth=16, time_per_move=0.3, is_user_white=True, on_progress=None):
+    async def mock_analyze_game(moves_list, depth=16, time_per_move=0.3, is_user_white=True, *args, **kwargs):
+        on_progress = kwargs.get('on_progress')
         if on_progress:
             on_progress(50)
             on_progress(100)

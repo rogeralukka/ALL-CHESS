@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Game, Move, CoachExpression, BoardBadge, Arrow } from '@/data/types';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -77,7 +77,12 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
   const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
 
-  const [orientation, setOrientation] = useState<'white' | 'black'>('white');
+  const userIsWhite = game.isUserWhite ?? (game.white.username === 'You');
+  const [orientation, setOrientation] = useState<'white' | 'black'>(userIsWhite ? 'white' : 'black');
+
+  useEffect(() => {
+    setOrientation(userIsWhite ? 'white' : 'black');
+  }, [game.id, userIsWhite]);
 
   // Find biggest swing moment to showcase on summary board
   let biggestSwingMove = game.moves[0];

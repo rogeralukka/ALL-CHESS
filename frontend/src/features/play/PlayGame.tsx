@@ -902,6 +902,15 @@ export const PlayGame: React.FC = () => {
                   <div className="flex items-center justify-between px-1 text-xs text-theme-muted">
                     <button
                       type="button"
+                      onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
+                      className="flex items-center gap-1 hover:text-theme-text transition-colors p-1"
+                      title="Flip Board (F)"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Flip</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleDownloadPgn}
                       className="flex items-center gap-1 hover:text-theme-text transition-colors p-1"
                       title="Download PGN"

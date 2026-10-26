@@ -80,6 +80,7 @@ export interface Game {
   timeControl: string;
   speed: 'bullet' | 'blitz' | 'rapid' | 'daily';
   source: 'online' | 'vs_coach';
+  isUserWhite?: boolean;
   opening: Opening;
   moves: Move[];
   accuracy?: {

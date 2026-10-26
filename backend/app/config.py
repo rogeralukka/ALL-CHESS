@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     groq_api_key_2: str = Field(default="")
     
     session_cookie_name: str = Field(default="all_chess_session")
+    # Chess.com accuracy curve settings (softer curve calibrated to reference games)
+    accuracy_chesscom_scale: float = Field(default=8.0)
+    accuracy_chesscom_power: float = Field(default=1.1)
+    accuracy_chesscom_weight_power: float = Field(default=0.4)
+
+    # Performance rating mapping settings
+    # estimated = clamp(100, 3000, player_rating + (accuracy - expected_accuracy) * sensitivity_k)
+    # expected_accuracy = base + (rating / 3000) * slope
+    rating_expected_acc_base: float = Field(default=60.0)
+    rating_expected_acc_slope: float = Field(default=35.0)
+    rating_sensitivity_k: float = Field(default=45.0)
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),

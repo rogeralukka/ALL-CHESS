@@ -133,9 +133,14 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
   const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
 
+  const isUserWhite = game.isUserWhite ?? (game.white.username === 'You');
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [orientation, setOrientation] = useState<'white' | 'black'>('white');
+  const [orientation, setOrientation] = useState<'white' | 'black'>(isUserWhite ? 'white' : 'black');
+
+  useEffect(() => {
+    setOrientation(isUserWhite ? 'white' : 'black');
+  }, [game.id, isUserWhite]);
 
   // Mode states
   const [showingBest, setShowingBest] = useState<boolean>(false);
