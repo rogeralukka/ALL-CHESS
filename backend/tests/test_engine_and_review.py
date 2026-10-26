@@ -6,9 +6,19 @@ from app.services.classifier import classify_move
 from app.services.engine_service import (
     analyze_position,
     analyze_game_moves_full,
-    get_stockfish_executable_path
+    get_stockfish_executable_path,
+    BOOK_PREFIXES,
+    BOOK_POSITION_EPDS
 )
 from app.models.game import Game as GameModel
+
+
+def has_stockfish() -> bool:
+    try:
+        path = get_stockfish_executable_path()
+        return bool(path and os.path.exists(path))
+    except Exception:
+        return False
 
 
 def test_move_classification_known_positions():
@@ -59,7 +69,39 @@ def test_move_classification_known_positions():
     )
     assert best_cls == 'best'
 
+    # 6. Checkmate move is NEVER blunder
+    white_mate_cls = classify_move(
+        eval_before_pawns=4.0,
+        eval_after_pawns=99.0,
+        color='w',
+        mate_after=0,
+        is_checkmate=True
+    )
+    assert white_mate_cls in ('best', 'great')
+    assert white_mate_cls != 'blunder'
 
+    black_mate_cls = classify_move(
+        eval_before_pawns=-4.0,
+        eval_after_pawns=-99.0,
+        color='b',
+        mate_after=0,
+        is_checkmate=True
+    )
+    assert black_mate_cls in ('best', 'great')
+    assert black_mate_cls != 'blunder'
+
+
+def test_scandinavian_defense_book_moves():
+    # 1. e4 d5 should both be registered as book moves in the ECO book
+    board = chess.Board()
+    board.push_san("e4")
+    assert ("e4",) in BOOK_PREFIXES or board.epd() in BOOK_POSITION_EPDS
+
+    board.push_san("d5")
+    assert ("e4", "d5") in BOOK_PREFIXES or board.epd() in BOOK_POSITION_EPDS
+
+
+@pytest.mark.skipif(not has_stockfish(), reason="Stockfish binary not installed")
 def test_engine_position_api(auth_client):
     start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     response = auth_client.post(
@@ -82,6 +124,14 @@ def test_engine_position_api(auth_client):
 def test_engine_position_rate_limiting(auth_client, monkeypatch):
     from app.routers import engine as engine_module
     monkeypatch.setattr(engine_module, "_MAX_REQUESTS_PER_WINDOW", 3)
+
+    # Mock analyze_position to test HTTP rate limiting independent of Stockfish presence
+    async def mock_analyze_position(fen, depth=14, multipv=3, time_limit=0.5):
+        return [
+            {"move": "e4", "eval": 0.2, "mate": None, "depth": depth, "why": "Develops pawn", "pv": ["e4", "e5"]}
+        ]
+    monkeypatch.setattr(engine_module, "analyze_position", mock_analyze_position)
+
     start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
     # Make 3 allowed requests
@@ -102,7 +152,7 @@ def test_engine_position_rate_limiting(auth_client, monkeypatch):
 
 
 def test_game_analyze_flow_mocked(auth_client, test_user, db_session, monkeypatch):
-    async def mock_analyze_game(moves_list, depth=16, time_per_move=0.3, on_progress=None):
+    async def mock_analyze_game(moves_list, depth=16, time_per_move=0.3, is_user_white=True, on_progress=None):
         if on_progress:
             on_progress(50)
             on_progress(100)
@@ -196,13 +246,9 @@ def test_game_analyze_flow_mocked(auth_client, test_user, db_session, monkeypatc
     assert len(insights["strengths"]) > 0 or len(insights["weaknesses"]) > 0
 
 
+@pytest.mark.skipif(not has_stockfish(), reason="Stockfish binary not installed")
 @pytest.mark.asyncio
 async def test_real_engine_smoke():
-    try:
-        path = get_stockfish_executable_path()
-    except FileNotFoundError:
-        pytest.skip("Stockfish binary not found, skipping real engine smoke test.")
-
     test_moves = [
         {"san": "e4", "from": "e2", "to": "e4", "color": "w", "moveNumber": 1},
         {"san": "e5", "from": "e7", "to": "e5", "color": "b", "moveNumber": 1},
@@ -211,7 +257,7 @@ async def test_real_engine_smoke():
         {"san": "Bc4", "from": "f1", "to": "c4", "color": "w", "moveNumber": 3},
     ]
 
-    result = await analyze_game_moves_full(test_moves, depth=10, time_per_move=0.2)
+    result = await analyze_game_moves_full(test_moves, depth=10, time_per_move=0.2, is_user_white=True)
     assert "moves" in result
     assert "accuracy" in result
     assert "estimatedRating" in result

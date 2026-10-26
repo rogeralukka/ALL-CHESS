@@ -67,10 +67,12 @@ async def main():
             print(f"  Progress: {pct}%")
             last_pct[0] = pct
 
+    is_user_white = white.get("username", "").lower() in [username.lower(), "you"]
     result = await analyze_game_moves_full(
         moves_list=moves,
         depth=16,
         time_per_move=0.3,
+        is_user_white=is_user_white,
         on_progress=on_progress
     )
 
@@ -100,12 +102,12 @@ async def main():
     print(f"  White Accuracy: {result['accuracy']['white']}%")
     print(f"  Black Accuracy: {result['accuracy']['black']}%")
     print(f"  Estimated Rating: White ~{result['estimatedRating']['white']}, Black ~{result['estimatedRating']['black']}")
-    print(f"  Phase Grades:")
+    print(f"  Phase Grades (User: {'White' if is_user_white else 'Black'}):")
     for phase, grade in result["phaseGrades"].items():
         print(f"    - {phase.capitalize()}: {grade}")
 
-    from app.services.engine_service import get_global_engine_worker
-    get_global_engine_worker().close()
+    from app.services.engine_service import get_global_engine_pool
+    get_global_engine_pool().close()
 
 
 if __name__ == "__main__":

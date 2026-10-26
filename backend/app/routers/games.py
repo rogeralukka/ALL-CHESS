@@ -207,6 +207,7 @@ async def run_game_analysis_task(
             moves_list=game.moves or [],
             depth=depth,
             time_per_move=0.3,
+            is_user_white=game.is_user_white,
             on_progress=update_progress
         )
 

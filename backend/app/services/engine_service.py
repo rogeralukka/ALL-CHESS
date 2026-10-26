@@ -1,8 +1,10 @@
 import os
 import shutil
+import json
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, AsyncIterator
+from contextlib import asynccontextmanager
 import chess
 import chess.engine
 from app.config import settings, BACKEND_DIR
@@ -17,7 +19,30 @@ from app.schemas.game import TopEngineLine
 
 logger = logging.getLogger("all_chess.engine")
 
-_ENGINE_SEMAPHORE = asyncio.Semaphore(2)
+# Load openings.json once and index book sequences
+OPENINGS_FILE = os.path.join(BACKEND_DIR, "app", "data", "openings.json")
+try:
+    with open(OPENINGS_FILE, "r", encoding="utf-8") as f:
+        _RAW_OPENINGS = json.load(f)
+except Exception:
+    _RAW_OPENINGS = []
+
+BOOK_PREFIXES = set()
+BOOK_POSITION_EPDS = set()
+
+for entry in _RAW_OPENINGS:
+    m_list = entry.get("moves", [])
+    if m_list:
+        for k in range(1, len(m_list) + 1):
+            BOOK_PREFIXES.add(tuple(m_list[:k]))
+
+        b_temp = chess.Board()
+        for san_move in m_list:
+            try:
+                b_temp.push_san(san_move)
+                BOOK_POSITION_EPDS.add(b_temp.epd())
+            except Exception:
+                break
 
 
 def get_stockfish_executable_path() -> str:
@@ -45,7 +70,7 @@ def get_stockfish_executable_path() -> str:
 
     raise FileNotFoundError(
         f"Stockfish binary not found at '{candidates[0]}'. "
-        "Please check STOCKFISH_PATH in backend/.env or run backend/scripts/setup.ps1 (setup.sh)."
+        "Please check STOCKFISH_PATH in backend/.env or install stockfish."
     )
 
 
@@ -65,109 +90,138 @@ def generate_line_why_template(board: chess.Board, move: chess.Move) -> str:
     return f"Advances to {to_sq_name}, coordinating pieces and maintaining pressure."
 
 
-class EngineWorker:
-    def __init__(self, stockfish_path: str):
-        self.stockfish_path = stockfish_path
-        self._engine: Optional[chess.engine.SimpleEngine] = None
+def _analyse_fen_sync(
+    engine: chess.engine.SimpleEngine,
+    fen: str,
+    depth: int = 14,
+    multipv: int = 3,
+    time_limit: float = 0.5
+) -> List[TopEngineLine]:
+    board = chess.Board(fen)
 
-    def get_or_create_engine(self) -> chess.engine.SimpleEngine:
-        if self._engine is not None:
+    if board.is_checkmate():
+        # Checkmate position
+        mover_color = not board.turn
+        eval_pawns = 99.0 if mover_color == chess.WHITE else -99.0
+        return [TopEngineLine(move="", eval=eval_pawns, mate=0, depth=depth, why="Checkmate", pv=[])]
+
+    if board.is_stalemate() or board.is_insufficient_material():
+        return [TopEngineLine(move="", eval=0.0, mate=None, depth=depth, why="Drawn position", pv=[])]
+
+    limit = chess.engine.Limit(depth=depth, time=time_limit)
+    infos = engine.analyse(board, limit=limit, multipv=multipv)
+    if isinstance(infos, dict):
+        infos = [infos]
+
+    lines: List[TopEngineLine] = []
+    for info in infos:
+        pv = info.get("pv", [])
+        if not pv:
+            continue
+
+        score = info.get("score")
+        eval_pawns = 0.0
+        mate_val = None
+        if score:
+            white_score = score.white()
+            if white_score.is_mate():
+                m_num = white_score.mate()
+                mate_val = m_num
+                if m_num == 0:
+                    eval_pawns = 99.0 if board.turn == chess.BLACK else -99.0
+                elif m_num > 0:
+                    eval_pawns = 99.0
+                else:
+                    eval_pawns = -99.0
+            else:
+                cp = white_score.score()
+                eval_pawns = round(cp / 100.0, 2) if cp is not None else 0.0
+
+        pv_sans: List[str] = []
+        temp_board = board.copy()
+        for m in pv[:8]:
             try:
-                # Ping engine
-                self._engine.ping()
-                return self._engine
+                pv_sans.append(temp_board.san(m))
+                temp_board.push(m)
             except Exception:
-                logger.warning("Stockfish engine was unresponsive. Restarting...")
-                self.close()
+                break
 
-        logger.info(f"Launching Stockfish from {self.stockfish_path}")
-        engine = chess.engine.SimpleEngine.popen_uci(self.stockfish_path)
-        engine.configure({
-            "Threads": 4,
-            "Hash": 256
-        })
-        self._engine = engine
-        return self._engine
+        first_move_san = pv_sans[0] if pv_sans else pv[0].uci()
+        why_text = generate_line_why_template(board, pv[0])
+
+        lines.append(
+            TopEngineLine(
+                move=first_move_san,
+                eval=eval_pawns,
+                mate=mate_val,
+                depth=info.get("depth", depth),
+                why=why_text,
+                pv=pv_sans
+            )
+        )
+    return lines
+
+
+class EnginePool:
+    """
+    Manages a pool of independent SimpleEngine subprocesses (one per concurrent job),
+    eliminating cross-thread UCI pipe corruption.
+    """
+    def __init__(self, size: int = 2):
+        self.size = size
+        self._queue: Optional[asyncio.Queue[chess.engine.SimpleEngine]] = None
+        self._all_engines: List[chess.engine.SimpleEngine] = []
+        self._lock = asyncio.Lock()
+
+    async def _init_pool(self) -> None:
+        if self._queue is not None:
+            return
+        self._queue = asyncio.Queue(maxsize=self.size)
+        path = get_stockfish_executable_path()
+        for _ in range(self.size):
+            engine = chess.engine.SimpleEngine.popen_uci(path)
+            engine.configure({"Threads": 2, "Hash": 128})
+            self._all_engines.append(engine)
+            await self._queue.put(engine)
+
+    @asynccontextmanager
+    async def acquire(self) -> AsyncIterator[chess.engine.SimpleEngine]:
+        async with self._lock:
+            if self._queue is None:
+                await self._init_pool()
+
+        engine = await self._queue.get()
+        try:
+            try:
+                engine.ping()
+            except Exception:
+                logger.warning("Engine in pool unresponsive, restarting...")
+                try:
+                    engine.quit()
+                except Exception:
+                    pass
+                path = get_stockfish_executable_path()
+                engine = chess.engine.SimpleEngine.popen_uci(path)
+                engine.configure({"Threads": 2, "Hash": 128})
+            yield engine
+        finally:
+            await self._queue.put(engine)
 
     def close(self) -> None:
-        if self._engine is not None:
+        for e in self._all_engines:
             try:
-                self._engine.quit()
+                e.quit()
             except Exception:
                 pass
-            self._engine = None
-
-    def analyse_fen_sync(
-        self,
-        fen: str,
-        depth: int = 14,
-        multipv: int = 3,
-        time_limit: float = 0.5
-    ) -> List[TopEngineLine]:
-        engine = self.get_or_create_engine()
-        board = chess.Board(fen)
-
-        limit = chess.engine.Limit(depth=depth, time=time_limit)
-        infos = engine.analyse(board, limit=limit, multipv=multipv)
-
-        # Normalise infos to list
-        if isinstance(infos, dict):
-            infos = [infos]
-
-        lines: List[TopEngineLine] = []
-        for info in infos:
-            pv = info.get("pv", [])
-            if not pv:
-                continue
-
-            score = info.get("score")
-            eval_pawns = 0.0
-            mate_val = None
-            if score:
-                white_score = score.white()
-                if white_score.is_mate():
-                    mate_val = white_score.mate()
-                    eval_pawns = 99.0 if (mate_val and mate_val > 0) else -99.0
-                else:
-                    cp = white_score.score()
-                    eval_pawns = round(cp / 100.0, 2) if cp is not None else 0.0
-
-            # Convert PV to SAN
-            pv_sans: List[str] = []
-            temp_board = board.copy()
-            for m in pv[:8]:
-                try:
-                    pv_sans.append(temp_board.san(m))
-                    temp_board.push(m)
-                except Exception:
-                    break
-
-            first_move_san = pv_sans[0] if pv_sans else pv[0].uci()
-            why_text = generate_line_why_template(board, pv[0])
-
-            lines.append(
-                TopEngineLine(
-                    move=first_move_san,
-                    eval=eval_pawns,
-                    mate=mate_val,
-                    depth=info.get("depth", depth),
-                    why=why_text,
-                    pv=pv_sans
-                )
-            )
-
-        return lines
+        self._all_engines.clear()
+        self._queue = None
 
 
-_GLOBAL_ENGINE_WORKER: Optional[EngineWorker] = None
+_GLOBAL_ENGINE_POOL = EnginePool(size=2)
 
 
-def get_global_engine_worker() -> EngineWorker:
-    global _GLOBAL_ENGINE_WORKER
-    if _GLOBAL_ENGINE_WORKER is None:
-        path = get_stockfish_executable_path()
-        _GLOBAL_ENGINE_WORKER = EngineWorker(path)
-    return _GLOBAL_ENGINE_WORKER
+def get_global_engine_pool() -> EnginePool:
+    return _GLOBAL_ENGINE_POOL
 
 
 async def analyze_position(
@@ -176,187 +230,259 @@ async def analyze_position(
     multipv: int = 3,
     time_limit: float = 0.5
 ) -> List[TopEngineLine]:
-    """Analyzes a single FEN position asynchronously behind the concurrency semaphore."""
-    async with _ENGINE_SEMAPHORE:
-        worker = get_global_engine_worker()
-        return await asyncio.to_thread(worker.analyse_fen_sync, fen, depth, multipv, time_limit)
+    """Analyzes a single FEN position using a dedicated engine from the pool."""
+    pool = get_global_engine_pool()
+    async with pool.acquire() as engine:
+        return await asyncio.to_thread(_analyse_fen_sync, engine, fen, depth, multipv, time_limit)
+
+
+def _run_single_pass_review_sync(
+    engine: chess.engine.SimpleEngine,
+    moves_list: List[Dict[str, Any]],
+    depth: int = 16,
+    time_per_move: float = 0.3,
+    is_user_white: bool = True,
+    on_progress: Optional[Callable[[int], None]] = None
+) -> Dict[str, Any]:
+    """
+    ONE EVAL PER POSITION:
+    Evaluates each position in the game exactly once (depth 16 / 0.3s, MultiPV 3).
+    A move's 'after' eval is the 'before' eval of the next position.
+    Checkmate / stalemate are identified without wasteful engine searches.
+    """
+    total_moves = len(moves_list)
+    if total_moves == 0:
+        return {
+            "moves": [],
+            "accuracy": {"white": None, "black": None},
+            "estimatedRating": {"white": None, "black": None},
+            "phaseGrades": {"opening": "N/A", "middlegame": "N/A", "tactics": "N/A", "endgame": "N/A"}
+        }
+
+    # 1. Step through positions and evaluate each position ONCE
+    board = chess.Board()
+    positions: List[chess.Board] = [board.copy()]
+    played_chess_moves: List[Optional[chess.Move]] = []
+    is_sacrifice_flags: List[bool] = []
+
+    for raw_m in moves_list:
+        san_str = raw_m.get("san", "")
+        from_sq = raw_m.get("from")
+        to_sq = raw_m.get("to")
+        promo = raw_m.get("promotion")
+
+        chess_m = None
+        try:
+            chess_m = board.parse_san(san_str)
+        except Exception:
+            if from_sq and to_sq:
+                try:
+                    uci_str = f"{from_sq}{to_sq}{promo.lower() if promo else ''}"
+                    chess_m = chess.Move.from_uci(uci_str)
+                except Exception:
+                    pass
+
+        is_sac = False
+        if chess_m and chess_m in board.legal_moves:
+            is_sac = is_material_sacrifice(board, chess_m)
+            board.push(chess_m)
+        else:
+            board = chess.Board(raw_m.get("fen", board.fen()))
+
+        played_chess_moves.append(chess_m)
+        is_sacrifice_flags.append(is_sac)
+        positions.append(board.copy())
+
+    # Now evaluate positions 0 .. total_moves (N + 1 positions total)
+    pos_evals: List[Dict[str, Any]] = []
+    total_positions = len(positions)
+
+    for p_idx, pos_board in enumerate(positions):
+        if pos_board.is_checkmate():
+            # Mover who created this position won
+            # If pos_board.turn is BLACK, White delivered checkmate (+99)
+            eval_val = 99.0 if pos_board.turn == chess.BLACK else -99.0
+            pos_evals.append({
+                "eval": eval_val,
+                "mate": 0,
+                "best_move_san": None,
+                "gap_to_second": 0.0,
+                "top_lines": []
+            })
+        elif pos_board.is_stalemate() or pos_board.is_insufficient_material():
+            pos_evals.append({
+                "eval": 0.0,
+                "mate": None,
+                "best_move_san": None,
+                "gap_to_second": 0.0,
+                "top_lines": []
+            })
+        else:
+            # Engine search
+            limit = chess.engine.Limit(depth=depth, time=time_per_move)
+            infos = engine.analyse(pos_board, limit=limit, multipv=3)
+            if isinstance(infos, dict):
+                infos = [infos]
+
+            top_lines: List[Dict[str, Any]] = []
+            best_eval = 0.2
+            best_mate = None
+            best_san = None
+
+            for i, info in enumerate(infos):
+                pv = info.get("pv", [])
+                if not pv:
+                    continue
+                score = info.get("score")
+                line_eval = 0.0
+                line_mate = None
+                if score:
+                    w_sc = score.white()
+                    if w_sc.is_mate():
+                        m_dist = w_sc.mate()
+                        line_mate = m_dist
+                        line_eval = 99.0 if m_dist > 0 else -99.0
+                    else:
+                        cp = w_sc.score()
+                        line_eval = round(cp / 100.0, 2) if cp is not None else 0.0
+
+                if i == 0:
+                    best_eval = line_eval
+                    best_mate = line_mate
+                    try:
+                        best_san = pos_board.san(pv[0])
+                    except Exception:
+                        best_san = pv[0].uci()
+
+                pv_sans: List[str] = []
+                tb = pos_board.copy()
+                for m in pv[:6]:
+                    try:
+                        pv_sans.append(tb.san(m))
+                        tb.push(m)
+                    except Exception:
+                        break
+
+                why_desc = generate_line_why_template(pos_board, pv[0])
+                top_lines.append({
+                    "move": pv_sans[0] if pv_sans else pv[0].uci(),
+                    "eval": line_eval,
+                    "mate": line_mate,
+                    "depth": info.get("depth", depth),
+                    "why": why_desc,
+                    "pv": pv_sans
+                })
+
+            gap_2nd = 0.0
+            if len(top_lines) >= 2:
+                w1 = eval_to_win_pct(top_lines[0]["eval"], top_lines[0]["mate"])
+                w2 = eval_to_win_pct(top_lines[1]["eval"], top_lines[1]["mate"])
+                gap_2nd = abs(w1 - w2)
+
+            pos_evals.append({
+                "eval": best_eval,
+                "mate": best_mate,
+                "best_move_san": best_san,
+                "gap_to_second": gap_2nd,
+                "top_lines": top_lines
+            })
+
+        if on_progress:
+            on_progress(int(((p_idx + 1) / total_positions) * 100))
+
+    # 2. Correlate moves: move i starts at pos i, ends at pos i+1
+    analyzed_moves: List[Dict[str, Any]] = []
+    is_in_book = True
+    current_move_sans: List[str] = []
+    last_mover_made_mistake = False
+
+    for idx, raw_move in enumerate(moves_list):
+        san_move = raw_move.get("san", "")
+        color = raw_move.get("color", "w")
+        current_move_sans.append(san_move)
+
+        pos_before = pos_evals[idx]
+        pos_after = pos_evals[idx + 1]
+
+        # Book move identification (stops at first non-book move)
+        is_book_move = False
+        if is_in_book:
+            resulting_board = positions[idx + 1]
+            if tuple(current_move_sans) in BOOK_PREFIXES or resulting_board.epd() in BOOK_POSITION_EPDS:
+                is_book_move = True
+            else:
+                is_in_book = False
+
+        is_top = (san_move == pos_before["best_move_san"])
+        is_cm = (pos_after["mate"] == 0)
+
+        classification = classify_move(
+            eval_before_pawns=pos_before["eval"],
+            eval_after_pawns=pos_after["eval"],
+            color=color,
+            mate_before=pos_before["mate"],
+            mate_after=pos_after["mate"],
+            is_book=is_book_move,
+            is_sacrifice=is_sacrifice_flags[idx],
+            gap_to_second_win_pct=pos_before["gap_to_second"],
+            opponent_just_made_mistake=last_mover_made_mistake,
+            is_top_engine_move=is_top,
+            is_checkmate=is_cm
+        )
+
+        # Miss can only occur after opponent mistake or blunder (NOT inaccuracy)
+        last_mover_made_mistake = (classification in ("mistake", "blunder"))
+
+        # Win% calculation
+        played_win_pct = eval_to_win_pct(pos_after["eval"], pos_after["mate"])
+        if color == 'b':
+            played_win_pct = round(100.0 - played_win_pct, 1)
+
+        updated_m = dict(raw_move)
+        updated_m["classification"] = classification
+        updated_m["eval"] = {
+            "eval": pos_after["eval"],
+            "mate": pos_after["mate"],
+            "bestMove": pos_before["best_move_san"],
+            "winPct": played_win_pct,
+            "why": pos_before["top_lines"][0]["why"] if pos_before["top_lines"] else "",
+            "lines": pos_before["top_lines"]
+        }
+        analyzed_moves.append(updated_m)
+
+    # Compute game-level accuracy using the Lichess method
+    accuracy = calculate_game_accuracy(analyzed_moves)
+    est_ratings = estimate_performance_ratings(accuracy)
+    phase_grades = calculate_phase_grades(analyzed_moves, is_user_white=is_user_white)
+
+    return {
+        "moves": analyzed_moves,
+        "accuracy": accuracy,
+        "estimatedRating": est_ratings,
+        "phaseGrades": phase_grades["user"],
+        "phaseGradesAll": phase_grades
+    }
 
 
 async def analyze_game_moves_full(
     moves_list: List[Dict[str, Any]],
     depth: int = 16,
     time_per_move: float = 0.3,
+    is_user_white: bool = True,
     on_progress: Optional[Callable[[int], None]] = None
 ) -> Dict[str, Any]:
     """
     Performs full depth 16 game review across every position in a game.
-    Runs inside the 2-job concurrency semaphore.
+    Acquires an exclusive SimpleEngine instance from the pool.
     """
-    async with _ENGINE_SEMAPHORE:
-        worker = get_global_engine_worker()
-
-        def _run_full_review() -> Dict[str, Any]:
-            board = chess.Board()
-            analyzed_moves: List[Dict[str, Any]] = []
-            total_moves = len(moves_list)
-
-            last_eval = 0.2
-            last_mate: Optional[int] = None
-            last_mover_made_mistake = False
-
-            for idx, raw_move in enumerate(moves_list):
-                # 1. Analyze position BEFORE the move
-                limit = chess.engine.Limit(depth=depth, time=time_per_move)
-                engine = worker.get_or_create_engine()
-                infos = engine.analyse(board, limit=limit, multipv=3)
-                if isinstance(infos, dict):
-                    infos = [infos]
-
-                # Extract top engine lines
-                top_lines: List[Dict[str, Any]] = []
-                best_line_eval = 0.2
-                best_line_mate = None
-                best_move_san = raw_move.get("san", "")
-                gap_to_second_win_pct = 0.0
-
-                for i, info in enumerate(infos):
-                    pv = info.get("pv", [])
-                    if not pv:
-                        continue
-                    score = info.get("score")
-                    line_eval = 0.0
-                    line_mate = None
-                    if score:
-                        w_score = score.white()
-                        if w_score.is_mate():
-                            line_mate = w_score.mate()
-                            line_eval = 99.0 if (line_mate and line_mate > 0) else -99.0
-                        else:
-                            cp = w_score.score()
-                            line_eval = round(cp / 100.0, 2) if cp is not None else 0.0
-
-                    if i == 0:
-                        best_line_eval = line_eval
-                        best_line_mate = line_mate
-                        try:
-                            best_move_san = board.san(pv[0])
-                        except Exception:
-                            best_move_san = pv[0].uci()
-
-                    pv_sans: List[str] = []
-                    tb = board.copy()
-                    for m in pv[:6]:
-                        try:
-                            pv_sans.append(tb.san(m))
-                            tb.push(m)
-                        except Exception:
-                            break
-
-                    why_desc = generate_line_why_template(board, pv[0])
-                    top_lines.append({
-                        "move": pv_sans[0] if pv_sans else pv[0].uci(),
-                        "eval": line_eval,
-                        "mate": line_mate,
-                        "depth": info.get("depth", depth),
-                        "why": why_desc,
-                        "pv": pv_sans
-                    })
-
-                # Calculate gap to 2nd line in win%
-                if len(top_lines) >= 2:
-                    win1 = eval_to_win_pct(top_lines[0]["eval"], top_lines[0]["mate"])
-                    win2 = eval_to_win_pct(top_lines[1]["eval"], top_lines[1]["mate"])
-                    gap_to_second_win_pct = abs(win1 - win2)
-
-                # 2. Find and execute played move
-                color = raw_move.get("color", "w")
-                san_move = raw_move.get("san", "")
-                from_sq = raw_move.get("from")
-                to_sq = raw_move.get("to")
-                promo = raw_move.get("promotion")
-
-                played_chess_move = None
-                try:
-                    played_chess_move = board.parse_san(san_move)
-                except Exception:
-                    if from_sq and to_sq:
-                        try:
-                            uci_str = f"{from_sq}{to_sq}{promo.lower() if promo else ''}"
-                            played_chess_move = chess.Move.from_uci(uci_str)
-                        except Exception:
-                            pass
-
-                is_sac = False
-                if played_chess_move and played_chess_move in board.legal_moves:
-                    is_sac = is_material_sacrifice(board, played_chess_move)
-                    board.push(played_chess_move)
-                else:
-                    # Fallback if unparseable move
-                    board = chess.Board(raw_move.get("fen", board.fen()))
-
-                # 3. Analyze position AFTER the move
-                infos_after = engine.analyse(board, limit=chess.engine.Limit(depth=min(12, depth), time=0.15), multipv=1)
-                if isinstance(infos_after, list) and infos_after:
-                    infos_after = infos_after[0]
-                after_eval = best_line_eval
-                after_mate = best_line_mate
-                if isinstance(infos_after, dict) and infos_after.get("score"):
-                    w_sc = infos_after["score"].white()
-                    if w_sc.is_mate():
-                        after_mate = w_sc.mate()
-                        after_eval = 99.0 if (after_mate and after_mate > 0) else -99.0
-                    else:
-                        cp = w_sc.score()
-                        after_eval = round(cp / 100.0, 2) if cp is not None else best_line_eval
-
-                # 4. Classify move
-                is_top = (san_move == best_move_san)
-                is_book_move = raw_move.get("classification") == "book" or (idx < 6 and raw_move.get("classification") == "book")
-
-                classification = classify_move(
-                    eval_before_pawns=best_line_eval,
-                    eval_after_pawns=after_eval,
-                    color=color,
-                    mate_before=best_line_mate,
-                    mate_after=after_mate,
-                    is_book=is_book_move,
-                    is_sacrifice=is_sac,
-                    gap_to_second_win_pct=gap_to_second_win_pct,
-                    opponent_just_made_mistake=last_mover_made_mistake,
-                    is_top_engine_move=is_top
-                )
-
-                last_mover_made_mistake = (classification in ("mistake", "blunder", "inaccuracy"))
-
-                # Win%
-                played_win_pct = eval_to_win_pct(after_eval, after_mate)
-                if color == 'b':
-                    played_win_pct = round(100.0 - played_win_pct, 1)
-
-                updated_m = dict(raw_move)
-                updated_m["classification"] = classification
-                updated_m["eval"] = {
-                    "eval": after_eval,
-                    "mate": after_mate,
-                    "bestMove": best_move_san,
-                    "winPct": played_win_pct,
-                    "why": top_lines[0]["why"] if top_lines else "Best engine line.",
-                    "lines": top_lines
-                }
-                analyzed_moves.append(updated_m)
-
-                if on_progress and total_moves > 0:
-                    on_progress(int(((idx + 1) / total_moves) * 100))
-
-            accuracy = calculate_game_accuracy(analyzed_moves)
-            est_ratings = estimate_performance_ratings(accuracy)
-            phase_grades = calculate_phase_grades(analyzed_moves)
-
-            return {
-                "moves": analyzed_moves,
-                "accuracy": accuracy,
-                "estimatedRating": est_ratings,
-                "phaseGrades": phase_grades
-            }
-
-        return await asyncio.to_thread(_run_full_review)
+    pool = get_global_engine_pool()
+    async with pool.acquire() as engine:
+        return await asyncio.to_thread(
+            _run_single_pass_review_sync,
+            engine,
+            moves_list,
+            depth,
+            time_per_move,
+            is_user_white,
+            on_progress
+        )

@@ -22,14 +22,21 @@ def win_pct(cp: float) -> float:
 def eval_to_win_pct(eval_score: Optional[float] = None, mate: Optional[int] = None) -> float:
     """
     Computes win percentage from eval in pawns (from White's POV) or mate.
+    mate: number of moves to mate.
+      > 0: White forces mate -> 100.0%
+      < 0: Black forces mate -> 0.0%
+      == 0: Checkmate position. If eval_score >= 0, White delivered mate (100.0%), else Black delivered mate (0.0%).
     """
     if mate is not None:
         if mate > 0:
             return 100.0
         elif mate < 0:
             return 0.0
-        return 50.0
+        else:
+            if eval_score is not None:
+                return 100.0 if eval_score >= 0 else 0.0
+            return 100.0
+
     if eval_score is None or math.isnan(eval_score):
         return 50.0
-    # Convert pawn units to centipawns
     return win_pct(eval_score * 100.0)

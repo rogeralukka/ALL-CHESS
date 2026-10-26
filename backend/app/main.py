@@ -3,6 +3,10 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+import os
+from pathlib import Path
+from alembic.config import Config
+from alembic import command
 from app.config import settings
 from app.database import engine as db_engine, Base
 import app.models  # registers models with Base
@@ -10,8 +14,25 @@ from app.routers import auth, games, sync, stats, jobs, engine as engine_router
 
 logger = logging.getLogger("all_chess")
 
-# Create tables on application start
-Base.metadata.create_all(bind=db_engine)
+def run_db_migrations():
+    if os.environ.get("TESTING") == "1":
+        return
+    try:
+        backend_dir = Path(__file__).resolve().parent.parent
+        alembic_ini = backend_dir / "alembic.ini"
+        if alembic_ini.exists():
+            alembic_cfg = Config(str(alembic_ini))
+            alembic_cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+            command.upgrade(alembic_cfg, "head")
+            logger.info("Database migrations applied successfully.")
+        else:
+            Base.metadata.create_all(bind=db_engine)
+    except Exception as e:
+        logger.warning(f"Could not run alembic migrations, falling back to create_all: {e}")
+        Base.metadata.create_all(bind=db_engine)
+
+# Apply migrations on application startup
+run_db_migrations()
 
 app = FastAPI(
     title="ALL-CHESS API",
