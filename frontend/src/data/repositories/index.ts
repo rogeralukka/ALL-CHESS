@@ -225,8 +225,6 @@ export const statsRepository: IStatsRepository = {
   },
 };
 
-console.info('[ALL-CHESS] scoutRepository: using mock fallback');
-
 // --- PUZZLE REPOSITORY ---
 export const puzzleRepository: IPuzzleRepository = {
   async getPuzzles() {
@@ -313,11 +311,31 @@ export const friendRepository: IFriendRepository = {
 
 export const scoutRepository: IScoutRepository = {
   async searchProfiles(query: string) {
-    const q = query.toLowerCase();
-    return Object.values(MOCK_SCOUT_PROFILES).filter((p) => p.username.toLowerCase().includes(q));
+    if (isMockMode()) {
+      const q = query.toLowerCase();
+      return Object.values(MOCK_SCOUT_PROFILES).filter((p) => p.username.toLowerCase().includes(q));
+    }
+    try {
+      const res = await api.get<ScoutProfile[]>(`/scout?query=${encodeURIComponent(query)}`);
+      return res || [];
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return [];
+      const q = query.toLowerCase();
+      return Object.values(MOCK_SCOUT_PROFILES).filter((p) => p.username.toLowerCase().includes(q));
+    }
   },
   async getProfile(username: string) {
-    return MOCK_SCOUT_PROFILES[username] || null;
+    if (isMockMode()) {
+      return MOCK_SCOUT_PROFILES[username] || null;
+    }
+    try {
+      return await api.get<ScoutProfile>(`/scout/${encodeURIComponent(username)}`);
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 404 || err.status === 401)) {
+        return null;
+      }
+      return MOCK_SCOUT_PROFILES[username] || null;
+    }
   },
 };
 
