@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { ArrowLeft, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
+import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
 
 const EMPTY_ARROWS: never[] = [];
 const EMPTY_HIGHLIGHTS: never[] = [];
@@ -153,11 +154,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
       </div>
 
       {/* Mode Panel */}
-      <div className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] z-20 overflow-hidden">
-        <div className="h-14 flex-shrink-0 flex items-center justify-center gap-2 border-b border-theme-border/60">
-          <img src="/assets/ui/icon_learn.webp" alt="" className="w-7 h-7 object-contain" />
-          <span className="text-xl font-extrabold font-display text-theme-text">Lesson</span>
-        </div>
+      <SidebarPanel className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20" testId="lesson-panel">
+        <SidebarHeader title="Lesson" icon={<img src="/assets/ui/icon_learn.webp" alt="" className="w-9 h-9 object-contain" />} />
         <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col justify-between gap-5">
         <div className="space-y-5">
           <CoachSpeech
@@ -217,7 +215,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
           </Button>
         </div>
         </div>
-      </div>
+      </SidebarPanel>
     </div>
   );
 };

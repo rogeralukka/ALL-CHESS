@@ -36,6 +36,7 @@ import {
   ArrowLeft,
   SlidersHorizontal,
 } from 'lucide-react';
+import { SidebarPanel, SidebarHeader, HeaderIconButton } from '@/components/SidebarPanel';
 import { useNavigate } from 'react-router-dom';
 
 interface ReviewBoardProps {
@@ -569,49 +570,30 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
       </div>
 
       {/* --- RIGHT ZONE: MODE PANEL (460px to 500px, clamp 380-500) --- */}
-      <div className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] z-20 min-h-0">
-        {/* Panel Header: 48px bar, title centred with icon, back on left, sound & settings on right. Drop ply counter. */}
-        <div className="h-14 min-h-[56px] px-4 border-b border-theme-border/60 flex items-center justify-between flex-shrink-0">
-          <button
-            type="button"
-            onClick={onBackToSummary}
-            className="p-2 -ml-2 rounded-lg text-theme-muted hover:text-theme-text transition-colors inline-flex items-center gap-1 text-xs font-semibold"
-            title="Return to Summary"
-            aria-label="Return to Summary"
-          >
-            <ArrowLeft size={18} />
-            <span className="hidden sm:inline">Summary</span>
-          </button>
-
-          <div className="flex items-center gap-2 font-display font-extrabold text-xl text-theme-text">
-            <img src="/assets/ui/icon_review.webp" alt="" className="w-7 h-7 object-contain" />
-            <span>Game Review</span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Sound toggle button */}
-            <button
-              type="button"
-              onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
-              className="text-theme-muted hover:text-theme-text transition-colors p-2 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
-              title={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
-              aria-label={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
-            >
-              {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
-            </button>
-            {/* Quick settings link */}
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="text-theme-muted hover:text-theme-text transition-colors p-2 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center"
-              title="Settings"
-              aria-label="Settings"
-            >
-              <SlidersHorizontal size={17} />
-            </button>
-          </div>
-        </div>
-
+      <SidebarPanel className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20" testId="review-panel">
+        <SidebarHeader
+          title="Game Review"
+          icon={<img src="/assets/ui/icon_review.webp" alt="" className="w-9 h-9 object-contain" />}
+          left={
+            <HeaderIconButton onClick={onBackToSummary} title="Return to Summary" aria-label="Return to Summary">
+              <ArrowLeft size={22} />
+            </HeaderIconButton>
+          }
+          right={
+            <>
+              <HeaderIconButton
+                onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
+                title={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
+                aria-label={soundEnabled ? 'Mute review sounds' : 'Enable review sounds'}
+              >
+                {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              </HeaderIconButton>
+              <HeaderIconButton onClick={() => navigate('/settings')} title="Settings" aria-label="Settings">
+                <SlidersHorizontal size={20} />
+              </HeaderIconButton>
+            </>
+          }
+        />
         {/* Panel Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
           {/* Coach Portrait + Speech Bubble (Unclipped, bubble fills panel width minus 96px portrait + 12px gap) */}
@@ -901,7 +883,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             <SkipForward size={18} />
           </Button>
         </div>
-      </div>
+      </SidebarPanel>
     </div>
   );
 };

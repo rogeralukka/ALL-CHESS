@@ -25,6 +25,7 @@ import { OpeningService, OpeningMatch } from '@/services/openingService';
 import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/lib/useCurrentUser';
+import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
 
 const PIECE_FIGURINES: Record<string, string> = {
   p: '♟',
@@ -817,29 +818,22 @@ export const PlayGame: React.FC = () => {
       </div>
 
       {/* Right Zone: Lobby or In-Game Panel (460px to 500px, clamp 380-500) */}
-      <div className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] z-20 overflow-hidden">
-        {/* Panel Header */}
-        <div className="flex items-center justify-between px-4 h-14 flex-shrink-0 border-b border-theme-border/60">
-          <div className="flex items-center gap-2">
-            <img src="/assets/ui/icon_play.webp" alt="" className="w-7 h-7 object-contain" />
-            <span className="text-xl font-extrabold font-display text-theme-text">Play Coach</span>
+      <SidebarPanel className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20" testId="play-panel">
+        <SidebarHeader
+          title="Play Coach"
+          icon={<img src="/assets/ui/icon_play.webp" alt="" className="w-9 h-9 object-contain" />}
+          right={
             <span
-              className={`text-xs font-bold uppercase px-1.5 py-0.2 rounded border ${
+              className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded border ${
                 activeConfig
                   ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                   : 'bg-theme-raised text-theme-muted border-theme-border'
               }`}
             >
-              {activeConfig ? 'Live Game' : 'Match Setup'}
+              {activeConfig ? `Live · ${Math.floor(moves.length / 2)}` : 'Setup'}
             </span>
-          </div>
-          {activeConfig && (
-            <span className="text-xs font-mono tabular-nums font-bold text-theme-muted">
-              Moves: {Math.floor(moves.length / 2)}
-            </span>
-          )}
-        </div>
-
+          }
+        />
         {/* Panel Content (Scrollable with fixed container for 200ms cross-fade) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <AnimatePresence mode="wait">
@@ -1008,7 +1002,7 @@ export const PlayGame: React.FC = () => {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </SidebarPanel>
     </div>
   );
 };
