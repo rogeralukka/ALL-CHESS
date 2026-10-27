@@ -1,5 +1,5 @@
 import math
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from app.services.win_pct import eval_to_win_pct
 from app.config import settings
 
