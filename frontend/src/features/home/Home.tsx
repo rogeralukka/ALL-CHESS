@@ -1,6 +1,7 @@
 import { ModeIcon, GameMode } from '@/components/ModeIcon';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import React, { useEffect, useState } from 'react';
+import { InlineLoader } from '@/components/LoadingScreen';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/Card';
@@ -76,6 +77,7 @@ export const Home: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [currentStage, setCurrentStage] = useState<LessonStage | null>(null);
   const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -95,6 +97,10 @@ export const Home: React.FC = () => {
           setFriends(friendList);
           setCurrentStage(stages.find((s) => s.status === 'current') || stages[0] || null);
           setDailyPuzzle(puzzle);
+          setLoaded(true);
+        },
+        () => {
+          if (mounted) setLoaded(true);
         }
       );
     };
@@ -117,6 +123,14 @@ export const Home: React.FC = () => {
 
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const today = (new Date().getDay() + 6) % 7;
+
+  if (!loaded) {
+    return (
+      <PageContainer wide>
+        <InlineLoader label="Setting up your home…" size={140} className="py-24" />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer wide>

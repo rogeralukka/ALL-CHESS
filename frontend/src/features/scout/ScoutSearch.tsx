@@ -1,3 +1,4 @@
+import { InlineLoader } from '@/components/LoadingScreen';
 import React, { useEffect, useState } from 'react';
 import { Search, ChevronRight, Swords, BookOpen, Percent } from 'lucide-react';
 import { PageContainer } from '@/components/PageHeader';
@@ -108,6 +109,8 @@ export const ScoutSearch: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {busy && <InlineLoader label={`Scouting ${query.trim()}… this can take a few seconds`} size={120} />}
 
       {notice && (
         <div role="status" className="cc-card px-5 py-3.5 text-[15px] text-theme-text" data-testid="scout-notice">

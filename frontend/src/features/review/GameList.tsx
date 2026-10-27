@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Game } from '@/data/types';
 import { gameRepository, GameFilter } from '@/data/repositories';
 import { Button } from '@/components/Button';
-import { Skeleton } from '@/components/Skeleton';
+import { InlineLoader } from '@/components/LoadingScreen';
 import { Segmented } from '@/components/Segmented';
 import { PageContainer } from '@/components/PageHeader';
 import { PageTitle, StatTile } from '@/components/ListUI';
@@ -114,11 +114,7 @@ export const GameList: React.FC<GameListProps> = () => {
         </div>
 
         {loading && (
-          <div className="p-4 space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} height={52} />
-            ))}
-          </div>
+          <InlineLoader label="Loading your games…" size={110} className="py-12" />
         )}
 
         {!loading && games.length === 0 && (

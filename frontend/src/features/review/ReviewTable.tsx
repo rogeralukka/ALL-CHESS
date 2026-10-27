@@ -3,6 +3,7 @@ import { Game, MoveClassification, Player } from '@/data/types';
 import { CLASSIFICATION_META, ClassificationBadge } from '@/components/ClassificationBadge';
 import { PlayerAvatar } from '@/components/Bits';
 import { useCurrentUser } from '@/lib/useCurrentUser';
+import { gameOpening, phaseRows } from './phases';
 
 /** Order and wording follow the reference review table. */
 const ORDER: MoveClassification[] = ['brilliant', 'great', 'book', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'miss', 'blunder'];
@@ -47,15 +48,8 @@ export const ReviewTable: React.FC<ReviewTableProps> = ({ game }) => {
     </div>
   );
 
-  const g = game.phaseGrades;
-  const phases = g
-    ? [
-        ['Opening', g.opening],
-        ['Middlegame', g.middlegame],
-        ['Tactics', g.tactics],
-        ['Endgame', g.endgame],
-      ]
-    : [];
+  const rows = phaseRows(game);
+  const opening = gameOpening(game);
 
   return (
     <div className="px-4 pb-2 select-none" data-testid="review-table">
@@ -99,18 +93,22 @@ export const ReviewTable: React.FC<ReviewTableProps> = ({ game }) => {
         })}
       </div>
 
-      {phases.length > 0 && (
-        <div className="mt-2 border-t border-white/[0.06] pt-1.5">
-          {phases.map(([label, grade]) => (
-            <div key={label} className={`${GRID} h-[44px]`}>
-              <RowLabel>{label}</RowLabel>
-              <span className="flex justify-center">
-                {userIsWhite && <GradeChip grade={grade} />}
-              </span>
+      {rows.length > 0 && (
+        <div className="mt-2 border-t border-white/[0.06] pt-2" data-testid="advanced-stats">
+          <div className="pb-1 text-[11px] font-bold uppercase tracking-wider text-theme-muted">Advanced stats</div>
+          {rows.map((row) => (
+            <div key={row.phase} className={`${GRID} min-h-[52px] py-1`} data-testid={`phase-${row.phase}`}>
+              <div className="min-w-0 pr-2">
+                <RowLabel>{row.label}</RowLabel>
+                {row.phase === 'opening' && opening && (
+                  <div className="text-[11px] leading-tight text-theme-muted/80 truncate" title={`${opening.name} (${opening.eco})`}>
+                    {opening.name} · {opening.eco}
+                  </div>
+                )}
+              </div>
+              <PhaseCell side={row.white} />
               <span />
-              <span className="flex justify-center">
-                {!userIsWhite && <GradeChip grade={grade} />}
-              </span>
+              <PhaseCell side={row.black} />
             </div>
           ))}
         </div>
@@ -118,6 +116,15 @@ export const ReviewTable: React.FC<ReviewTableProps> = ({ game }) => {
     </div>
   );
 };
+
+const PhaseCell: React.FC<{ side: { grade: string; accuracy: number | null; moves: number } }> = ({ side }) => (
+  <span className="flex flex-col items-center gap-0.5">
+    {side.moves > 0 || side.grade !== 'N/A' ? <GradeChip grade={side.grade} /> : <span className="text-theme-muted">–</span>}
+    {side.accuracy !== null && (
+      <span className="text-[11px] font-bold tabular-nums text-theme-muted">{side.accuracy.toFixed(0)}%</span>
+    )}
+  </span>
+);
 
 const GradeChip: React.FC<{ grade: string }> = ({ grade }) => (
   <span

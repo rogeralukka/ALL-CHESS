@@ -91,7 +91,11 @@ export interface Game {
     white: number; // MOCK
     black: number; // MOCK
   };
-  phaseGrades?: PhaseGrade; // MOCK
+  /** Either one grade set (the signed-in player's colour) or one per colour. */
+  phaseGrades?: PhaseGrade | { white?: PhaseGrade; black?: PhaseGrade };
+  /** Stockfish depth the review was produced at, and the level id that asked for it. */
+  analysisDepth?: number;
+  analysisLevel?: string;
 }
 
 export interface OpeningStat {

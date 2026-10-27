@@ -1,3 +1,4 @@
+import { MiniHopper } from '@/components/LoadingScreen';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Game } from '@/data/types';
@@ -102,7 +103,7 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
                   {!compact && (
                     <td className="py-3 px-2 text-center hidden md:table-cell">
                       {analyzingId === g.id ? (
-                        <span className="text-[12px] font-semibold text-theme-muted animate-pulse">Analysing…</span>
+                        <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-theme-muted"><MiniHopper size={26} />Analysing…</span>
                       ) : (
                         <div className="flex flex-col text-[14px] font-semibold tabular-nums leading-6">
                           <span className={accTone(g.accuracy?.white)}>{g.accuracy?.white ?? '–'}</span>

@@ -5,6 +5,9 @@ import { PlayerBar } from '@/components/PlayerBar';
 import { PlayerAvatar } from '@/components/Bits';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { ReviewTable } from './ReviewTable';
+import { phaseRows } from './phases';
+import { AnalysisDepth } from './AnalysisDepth';
+import { AnalysisLevel, DEFAULT_LEVEL } from './analysisLevels';
 import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { Board } from '@/features/board/Board';
@@ -18,6 +21,9 @@ import { NavLink } from 'react-router-dom';
 interface GameSummaryProps {
   game: Game;
   onStartReview: () => void;
+  level?: AnalysisLevel['id'];
+  onLevelChange?: (id: AnalysisLevel['id']) => void;
+  onReanalyze?: (id: AnalysisLevel['id']) => void;
 }
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -52,8 +58,15 @@ function generateCoachSummary(game: Game): { text: string; expression: CoachExpr
     ? `on move ${biggestSwingMove.moveNumber} (${biggestSwingMove.san}${biggestSwingMove.classification ? `, ${biggestSwingMove.classification}` : ''})`
     : 'in the middlegame';
 
-  const openingGrade = game.phaseGrades?.opening || 'B';
-  const middleGrade = game.phaseGrades?.middlegame || 'C';
+  const userIsWhiteSide = game.isUserWhite ?? game.white.username === 'You';
+  const phaseList = phaseRows(game);
+  const mine = (id: 'opening' | 'middlegame') => {
+    const row = phaseList.find((r) => r.phase === id);
+    const g = row ? (userIsWhiteSide ? row.white.grade : row.black.grade) : 'N/A';
+    return g === 'N/A' ? 'B' : g;
+  };
+  const openingGrade = mine('opening');
+  const middleGrade = mine('middlegame');
 
   let text = '';
   let expression: CoachExpression = 'neutral';
@@ -72,7 +85,7 @@ function generateCoachSummary(game: Game): { text: string; expression: CoachExpr
   return { text, expression };
 }
 
-export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview }) => {
+export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview, level = DEFAULT_LEVEL, onLevelChange, onReanalyze }) => {
   const me = useCurrentUser();
   const { boardThemeId, pieceSetId, animationSpeed, coordinates, coachVoiceEnabled } = useSettingsStore();
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
@@ -216,6 +229,9 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview })
           </div>
 
           <ReviewTable game={game} />
+          {onLevelChange && onReanalyze && (
+            <AnalysisDepth game={game} level={level} onLevelChange={onLevelChange} onReanalyze={onReanalyze} />
+          )}
         </div>
 
         <div className="p-4 flex-shrink-0" style={{ background: 'var(--side-header-bg)' }}>

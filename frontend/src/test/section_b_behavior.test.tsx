@@ -104,7 +104,7 @@ describe('Section B: Behavior & Engine Services', () => {
     });
 
     it('returns null for arbitrary illegal/unrecorded move sequence', () => {
-      const moves = ['h4', 'h5', 'a4', 'a5'];
+      const moves = ['Qz9', 'Kx0'];
       const match = OpeningService.identifyOpening(moves);
       expect(match).toBeNull();
     });

@@ -267,7 +267,7 @@ const SingleBubbleItem: React.FC<SingleBubbleItemProps> = ({
 
               {/* Text: the untyped remainder is laid out but invisible, so the bubble has its final
                   size from the first frame and nothing below it jumps while the coach "types". */}
-              <div data-testid="coach-bubble-text" className="text-[15px] leading-5 font-medium" aria-live="polite">
+              <div data-testid="coach-bubble-text" className="text-[16px] leading-6 font-medium" aria-live="polite">
                 <span className="sr-only">{msg.text}</span>
                 <span aria-hidden="true">{typed}</span>
                 {rest && (

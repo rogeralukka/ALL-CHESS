@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { InlineLoader } from '@/components/LoadingScreen';
 import { ChevronRight, Plus, Users } from 'lucide-react';
 import { PageContainer } from '@/components/PageHeader';
 import { PageTitle, FilterBar, FilterDropdown, StatTile } from '@/components/ListUI';
@@ -74,13 +75,14 @@ export const Leaderboard: React.FC = () => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [newFriend, setNewFriend] = useState('');
   const [adding, setAdding] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const load = () =>
     Promise.all([friendRepository.getFriends(), gameRepository.getGames(), statsRepository.getUserRatings()]).then(([f, g, r]) => {
       setFriends(f);
       setGames(g);
       setMine(r);
-    });
+    }).catch(() => undefined).finally(() => setLoaded(true));
 
   useEffect(() => {
     load();
@@ -141,6 +143,15 @@ export const Leaderboard: React.FC = () => {
   };
 
   const bestRating = Math.max(0, ...SPEEDS.map(myRating));
+
+  if (!loaded) {
+    return (
+      <PageContainer wide className="!max-w-[1100px]">
+        <PageTitle icon="/assets/ui/icon_leaderboard.webp" title="Leaderboard" />
+        <InlineLoader label="Loading the leaderboard…" size={130} className="py-20" />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer wide className="!max-w-[1100px]">

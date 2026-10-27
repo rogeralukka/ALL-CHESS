@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { InlineLoader } from '@/components/LoadingScreen';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -84,6 +85,7 @@ export const Profile: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [ratings, setRatings] = useState<{ mode: string; rating: number; deltaWeekly: number }[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -100,6 +102,9 @@ export const Profile: React.FC = () => {
         setGames(g);
         setFriends(f);
         setRatings(r);
+        setLoaded(true);
+      }).catch(() => {
+        if (alive) setLoaded(true);
       });
     };
 
@@ -160,6 +165,14 @@ export const Profile: React.FC = () => {
     setSpeed(s);
     setTab('stats');
   };
+
+  if (!loaded) {
+    return (
+      <PageContainer wide className="!max-w-[1200px]">
+        <InlineLoader label="Loading your profile…" size={140} className="py-24" />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer wide className="!max-w-[1200px]">

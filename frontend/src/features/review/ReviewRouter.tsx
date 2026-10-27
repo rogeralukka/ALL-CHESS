@@ -9,6 +9,7 @@ import { GameSummary } from './GameSummary';
 import { ReviewBoard } from './ReviewBoard';
 import { Skeleton } from '@/components/Skeleton';
 import { PieceHopper } from '@/components/LoadingScreen';
+import { AnalysisLevel, loadLevel, saveLevel } from './analysisLevels';
 
 export const ReviewRouter: React.FC = () => {
   const params = useParams();
@@ -21,7 +22,63 @@ export const ReviewRouter: React.FC = () => {
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<number | null>(null);
-  const [activeView, setActiveView] = useState<'summary' | 'board'>('summary');
+  const [level, setLevelState] = useState<AnalysisLevel['id']>(() => loadLevel());
+  const viewKey = `all_chess_review_view_${gameId}`;
+  const readView = (): 'summary' | 'board' => {
+    try {
+      return sessionStorage.getItem(viewKey) === 'board' ? 'board' : 'summary';
+    } catch {
+      return 'summary';
+    }
+  };
+  const [activeView, setActiveViewState] = useState<'summary' | 'board'>(readView);
+  // Remember which screen of this review is open, so a remount (tab return, hot reload) lands in the same place
+  const setActiveView = (v: 'summary' | 'board') => {
+    setActiveViewState(v);
+    try {
+      sessionStorage.setItem(viewKey, v);
+    } catch {
+      // ignore
+    }
+  };
+  const setLevel = (id: AnalysisLevel['id']) => {
+    setLevelState(id);
+    saveLevel(id);
+  };
+
+  /** Runs (or re-runs) the Stockfish review on the backend and waits for it. Returns the fresh game. */
+  const analyzeGame = async (id: string, lvl: string, force: boolean, isActive: () => boolean): Promise<Game | null> => {
+    const analyzeRes = await api.post<{ jobId: string }>(`/games/${id}/analyze`, { level: lvl, force });
+    const jobId = analyzeRes?.jobId;
+    if (!jobId) return null;
+    for (let attempts = 0; attempts < 300 && isActive(); attempts++) {
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        const job = await api.get<{ id: string; status: 'queued' | 'processing' | 'done' | 'failed'; progress: number }>(`/jobs/${jobId}`);
+        if (job.status === 'done') return gameRepository.getGameById(id);
+        if (job.status === 'failed') return null;
+        if (isActive()) setAnalysisProgress(job.progress);
+      } catch {
+        // transient error during polling
+      }
+    }
+    return null;
+  };
+
+  const reanalyze = async (lvl: AnalysisLevel['id']) => {
+    if (!gameId) return;
+    setLevel(lvl);
+    setLoading(true);
+    setAnalysisProgress(0);
+    try {
+      const fresh = await analyzeGame(gameId, lvl, true, () => true);
+      if (fresh) setCurrentGame(fresh);
+    } catch (err) {
+      console.error('Failed to re-analyze game:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!gameId) {
@@ -32,6 +89,7 @@ export const ReviewRouter: React.FC = () => {
     let active = true;
     setLoading(true);
     setAnalysisProgress(null);
+    setActiveViewState(readView());
 
     const loadAndAnalyze = async () => {
       try {
@@ -53,45 +111,9 @@ export const ReviewRouter: React.FC = () => {
           game.moves[0].eval !== undefined;
 
         if (!isAnalyzed && import.meta.env.VITE_USE_MOCKS !== 'true') {
-          // Trigger analysis on the backend
           try {
-            const analyzeRes = await api.post<{ jobId: string }>(`/games/${gameId}/analyze`);
-            const jobId = analyzeRes?.jobId;
-            if (jobId) {
-              let done = false;
-              let attempts = 0;
-              while (!done && attempts < 120 && active) {
-                await new Promise((r) => setTimeout(r, 800));
-                attempts++;
-                try {
-                  const job = await api.get<{
-                    id: string;
-                    status: 'queued' | 'processing' | 'done' | 'failed';
-                    progress: number;
-                    error?: string;
-                  }>(`/jobs/${jobId}`);
-
-                  if (job.status === 'done') {
-                    done = true;
-                    // Reload analyzed game from repo
-                    const analyzed = await gameRepository.getGameById(gameId);
-                    if (active && analyzed) {
-                      game = analyzed;
-                    }
-                    break;
-                  } else if (job.status === 'failed') {
-                    done = true;
-                    break;
-                  } else {
-                    if (active) {
-                      setAnalysisProgress(job.progress);
-                    }
-                  }
-                } catch {
-                  // transient error during polling
-                }
-              }
-            }
+            const analyzed = await analyzeGame(gameId, loadLevel(), false, () => active);
+            if (active && analyzed) game = analyzed;
           } catch (analyzeErr) {
             console.error('Failed to analyze game:', analyzeErr);
           }
@@ -100,7 +122,6 @@ export const ReviewRouter: React.FC = () => {
         if (active) {
           setCurrentGame(game);
           setLoading(false);
-          setActiveView('summary');
         }
       } catch {
         if (active) {
@@ -115,6 +136,7 @@ export const ReviewRouter: React.FC = () => {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
   // If no gameId, render the games list
@@ -216,6 +238,9 @@ export const ReviewRouter: React.FC = () => {
           >
             <GameSummary
               game={currentGame}
+              level={level}
+              onLevelChange={setLevel}
+              onReanalyze={reanalyze}
               onStartReview={() => setActiveView('board')}
             />
           </motion.div>
