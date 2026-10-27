@@ -114,7 +114,7 @@ export const GameList: React.FC<GameListProps> = () => {
         </div>
 
         {loading && (
-          <InlineLoader label="Loading your games…" size={110} className="py-12" />
+          <InlineLoader label="Loading your games…" size={190} className="py-14" />
         )}
 
         {!loading && games.length === 0 && (

@@ -25,6 +25,8 @@ import { OpeningService, OpeningMatch } from '@/services/openingService';
 import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/lib/useCurrentUser';
+import { saveCoachGame } from '@/services/coachGameService';
+import { useToastStore } from '@/components/Toast';
 import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
 
 const PIECE_FIGURINES: Record<string, string> = {
@@ -234,6 +236,26 @@ export const PlayGame: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const [savingReview, setSavingReview] = useState(false);
+  const openReview = useCallback(async () => {
+    if (!gameOver || !activeConfig || savingReview) return;
+    setSavingReview(true);
+    try {
+      const id = await saveCoachGame({
+        sans: moves.map((m) => m.san),
+        userColor,
+        winner: gameOver.winner,
+        reason: gameOver.reason,
+        opponentName: 'Coach All-Chess',
+        opponentRating: activeConfig.levelRating,
+      });
+      navigate(`/review/${id}`);
+    } catch {
+      useToastStore.getState().addToast({ type: 'error', title: 'Could not open the review', subtitle: 'The game could not be saved. Please try again.' });
+      setSavingReview(false);
+    }
+  }, [gameOver, activeConfig, savingReview, moves, userColor, navigate]);
 
   const triggerGameOver = useCallback((winner: 'user' | 'coach' | 'draw', reason: string) => {
     sound.gameEnd();
@@ -795,7 +817,8 @@ export const PlayGame: React.FC = () => {
                     setKingBadges([]);
                     setShowGameOverModal(false);
                   }}
-                  onGameReview={() => navigate('/review/game-01')}
+                  onGameReview={openReview}
+                  reviewBusy={savingReview}
                 />
               )}
             </div>

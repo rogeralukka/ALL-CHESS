@@ -169,7 +169,7 @@ export const Profile: React.FC = () => {
   if (!loaded) {
     return (
       <PageContainer wide className="!max-w-[1200px]">
-        <InlineLoader label="Loading your profile…" size={140} className="py-24" />
+        <InlineLoader label="Loading your profile…" page />
       </PageContainer>
     );
   }

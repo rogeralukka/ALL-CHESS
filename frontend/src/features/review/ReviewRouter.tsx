@@ -7,7 +7,6 @@ import { api } from '@/data/api';
 import { GameList } from './GameList';
 import { GameSummary } from './GameSummary';
 import { ReviewBoard } from './ReviewBoard';
-import { Skeleton } from '@/components/Skeleton';
 import { PieceHopper } from '@/components/LoadingScreen';
 import { AnalysisLevel, loadLevel, saveLevel } from './analysisLevels';
 
@@ -144,65 +143,22 @@ export const ReviewRouter: React.FC = () => {
     return <GameList onSelectGame={(id) => navigate(`/review/${id}`)} />;
   }
 
-  // Loading state with layout matching board + right panel exactly
+  // Loading state: one centred loader (no empty board/panel placeholders)
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden" data-testid="review-loading">
-        {/* Left Board Zone */}
-        <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 bg-theme-page min-w-0">
-          <div className="w-full max-w-[min(calc(100vh-120px),800px)] flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div className="h-6 w-48 bg-theme-raised/60 rounded animate-pulse" />
-              {analysisProgress !== null && (
-                <span className="text-[13px] font-bold text-[#81b64c] tabular-nums">
-                  Stockfish review: {analysisProgress}%
-                </span>
-              )}
-            </div>
-            <div className="aspect-square w-full rounded-[5px] bg-theme-raised/70 shadow-[0_3px_0_rgba(0,0,0,0.2)] flex items-center justify-center">
-              <div className="flex flex-col items-center text-center gap-3 p-4 select-none" role="status" aria-live="polite">
-                <PieceHopper size={200} />
-                <div className="text-[22px] leading-7 font-display font-extrabold text-theme-text">
-                  {analysisProgress !== null ? 'Analyzing your game…' : 'Opening your game…'}
-                </div>
-                {analysisProgress !== null && <div className="text-[14px] text-theme-muted -mt-1.5">Stockfish is checking every move</div>}
-                {analysisProgress !== null && (
-                  <div className="w-56 h-2.5 bg-black/30 rounded-full overflow-hidden" aria-hidden="true">
-                    <div className="h-full bg-[#81b64c] transition-all duration-300 rounded-full" style={{ width: `${analysisProgress}%` }} />
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="h-6 w-36 bg-theme-raised/60 rounded animate-pulse" />
-          </div>
+      <div className="flex-1 min-h-[80vh] flex flex-col items-center justify-center gap-3 p-6 select-none" data-testid="review-loading" role="status" aria-live="polite">
+        <PieceHopper size={260} />
+        <div className="text-[24px] leading-7 font-display font-extrabold text-theme-text text-center">
+          {analysisProgress !== null ? 'Analyzing your game…' : 'Opening your game…'}
         </div>
-
-        {/* Right Panel Zone (480-500px) */}
-        <div className="w-full lg:w-[480px] xl:w-[500px] flex-shrink-0 flex flex-col h-full bg-theme-card border-t lg:border-t-0 lg:border-l border-theme-border p-4 space-y-4 animate-pulse">
-          <div className="flex items-center gap-3">
-            <Skeleton circle width={84} height={84} />
-            <div className="flex-1 space-y-2">
-              <Skeleton height={20} width="60%" />
-              <Skeleton height={48} width="100%" />
+        {analysisProgress !== null && (
+          <>
+            <div className="text-[14px] text-theme-muted -mt-1">Stockfish is checking every move · {analysisProgress}%</div>
+            <div className="w-64 h-2.5 bg-black/30 rounded-full overflow-hidden" aria-hidden="true">
+              <div className="h-full bg-[#81b64c] transition-all duration-300 rounded-full" style={{ width: `${analysisProgress}%` }} />
             </div>
-          </div>
-          <Skeleton height={90} className="rounded-xl" />
-          <div className="flex justify-between items-center p-3 rounded-xl bg-theme-raised/40">
-            <div className="flex items-center gap-2">
-              <Skeleton circle width={32} height={32} />
-              <Skeleton width={80} height={16} />
-            </div>
-            <Skeleton width={50} height={24} className="rounded" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton height={28} className="rounded-md" />
-            <Skeleton height={28} className="rounded-md" />
-            <Skeleton height={28} className="rounded-md" />
-          </div>
-          <div className="pt-4 mt-auto">
-            <Skeleton height={48} className="rounded-xl w-full" />
-          </div>
-        </div>
+          </>
+        )}
       </div>
     );
   }
