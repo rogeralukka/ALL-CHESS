@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     groq_api_key_2: str = Field(default="")
     
     session_cookie_name: str = Field(default="all_chess_session")
+    # In production (https) set COOKIE_SECURE=true. COOKIE_SAMESITE is "lax" (same-site / proxied /api)
+    # or "none" (frontend and API on different sites; needs COOKIE_SECURE=true).
+    cookie_secure: bool = Field(default=False)
+    cookie_samesite: str = Field(default="lax")
     # Chess.com accuracy curve settings (softer curve calibrated to reference games)
     accuracy_chesscom_scale: float = Field(default=8.0)
     accuracy_chesscom_power: float = Field(default=1.1)
