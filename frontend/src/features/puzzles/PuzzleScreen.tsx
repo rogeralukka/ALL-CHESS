@@ -9,12 +9,13 @@ import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { Button } from '@/components/Button';
 import { RewardCascade } from './RewardCascade';
 import { IsoLevelMap } from '@/features/map/IsoLevelMap';
-import { LevelBadge } from '@/features/map/LevelBadge';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { storage } from '@/lib/storage';
 import { formatTime } from '@/lib/formatters';
 import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
+import { SidebarHeader, HeaderIconButton } from '@/components/SidebarPanel';
+import { PuzzlePieceBadge } from './PuzzlePieceBadge';
 import { BoardBadge, CoachExpression } from '@/data/types';
 import { sound } from '@/lib/sound';
 import { useMotion } from '@/lib/useMotion';
@@ -26,7 +27,6 @@ import {
   ChevronRight,
   ChevronRight as NextIcon,
   Clock3,
-  Puzzle as PuzzleIcon,
   Volume2,
   VolumeX,
   Settings as SettingsIcon,
@@ -351,7 +351,7 @@ export const PuzzleScreen: React.FC = () => {
   const ratingBlock = (onDark: boolean) => (
     <div className="space-y-2">
       <div className="flex items-baseline gap-2.5">
-        <span className={`text-[28px] leading-none font-extrabold font-display tabular-nums ${onDark ? 'text-white drop-shadow' : 'text-theme-text'}`} data-testid="puzzle-rating">
+        <span className={`text-[38px] leading-none font-extrabold font-display tabular-nums ${onDark ? 'text-white drop-shadow' : 'text-theme-text'}`} data-testid="puzzle-rating">
           {displayedRating}
         </span>
         <AnimatePresence>
@@ -367,8 +367,8 @@ export const PuzzleScreen: React.FC = () => {
             </motion.span>
           )}
         </AnimatePresence>
-        <span className="flex items-center gap-0.5 text-[15px] font-bold text-amber-400" title="Solved in a row" data-testid="puzzle-streak">
-          <Flame size={16} className="fill-amber-400/30" />
+        <span className="flex items-center gap-0.5 text-[17px] font-bold text-[var(--color-orange)]" title="Solved in a row" data-testid="puzzle-streak">
+          <Flame size={17} className="fill-[var(--color-orange)]" />
           <motion.span key={streak} initial={isFull ? { scale: 1.5 } : false} animate={{ scale: 1 }} transition={{ duration: 0.25 }}>
             {streak}
           </motion.span>
@@ -376,10 +376,10 @@ export const PuzzleScreen: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className={`relative flex-1 h-3 rounded-full overflow-hidden ${onDark ? 'bg-black/45' : 'bg-black/10 dark:bg-black/35'}`} role="progressbar" aria-valuenow={solvedInLevel} aria-valuemax={PUZZLES_PER_LEVEL} aria-label={`Level ${level} progress`}>
+        <div className={`relative flex-1 h-[14px] rounded-full overflow-hidden ${onDark ? 'bg-black/45' : 'bg-white/[0.14] dark:bg-white/[0.14]'}`} role="progressbar" aria-valuenow={solvedInLevel} aria-valuemax={PUZZLES_PER_LEVEL} aria-label={`Level ${level} progress`}>
           <motion.div
             className="absolute inset-y-0 left-0 rounded-full"
-            style={{ background: 'linear-gradient(180deg, #ffd35a 0%, #f0a422 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.45)' }}
+            style={{ background: 'var(--color-orange)' }}
             initial={false}
             animate={{ width: `${Math.max(progressPct, 2.5)}%` }}
             transition={{ duration: isOff ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -396,7 +396,7 @@ export const PuzzleScreen: React.FC = () => {
           title="Level map"
           data-testid="level-badge"
         >
-          <LevelBadge level={level} />
+          <PuzzlePieceBadge n={level + 1} size={44} />
         </button>
       </div>
     </div>
@@ -443,47 +443,37 @@ export const PuzzleScreen: React.FC = () => {
 
       {/* Side panel: a rounded card the height of the board */}
       <aside
-        className="w-full lg:w-[400px] xl:w-[420px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] lg:max-h-[calc(100vh-32px)] panel !rounded-none lg:!rounded-[14px] overflow-hidden"
+        className="w-full lg:w-[400px] xl:w-[420px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] lg:max-h-[calc(100vh-32px)] rounded-none lg:rounded-[5px] overflow-hidden"
+        style={{ background: 'var(--side-panel-bg)' }}
         data-testid="puzzle-panel"
       >
-        {/* Header */}
-        <div className="relative flex items-center justify-center h-14 px-3 flex-shrink-0 border-b border-theme-border/60">
-          {showLevelMap && (
-            <button
-              type="button"
-              onClick={() => setShowLevelMap(false)}
-              className="absolute left-2 p-2 rounded-md text-theme-muted hover:text-theme-text hover:bg-theme-raised"
-              aria-label="Back to the puzzle"
-            >
-              <ChevronLeft size={20} />
-            </button>
-          )}
-          <div className="flex items-center gap-2">
-            <PuzzleIcon size={22} className="text-amber-500" />
-            <h1 className="text-xl font-extrabold font-display text-theme-text">Puzzles</h1>
-          </div>
-          <div className="absolute right-2 flex items-center">
-            <button
-              type="button"
-              onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
-              className="p-2 rounded-md text-theme-muted hover:text-theme-text hover:bg-theme-raised"
-              aria-label={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
-              title={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
-            >
-              {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            </button>
-            {showLevelMap && (
-              <button
-                type="button"
-                onClick={() => setShowLevelMap(false)}
-                className="p-2 rounded-md text-theme-muted hover:text-theme-text hover:bg-theme-raised"
-                aria-label="Close the level map"
+        <SidebarHeader
+          title="Puzzles"
+          icon={<PuzzlePieceBadge n={level} size={46} />}
+          left={
+            showLevelMap ? (
+              <HeaderIconButton onClick={() => setShowLevelMap(false)} aria-label="Back to the puzzle">
+                <ChevronLeft size={22} />
+              </HeaderIconButton>
+            ) : undefined
+          }
+          right={
+            <>
+              <HeaderIconButton
+                onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
+                aria-label={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
+                title={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
               >
-                <X size={18} />
-              </button>
-            )}
-          </div>
-        </div>
+                {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              </HeaderIconButton>
+              {showLevelMap && (
+                <HeaderIconButton onClick={() => setShowLevelMap(false)} aria-label="Close the level map">
+                  <X size={20} />
+                </HeaderIconButton>
+              )}
+            </>
+          }
+        />
 
         <AnimatePresence mode="wait" initial={false}>
           {!showLevelMap && !started ? (
@@ -578,15 +568,15 @@ export const PuzzleScreen: React.FC = () => {
               </div>
 
               {/* Timer */}
-              <div className="px-4 pb-3 flex items-center gap-1.5 text-sm text-theme-muted tabular-nums">
-                <Clock3 size={15} />
+              <div className="px-4 pb-3 flex items-center gap-2 text-[18px] text-theme-muted tabular-nums">
+                <Clock3 size={18} />
                 {formatTime(timerSeconds)}
               </div>
 
               {/* Action bar */}
               <div className="flex-shrink-0 px-4 py-3 bg-black/[0.03] dark:bg-black/15 border-t border-theme-border/60 space-y-2">
                 {status === 'solving' && (
-                  <Button variant="secondary" size="lg" fullWidth icon={<Lightbulb size={18} />} onClick={handleHint} disabled={!!hintArrow} data-testid="hint-button">
+                  <Button variant="secondary" size="lg" fullWidth className="!h-14 !text-[20px] !font-extrabold font-display" icon={<Lightbulb size={22} className="text-amber-400 fill-amber-400/30" />} onClick={handleHint} disabled={!!hintArrow} data-testid="hint-button">
                     {hintSquare ? 'Show move' : 'Hint'}
                   </Button>
                 )}

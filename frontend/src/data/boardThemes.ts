@@ -1,8 +1,8 @@
 import { BoardTheme, PieceSet } from './types';
 
 export const BOARD_THEMES: BoardTheme[] = [
+  { id: 'classic-green', name: 'Classic Green', light: '#ebecd0', dark: '#739552' },
   { id: 'sand-clay', name: 'Sand & Clay', light: '#f0d9b5', dark: '#b58863' },
-  { id: 'classic-green', name: 'Classic Green', light: '#eeeed2', dark: '#769656' },
   { id: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
   { id: 'icy-sea', name: 'Icy Sea', light: '#d2dde4', dark: '#7d9eb3' },
   { id: 'walnut', name: 'Walnut', light: '#b99c78', dark: '#71513a' },
@@ -38,8 +38,8 @@ export interface BoardPreset {
 }
 
 export const BOARD_PRESETS: BoardPreset[] = [
-  { id: 'dusk-master', name: 'Dusk Classic', boardId: 'sand-clay', pieceId: 'staunty', background: 'standard' },
-  { id: 'club-green', name: 'Tournament Green', boardId: 'classic-green', pieceId: 'staunty', background: 'felt' },
+  { id: 'dusk-master', name: 'Classic Green', boardId: 'classic-green', pieceId: 'staunty', background: 'standard' },
+  { id: 'club-green', name: 'Sand & Clay', boardId: 'sand-clay', pieceId: 'staunty', background: 'felt' },
   { id: 'ocean-drift', name: 'Icy Calm', boardId: 'icy-sea', pieceId: 'staunty', background: 'standard' },
   { id: 'heritage-wood', name: 'Walnut Study', boardId: 'walnut', pieceId: 'staunty', background: 'wood' },
   { id: 'midnight-slate', name: 'Slate Modern', boardId: 'slate', pieceId: 'staunty', background: 'standard' },

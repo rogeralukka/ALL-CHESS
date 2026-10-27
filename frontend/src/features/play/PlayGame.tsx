@@ -24,6 +24,7 @@ import { EngineService } from '@/services/engineService';
 import { OpeningService, OpeningMatch } from '@/services/openingService';
 import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCurrentUser } from '@/lib/useCurrentUser';
 
 const PIECE_FIGURINES: Record<string, string> = {
   p: '♟',
@@ -97,6 +98,7 @@ function findKingSquares(chess: Chess) {
 
 export const PlayGame: React.FC = () => {
   const navigate = useNavigate();
+  const me = useCurrentUser();
   const { boardThemeId, pieceSetId, animationSpeed, coordinates, coachVoiceEnabled } = useSettingsStore();
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
   const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
@@ -659,9 +661,9 @@ export const PlayGame: React.FC = () => {
   };
 
   const userInfo = {
-    name: "You",
+    name: me.username,
     rating: 905,
-    avatar: <PlayerAvatar name="Master" size={40} className="!rounded-none" />,
+    avatar: <PlayerAvatar name="You" size={40} className="!rounded-none" />,
     right: (
       <>
         {activeConfig && (

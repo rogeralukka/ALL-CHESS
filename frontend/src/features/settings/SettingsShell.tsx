@@ -1,3 +1,4 @@
+import { MiniHopper } from '@/components/LoadingScreen';
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/Card';
 import { PageContainer, PageHeader } from '@/components/PageHeader';
@@ -745,7 +746,7 @@ export const SettingsShell: React.FC = () => {
             <Button
               size="sm"
               variant="primary"
-              icon={<RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />}
+              icon={isSyncing ? <MiniHopper size={26} /> : <RefreshCw size={14} />}
               onClick={handleMockSync}
               disabled={isSyncing}
             >

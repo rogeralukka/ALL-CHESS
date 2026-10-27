@@ -1,3 +1,4 @@
+import { bookCommentary, openingAt } from './phases';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { Game, Move, CoachExpression, Arrow, BoardBadge, MoveClassification } from '@/data/types';
@@ -7,6 +8,7 @@ import { EvalGraph } from '@/features/board/EvalGraph';
 import { MoveList } from '@/features/board/MoveList';
 import { PlayerBar } from '@/components/PlayerBar';
 import { PlayerAvatar } from '@/components/Bits';
+import { useCurrentUser } from '@/lib/useCurrentUser';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { Button } from '@/components/Button';
@@ -119,6 +121,7 @@ function getMaterialState(fen: string) {
 }
 
 export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary }) => {
+  const me = useCurrentUser();
   const navigate = useNavigate();
   const {
     boardThemeId,
@@ -370,7 +373,10 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   } else if (explaining) {
     coachExpression = 'thinking';
     if (isBookMove) {
-      coachText = `Opening: ${game.opening || 'Book Opening'}. Main Idea: Control key central squares, develop minor pieces toward the center, and prepare king safety through early castling.`;
+      const op = openingAt(game.moves, currentMoveIndex + 1);
+      coachText = op
+        ? `${op.name} (${op.eco}). ${op.idea || 'A known theory line: develop pieces, fight for the centre and get the king safe.'}`
+        : 'A known theory move: develop pieces, fight for the centre and get the king safe.';
     } else {
       coachText = `Step ${variationStep + 1} of ${refutationMoves.length}: ${
         refutationMoves[variationStep] ? `Refutation continues with ${refutationMoves[variationStep]}.` : 'End of critical refutation line.'
@@ -389,7 +395,11 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
   } else {
     // Body never repeats the header "<move> is a <label>" and is capped at 90 characters
-    if (currentMove?.san && currentMove?.classification) {
+    const book = bookCommentary(game.moves, currentMoveIndex);
+    if (book) {
+      coachText = currentMove?.classification === 'book' ? book : `${book} ${coachText}`;
+    }
+    if (currentMove?.san && currentMove?.classification && !book) {
       const prefixRegex = new RegExp(`^${currentMove.san}\\s+(is\\s+(a\\s+)?${currentMove.classification}[.:!\\s]*)+`, 'i');
       coachText = coachText.replace(prefixRegex, '').trim();
       if (coachText.length > 0) {
@@ -398,11 +408,11 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
   }
 
-  // Cap body text at 90 characters (two lines)
-  if (coachText.length > 90) {
-    const trimmed = coachText.slice(0, 87);
+  // Cap body text so the bubble stays readable (about five lines)
+  if (coachText.length > 220) {
+    const trimmed = coachText.slice(0, 217);
     const lastSpace = trimmed.lastIndexOf(' ');
-    coachText = (lastSpace > 50 ? trimmed.slice(0, lastSpace) : trimmed) + '...';
+    coachText = (lastSpace > 150 ? trimmed.slice(0, lastSpace) : trimmed) + '...';
   }
 
   const bubbleMessages: BubbleMessage[] = useMemo(
@@ -491,9 +501,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           {/* Top Player Row + Material Tally */}
           <PlayerBar
             testId="player-top"
-            name={topPlayer.username}
+            name={me.label(topPlayer.username)}
             rating={topPlayer.rating}
-            avatar={<PlayerAvatar name={topPlayer.username === 'You' ? 'Master' : topPlayer.username} size={40} className="!rounded-none" />}
+            avatar={<PlayerAvatar name={topPlayer.username} size={40} className="!rounded-none" />}
             captured={
               <>
                 {topCaptured.map((p, i) => (
@@ -532,9 +542,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           {/* Bottom Player Row + Material Tally */}
           <PlayerBar
             testId="player-bottom"
-            name={bottomPlayer.username}
+            name={me.label(bottomPlayer.username)}
             rating={bottomPlayer.rating}
-            avatar={<PlayerAvatar name={bottomPlayer.username === 'You' ? 'Master' : bottomPlayer.username} size={40} className="!rounded-none" />}
+            avatar={<PlayerAvatar name={bottomPlayer.username} size={40} className="!rounded-none" />}
             captured={
               <>
                 {bottomCaptured.map((p, i) => (

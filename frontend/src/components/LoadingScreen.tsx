@@ -45,6 +45,17 @@ export const PieceHopper: React.FC<{ size?: number }> = ({ size = 120 }) => {
   );
 };
 
+/** Hopper + label for loading a panel or list inside a page (no full-screen takeover). */
+export const InlineLoader: React.FC<{ label?: string; size?: number; className?: string }> = ({ label = 'Loading…', size = 96, className = '' }) => (
+  <div className={`flex flex-col items-center justify-center gap-2 py-8 select-none ${className}`} role="status" aria-live="polite" data-testid="inline-loader">
+    <PieceHopper size={size} />
+    <div className="font-display font-bold text-[14px] text-theme-muted">{label}</div>
+  </div>
+);
+
+/** Tiny hopper for buttons and toolbars while something is in flight. */
+export const MiniHopper: React.FC<{ size?: number }> = ({ size = 30 }) => <PieceHopper size={size} />;
+
 /**
  * Shown while a section's code loads. Waits a moment before appearing so fast loads
  * don't flash it.

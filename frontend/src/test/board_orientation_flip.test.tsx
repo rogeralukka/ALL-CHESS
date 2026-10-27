@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { EvalBar } from '@/features/board/EvalBar';
@@ -6,6 +6,7 @@ import { ReviewBoard } from '@/features/review/ReviewBoard';
 import { GameSummary } from '@/features/review/GameSummary';
 import { PlayGame } from '@/features/play/PlayGame';
 import type { Game } from '@/data/types';
+import { useAuthStore } from '@/data/authStore';
 
 const sampleBlackUserGame: Game = {
   id: 'game-7f0c27d796c4',
@@ -45,6 +46,10 @@ const sampleBlackUserGame: Game = {
 };
 
 describe('Board Orientation and Label Flipping', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ user: { username: 'roger' } as never, isAuthenticated: true });
+  });
+
   describe('EvalBar direction and anchoring', () => {
     it('anchors white fill at bottom when orientation is white, and at top when orientation is black', () => {
       const { rerender } = render(<EvalBar evalScore={2.0} orientation="white" />);
@@ -98,20 +103,20 @@ describe('Board Orientation and Label Flipping', () => {
       const topBar = screen.getByTestId('player-top');
       const bottomBar = screen.getByTestId('player-bottom');
       expect(topBar.textContent).toContain('Lollati');
-      expect(bottomBar.textContent).toContain('You');
+      expect(bottomBar.textContent).toContain('roger');
 
       // Click the Flip button
       const flipBtn = screen.getByRole('button', { name: /flip/i });
       fireEvent.click(flipBtn);
 
       // After flipping to White at bottom: Top is Black (You), Bottom is White (Lollati)
-      expect(screen.getByTestId('player-top').textContent).toContain('You');
+      expect(screen.getByTestId('player-top').textContent).toContain('roger');
       expect(screen.getByTestId('player-bottom').textContent).toContain('Lollati');
 
       // Press 'F' key to flip back
       fireEvent.keyDown(window, { key: 'f' });
       expect(screen.getByTestId('player-top').textContent).toContain('Lollati');
-      expect(screen.getByTestId('player-bottom').textContent).toContain('You');
+      expect(screen.getByTestId('player-bottom').textContent).toContain('roger');
     });
   });
 
@@ -125,14 +130,14 @@ describe('Board Orientation and Label Flipping', () => {
 
       // Initially Black at bottom: Top is White (Lollati), Bottom is Black (You)
       expect(screen.getByTestId('player-top').textContent).toContain('Lollati');
-      expect(screen.getByTestId('player-bottom').textContent).toContain('You');
+      expect(screen.getByTestId('player-bottom').textContent).toContain('roger');
 
       // Click Flip button
       const flipBtn = screen.getByRole('button', { name: /flip/i });
       fireEvent.click(flipBtn);
 
       // After flip: Top is You, Bottom is Lollati
-      expect(screen.getByTestId('player-top').textContent).toContain('You');
+      expect(screen.getByTestId('player-top').textContent).toContain('roger');
       expect(screen.getByTestId('player-bottom').textContent).toContain('Lollati');
     });
   });
@@ -148,13 +153,13 @@ describe('Board Orientation and Label Flipping', () => {
       // In default white orientation for user:
       // Top is Coach All-Chess, Bottom is You
       expect(screen.getByTestId('player-top').textContent).toContain('Coach All-Chess');
-      expect(screen.getByTestId('player-bottom').textContent).toContain('You');
+      expect(screen.getByTestId('player-bottom').textContent).toContain('roger');
 
       // Press 'F' key to flip orientation
       fireEvent.keyDown(window, { key: 'f' });
 
       // After flip: Top is You, Bottom is Coach All-Chess
-      expect(screen.getByTestId('player-top').textContent).toContain('You');
+      expect(screen.getByTestId('player-top').textContent).toContain('roger');
       expect(screen.getByTestId('player-bottom').textContent).toContain('Coach All-Chess');
     });
   });

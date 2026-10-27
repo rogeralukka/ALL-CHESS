@@ -91,7 +91,13 @@ export interface Game {
     white: number; // MOCK
     black: number; // MOCK
   };
-  phaseGrades?: PhaseGrade; // MOCK
+  /** Either one grade set (the signed-in player's colour) or one per colour. */
+  phaseGrades?: PhaseGrade | { white?: PhaseGrade; black?: PhaseGrade };
+  /** How the game ended, e.g. "Resignation", "Timeout", "Checkmate" (the backend fills this from the PGN Termination header). */
+  termination?: string;
+  /** Stockfish depth the review was produced at, and the level id that asked for it. */
+  analysisDepth?: number;
+  analysisLevel?: string;
 }
 
 export interface OpeningStat {
@@ -101,7 +107,8 @@ export interface OpeningStat {
   winRate: number;
   drawRate: number;
   lossRate: number;
-  avgAccuracy: number;
+  /** null when the games had no accuracy data */
+  avgAccuracy: number | null;
 }
 
 export interface RatingPoint {
@@ -159,9 +166,11 @@ export interface Friend {
 
 export interface ScoutProfile {
   username: string;
-  rating: number;
-  title?: string;
-  winRate: number;
+  /** null when the platform shows no rating for this player */
+  rating: number | null;
+  title?: string | null;
+  /** null when no games could be read */
+  winRate: number | null;
   mostPlayed: OpeningStat[];
   recentGames: Game[];
 }

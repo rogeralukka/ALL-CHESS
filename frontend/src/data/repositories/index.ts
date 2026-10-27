@@ -56,7 +56,8 @@ export interface IFriendRepository {
 
 export interface IScoutRepository {
   searchProfiles(query: string): Promise<ScoutProfile[]>;
-  getProfile(username: string): Promise<ScoutProfile | null>;
+  /** Live scouting report. Resolves null when the player has no public games; throws when the service can't be reached. */
+  getProfile(username: string, platform?: 'chesscom' | 'lichess'): Promise<ScoutProfile | null>;
 }
 
 export interface IEngineService {
@@ -318,23 +319,20 @@ export const scoutRepository: IScoutRepository = {
     try {
       const res = await api.get<ScoutProfile[]>(`/scout?query=${encodeURIComponent(query)}`);
       return res || [];
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) return [];
-      const q = query.toLowerCase();
-      return Object.values(MOCK_SCOUT_PROFILES).filter((p) => p.username.toLowerCase().includes(q));
+    } catch {
+      // never show sample opponents in the real app
+      return [];
     }
   },
-  async getProfile(username: string) {
+  async getProfile(username: string, platform: 'chesscom' | 'lichess' = 'chesscom') {
     if (isMockMode()) {
       return MOCK_SCOUT_PROFILES[username] || null;
     }
     try {
-      return await api.get<ScoutProfile>(`/scout/${encodeURIComponent(username)}`);
+      return await api.get<ScoutProfile>(`/scout/${encodeURIComponent(username)}?platform=${platform}`);
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 404 || err.status === 401)) {
-        return null;
-      }
-      return MOCK_SCOUT_PROFILES[username] || null;
+      if (err instanceof ApiError && (err.status === 404 || err.status === 401)) return null;
+      throw err;
     }
   },
 };
