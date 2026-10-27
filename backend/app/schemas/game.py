@@ -1,4 +1,4 @@
-from typing import Optional, List, Literal, Dict
+from typing import Optional, List, Literal, Dict, Union
 from pydantic import Field
 from app.schemas.common import CamelModel
 
@@ -85,7 +85,13 @@ class Game(CamelModel):
     is_user_white: Optional[bool] = None
     accuracy: Optional[Accuracy] = None
     estimated_rating: Optional[EstimatedRating] = None
-    phase_grades: Optional[PhaseGrade] = None
+    phase_grades: Optional[Union[PhaseGrade, Dict[str, PhaseGrade]]] = None
+    analysis_depth: Optional[int] = None
+    analysis_level: Optional[str] = None
+
+class AnalyzeGameRequest(CamelModel):
+    level: Optional[Literal['standard', 'deep', 'deeper', 'max']] = 'standard'
+    force: Optional[bool] = False
 
 class GameFilterParams(CamelModel):
     opening: Optional[str] = None

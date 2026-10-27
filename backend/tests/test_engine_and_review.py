@@ -310,3 +310,120 @@ def test_generate_line_why_piece_aware():
     assert why_kf1 == ""  # Moving to f1/g1 is NOT centralizing
     why_kd3 = generate_line_why_template(board_endgame, chess.Move.from_uci("e2d3"))
     assert why_kd3 == "Centralizes the king on d3 for the endgame."
+
+
+def test_analysis_levels_configuration():
+    from app.services.engine_service import ANALYSIS_LEVELS, LEVEL_ORDER
+    assert "standard" in ANALYSIS_LEVELS
+    assert "deep" in ANALYSIS_LEVELS
+    assert "deeper" in ANALYSIS_LEVELS
+    assert "max" in ANALYSIS_LEVELS
+
+    assert ANALYSIS_LEVELS["standard"]["depth"] == 18
+    assert ANALYSIS_LEVELS["deep"]["depth"] == 22
+    assert ANALYSIS_LEVELS["deeper"]["depth"] == 26
+    assert ANALYSIS_LEVELS["max"]["depth"] == 32
+
+    assert LEVEL_ORDER["standard"] < LEVEL_ORDER["deep"] < LEVEL_ORDER["deeper"] < LEVEL_ORDER["max"]
+
+
+def test_analyze_game_depth_levels_and_cache(auth_client, test_user, db_session, monkeypatch):
+    """
+    Asserts:
+    1. analyze with level='standard' sets analysisLevel and analysisDepth.
+    2. same level without force returns cached result.
+    3. deeper level triggers re-analysis.
+    4. shallower level without force returns cached deeper analysis.
+    5. GET /games/{id} returns analysisLevel and analysisDepth.
+    """
+    g = GameModel(
+        id="test-game-depths-01",
+        user_id=test_user.id,
+        source="online",
+        platform="chesscom",
+        pgn="1. e4 e5 2. Nf3 Nc6 1-0",
+        white={"username": test_user.username, "rating": 1200},
+        black={"username": "Opponent", "rating": 1200},
+        result="1-0",
+        date="2026-10-20T12:00:00Z",
+        time_control="600",
+        speed="rapid",
+        opening={"eco": "C44", "name": "King's Pawn Game"},
+        moves=[
+            {"san": "e4", "from": "e2", "to": "e4", "color": "w", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", "move_number": 1},
+            {"san": "e5", "from": "e7", "to": "e5", "color": "b", "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2", "move_number": 1}
+        ],
+        is_user_white=True
+    )
+    db_session.add(g)
+    db_session.commit()
+
+    called_levels = []
+
+    async def mock_analyze_game(moves_list, level="standard", **kwargs):
+        called_levels.append(level)
+        depth_map = {"standard": 18, "deep": 22, "deeper": 26, "max": 32}
+        return {
+            "moves": moves_list,
+            "accuracy": {"white": 75.0, "black": 70.0},
+            "estimatedRating": {"white": 1250, "black": 1180},
+            "phaseGrades": {"opening": "A", "middlegame": "B", "tactics": "B", "endgame": "N/A"},
+            "phaseGradesAll": {
+                "white": {"opening": "A", "middlegame": "B", "tactics": "B", "endgame": "N/A"},
+                "black": {"opening": "B", "middlegame": "B", "tactics": "B", "endgame": "N/A"}
+            },
+            "analysisLevel": level,
+            "analysisDepth": depth_map.get(level, 18)
+        }
+
+    monkeypatch.setattr("app.routers.games.analyze_game_moves_full", mock_analyze_game)
+
+    # 1. First analysis at 'standard'
+    resp = auth_client.post(f"/api/v1/games/{g.id}/analyze", json={"level": "standard", "force": False})
+    assert resp.status_code == 200
+    job_id = resp.json()["jobId"]
+    assert job_id
+
+    # Check job completion
+    job_resp = auth_client.get(f"/api/v1/jobs/{job_id}")
+    assert job_resp.status_code == 200
+    assert job_resp.json()["status"] == "done"
+    assert job_resp.json()["progress"] == 100
+    assert job_resp.json()["result"]["analysisLevel"] == "standard"
+    assert job_resp.json()["result"]["analysisDepth"] == 18
+
+    # Check GET /games/{id}
+    game_resp = auth_client.get(f"/api/v1/games/{g.id}")
+    assert game_resp.status_code == 200
+    assert game_resp.json()["analysisLevel"] == "standard"
+    assert game_resp.json()["analysisDepth"] == 18
+
+    assert called_levels == ["standard"]
+
+    # 2. Second analysis with same level without force -> returns existing done job (cached)
+    resp2 = auth_client.post(f"/api/v1/games/{g.id}/analyze", json={"level": "standard", "force": False})
+    assert resp2.status_code == 200
+    assert resp2.json()["jobId"] == job_id
+    assert called_levels == ["standard"]  # Not called again!
+
+    # 3. Request 'deep' -> triggers new analysis since deep > standard
+    resp3 = auth_client.post(f"/api/v1/games/{g.id}/analyze", json={"level": "deep", "force": False})
+    assert resp3.status_code == 200
+    job_id3 = resp3.json()["jobId"]
+    assert job_id3 != job_id
+    assert called_levels == ["standard", "deep"]
+
+    # Check game is now at 'deep'
+    game_resp3 = auth_client.get(f"/api/v1/games/{g.id}")
+    assert game_resp3.json()["analysisLevel"] == "deep"
+    assert game_resp3.json()["analysisDepth"] == 22
+
+    # 4. Request 'standard' without force -> returns cached 'deep' analysis, does NOT downgrade
+    resp4 = auth_client.post(f"/api/v1/games/{g.id}/analyze", json={"level": "standard", "force": False})
+    assert resp4.status_code == 200
+    assert called_levels == ["standard", "deep"]  # Not called again!
+
+    # Check game still has 'deep'
+    game_resp4 = auth_client.get(f"/api/v1/games/{g.id}")
+    assert game_resp4.json()["analysisLevel"] == "deep"
+    assert game_resp4.json()["analysisDepth"] == 22

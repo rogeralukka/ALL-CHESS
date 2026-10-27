@@ -332,6 +332,20 @@ class EnginePool:
 
 
 _GLOBAL_ENGINE_POOL = EnginePool(size=2)
+ANALYSIS_LEVELS: Dict[str, Dict[str, Any]] = {
+    "standard": {"depth": 18, "time_per_move": 0.35, "multipv": 3},
+    "deep": {"depth": 22, "time_per_move": 0.6, "multipv": 3},
+    "deeper": {"depth": 26, "time_per_move": 1.0, "multipv": 3},
+    "max": {"depth": 32, "time_per_move": 2.0, "multipv": 3},
+}
+
+LEVEL_ORDER: Dict[str, int] = {
+    "standard": 1,
+    "deep": 2,
+    "deeper": 3,
+    "max": 4,
+}
+
 
 
 def get_global_engine_pool() -> EnginePool:
@@ -353,13 +367,15 @@ async def analyze_position(
 def _run_single_pass_review_sync(
     engine: chess.engine.SimpleEngine,
     moves_list: List[Dict[str, Any]],
-    depth: int = 16,
-    time_per_move: float = 0.3,
+    depth: int = 18,
+    time_per_move: float = 0.35,
+    multipv: int = 3,
     is_user_white: bool = True,
     white_rating: Optional[int] = None,
     black_rating: Optional[int] = None,
     on_progress: Optional[Callable[[int], None]] = None,
-    db: Optional[Session] = None
+    db: Optional[Session] = None,
+    level: str = "standard"
 ) -> Dict[str, Any]:
     """
     ONE EVAL PER POSITION:
@@ -412,6 +428,7 @@ def _run_single_pass_review_sync(
 
     # Now evaluate positions 0 .. total_moves (N + 1 positions total)
     pos_evals: List[Dict[str, Any]] = []
+    depths_reached: List[int] = []
     total_positions = len(positions)
 
     for p_idx, pos_board in enumerate(positions):
@@ -437,7 +454,7 @@ def _run_single_pass_review_sync(
         else:
             # Engine search
             limit = chess.engine.Limit(depth=depth, time=time_per_move)
-            infos = engine.analyse(pos_board, limit=limit, multipv=3)
+            infos = engine.analyse(pos_board, limit=limit, multipv=multipv)
             if isinstance(infos, dict):
                 infos = [infos]
 
@@ -496,6 +513,8 @@ def _run_single_pass_review_sync(
                 w2 = eval_to_win_pct(top_lines[1]["eval"], top_lines[1]["mate"])
                 gap_2nd = abs(w1 - w2)
 
+            if top_lines:
+                depths_reached.append(top_lines[0].get("depth", depth))
             pos_evals.append({
                 "eval": best_eval,
                 "mate": best_mate,
@@ -655,12 +674,15 @@ def _run_single_pass_review_sync(
     )
     phase_grades = calculate_phase_grades(analyzed_moves, is_user_white=is_user_white)
 
+    real_depth = int(round(sum(depths_reached) / len(depths_reached))) if depths_reached else depth
     return {
         "moves": analyzed_moves,
         "accuracy": accuracy,
         "estimatedRating": est_ratings,
         "phaseGrades": phase_grades["user"],
-        "phaseGradesAll": phase_grades
+        "phaseGradesAll": phase_grades,
+        "analysisLevel": level,
+        "analysisDepth": real_depth
     }
 
 
@@ -701,8 +723,9 @@ def select_critical_turning_point_indices(analyzed_moves: List[Dict[str, Any]], 
 
 async def analyze_game_moves_full(
     moves_list: List[Dict[str, Any]],
-    depth: int = 16,
-    time_per_move: float = 0.3,
+    level: str = "standard",
+    depth: Optional[int] = None,
+    time_per_move: Optional[float] = None,
     is_user_white: bool = True,
     white_rating: Optional[int] = None,
     black_rating: Optional[int] = None,
@@ -710,26 +733,41 @@ async def analyze_game_moves_full(
     db: Optional[Session] = None
 ) -> Dict[str, Any]:
     """
-    Performs full depth 16 game review across every position in a game.
+    Performs game review across every position in a game according to specified analysis level.
     Acquires an exclusive SimpleEngine instance from the pool.
     """
+    level_cfg = ANALYSIS_LEVELS.get(level, ANALYSIS_LEVELS["standard"])
+    target_depth = depth if depth is not None else level_cfg["depth"]
+    target_time = time_per_move if time_per_move is not None else level_cfg["time_per_move"]
+    multipv = level_cfg.get("multipv", 3)
+
     pool = get_global_engine_pool()
     async with pool.acquire() as engine:
         review_data = await asyncio.to_thread(
             _run_single_pass_review_sync,
             engine,
             moves_list,
-            depth,
-            time_per_move,
+            target_depth,
+            target_time,
+            multipv,
             is_user_white,
             white_rating,
             black_rating,
-            on_progress
+            on_progress,
+            db,
+            level
         )
 
-    # Engine slot released. Run LLM commentary for critical turning points (max 8)
+    # Scale turning points comment limit with depth level
+    level_comment_limits = {
+        "standard": 8,
+        "deep": 12,
+        "deeper": 16,
+        "max": 20
+    }
+    max_llm_calls = level_comment_limits.get(level, 8)
     analyzed_moves = review_data["moves"]
-    critical_indices = select_critical_turning_point_indices(analyzed_moves, max_llm_calls=8)
+    critical_indices = select_critical_turning_point_indices(analyzed_moves, max_llm_calls=max_llm_calls)
 
     if critical_indices and not is_testing_environment():
         items_to_generate = []
