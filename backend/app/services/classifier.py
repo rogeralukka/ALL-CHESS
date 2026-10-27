@@ -18,10 +18,10 @@ MoveClassificationType = Literal[
 CLASSIFICATION_THRESHOLDS: Dict[str, float] = {
     "best_max_drop": 0.0,
     "excellent_max_drop": 1.5,
-    "good_max_drop": 3.8,
-    "inaccuracy_max_drop": 7.5,
+    "good_max_drop": 5.8,
+    "inaccuracy_max_drop": 10.0,
     "mistake_max_drop": 18.0,
-    "miss_min_drop": 7.5,
+    "miss_min_drop": 10.0,
     "great_min_gap_win_pct": 6.5,
     "great_min_after_win_pct": 40.0,
     "great_max_before_win_pct": 95.0,
@@ -140,6 +140,44 @@ def classify_move(
             return 'great'
         return 'best'
 
+    # Check for completely decisive positions (|eval| >= 20.0 or forced mate)
+    is_winning_side = (color == 'w' and (eval_before_pawns >= 15.0 or (mate_before is not None and mate_before > 0))) or \
+                      (color == 'b' and (eval_before_pawns <= -15.0 or (mate_before is not None and mate_before < 0)))
+    is_losing_side = (color == 'w' and (eval_before_pawns <= -15.0 or (mate_before is not None and mate_before < 0))) or \
+                     (color == 'b' and (eval_before_pawns >= 15.0 or (mate_before is not None and mate_before > 0)))
+
+    if is_winning_side:
+        still_winning = (color == 'w' and (eval_after_pawns >= 12.0 or (mate_after is not None and mate_after > 0))) or \
+                        (color == 'b' and (eval_after_pawns <= -12.0 or (mate_after is not None and mate_after < 0)))
+        if still_winning:
+            if is_top_engine_move:
+                return 'best'
+            return 'excellent'
+
+    if is_losing_side:
+        if is_top_engine_move:
+            return 'best'
+        if is_recapture:
+            return 'excellent'
+        # Check if defender shortened mate (made defeat faster)
+        mate_shortened = False
+        if mate_before is not None and mate_after is not None:
+            if color == 'w' and mate_before < 0 and mate_after < 0 and abs(mate_after) < abs(mate_before):
+                mate_shortened = True
+            elif color == 'b' and mate_before > 0 and mate_after > 0 and abs(mate_after) < abs(mate_before):
+                mate_shortened = True
+        # Only penalize allowing mate if the position wasn't already overwhelmingly lost (|eval| < 18.0)
+        allowed_forced_mate = False
+        if mate_before is None and mate_after is not None:
+            if color == 'w' and mate_after < 0 and eval_before_pawns > -18.0:
+                allowed_forced_mate = True
+            elif color == 'b' and mate_after > 0 and eval_before_pawns < 18.0:
+                allowed_forced_mate = True
+
+        if allowed_forced_mate or mate_shortened:
+            return 'inaccuracy'
+        return 'excellent'
+
     # Compute win% from White's POV
     white_win_before = eval_to_win_pct(eval_before_pawns, mate_before, rating=rating)
     white_win_after = eval_to_win_pct(eval_after_pawns, mate_after, rating=rating)
@@ -154,19 +192,6 @@ def classify_move(
 
     # Drop in mover's winning chances
     drop = max(0.0, mover_before - mover_after)
-
-    # Mate distance adjustment for forced mate positions with short/medium distance
-    if mate_before is not None and mate_after is not None:
-        if color == 'w':
-            if mate_before < 0 and mate_after < 0 and abs(mate_before) <= 12 and abs(mate_after) < abs(mate_before):
-                drop = max(drop, (abs(mate_before) - abs(mate_after)) * 2.0)
-            elif mate_before > 0 and mate_after > 0 and mate_before <= 6 and mate_after > mate_before:
-                drop = max(drop, (mate_after - mate_before) * 2.0)
-        else:
-            if mate_before > 0 and mate_after > 0 and abs(mate_before) <= 12 and abs(mate_after) < abs(mate_before):
-                drop = max(drop, (abs(mate_before) - abs(mate_after)) * 2.0)
-            elif mate_before < 0 and mate_after < 0 and abs(mate_before) <= 6 and abs(mate_after) > abs(mate_before):
-                drop = max(drop, (abs(mate_after) - abs(mate_before)) * 2.0)
 
     # 1. Brilliant: top move, genuine material sacrifice, stays winning/good, wasn't trivially winning
     if (
@@ -201,8 +226,9 @@ def classify_move(
     is_miss = False
     if (
         (opponent_just_made_mistake or best_wins_material_or_mate)
-        and mover_before < 85.0
-        and (drop >= CLASSIFICATION_THRESHOLDS["inaccuracy_max_drop"] or best_eval_gap >= 1.5)
+        and not is_recapture
+        and mover_before < 78.0
+        and (drop >= CLASSIFICATION_THRESHOLDS["inaccuracy_max_drop"] or (best_eval_gap is not None and best_eval_gap >= 1.5))
         and mover_after < 85.0
     ):
         if drop < 25.0 or opponent_just_made_mistake:
@@ -211,19 +237,31 @@ def classify_move(
     if is_miss:
         return 'miss'
 
-    # 5. Excellent: drop <= 1.5%
+    # Dynamic good threshold based on rating (beginners get slightly more lenient 'good' category in contestable positions)
+    effective_rating = rating if (rating is not None and rating > 0) else 1500
+    if effective_rating < 1200 and (35.0 <= mover_before <= 75.0):
+        good_threshold = 4.0 + max(0.0, (1200 - effective_rating) / 1000.0) * 4.0
+    else:
+        good_threshold = CLASSIFICATION_THRESHOLDS["good_max_drop"]
+
+    # 5. Excellent: drop <= excellent_max_drop
     if drop <= CLASSIFICATION_THRESHOLDS["excellent_max_drop"]:
         return 'excellent'
 
-    # 6. Good: drop <= 3.8%
-    if drop <= CLASSIFICATION_THRESHOLDS["good_max_drop"]:
+    # In clearly winning positions (mover_before >= 75.0), preserving a large lead (+5 pawns) is excellent
+    if mover_before >= 75.0 and mover_after >= 75.0 and drop <= good_threshold:
+        return 'excellent'
+
+    # 6. Good: drop <= good_threshold
+    if drop <= good_threshold:
         return 'good'
 
-    # 7. Inaccuracy: drop <= 7.5%
+    # 7. Inaccuracy: drop <= inaccuracy_max_drop
     if drop <= CLASSIFICATION_THRESHOLDS["inaccuracy_max_drop"]:
-        # Upgrade to mistake if eval loss is large (>= 1.2 pawns in a contestable position)
-        if best_eval_gap >= 1.2 and mover_before < 70.0:
-            return 'mistake'
+        # Upgrade to mistake if eval loss is large (>= 1.35 pawns from an already worse/equal position, or massive eval gap >= 3.0)
+        if best_eval_gap is not None:
+            if (best_eval_gap >= 1.35 and mover_before <= 50.0) or (best_eval_gap >= 3.0):
+                return 'mistake'
         return 'inaccuracy'
 
     # 8. Mistake: drop <= 18.0%
