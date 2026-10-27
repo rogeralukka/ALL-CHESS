@@ -5,6 +5,8 @@ import { Game } from '@/data/types';
 import { PlayerAvatar } from './Bits';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { ModeIcon, GameMode } from './ModeIcon';
+import { openingNameFor, terminationFor } from '@/lib/gameMeta';
+import { BookOpen } from 'lucide-react';
 
 const accTone = (v?: number) => (v === undefined ? 'text-theme-muted' : v >= 85 ? 'text-[var(--color-win)]' : v >= 70 ? 'text-theme-text' : 'text-[#e6912c]');
 
@@ -90,6 +92,17 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
                         <span className="text-[14px] text-theme-muted tabular-nums">({p.rating > 0 ? p.rating : '–'})</span>
                       </div>
                     ))}
+                    {(() => {
+                      const opening = openingNameFor(g);
+                      const ended = terminationFor(g);
+                      const parts = [opening, `${moves} moves`, ended].filter(Boolean) as string[];
+                      return (
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-theme-muted min-w-0" data-testid="game-meta">
+                          <BookOpen size={13} className="flex-shrink-0 opacity-80" aria-hidden="true" />
+                          <span className="truncate">{parts.join(' · ')}</span>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 px-2">
                     <div className="flex items-center justify-center gap-2">

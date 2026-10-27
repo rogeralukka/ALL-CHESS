@@ -93,6 +93,8 @@ export interface Game {
   };
   /** Either one grade set (the signed-in player's colour) or one per colour. */
   phaseGrades?: PhaseGrade | { white?: PhaseGrade; black?: PhaseGrade };
+  /** How the game ended, e.g. "Resignation", "Timeout", "Checkmate" (the backend fills this from the PGN Termination header). */
+  termination?: string;
   /** Stockfish depth the review was produced at, and the level id that asked for it. */
   analysisDepth?: number;
   analysisLevel?: string;
