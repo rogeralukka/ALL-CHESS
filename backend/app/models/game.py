@@ -26,6 +26,7 @@ class Game(Base):
     accuracy = Column(JSON, nullable=True) # { white, black }
     estimated_rating = Column(JSON, nullable=True) # { white, black }
     phase_grades = Column(JSON, nullable=True) # { opening, middlegame, tactics, endgame }
+    termination = Column(String(128), nullable=True) # e.g. "Aahanafrr won by resignation"
     
     analysis_level = Column(String(32), nullable=True) # 'standard' | 'deep' | 'deeper' | 'max'
     analysis_depth = Column(Integer, nullable=True)

@@ -630,6 +630,12 @@ def _run_single_pass_review_sync(
         top_pv = top_lines[0].get("pv", []) if top_lines else []
         engine_line_why = top_lines[0].get("why", "Engine recommended line") if top_lines else "Engine recommended line"
 
+        # Generate why for the move actually played
+        cur_chess_m = played_chess_moves[idx]
+        played_move_why = ""
+        if cur_chess_m and cur_chess_m in board_before.legal_moves:
+            played_move_why = generate_line_why_template(board_before, cur_chess_m)
+
         # Fast template comment for baseline
         tmpl_comment = generate_template_comment(
             san=raw_move["san"],
@@ -649,7 +655,8 @@ def _run_single_pass_review_sync(
             "mate": pos_after["mate"],
             "bestMove": pos_before["best_move_san"],
             "winPct": played_win_pct,
-            "why": engine_line_why,
+            "why": played_move_why if played_move_why else (engine_line_why if is_top else ""),
+            "bestWhy": engine_line_why,
             "lines": pos_before["top_lines"]
         }
         # Metadata for post-engine turning-point LLM pass
@@ -674,7 +681,10 @@ def _run_single_pass_review_sync(
         "moves": analyzed_moves,
         "accuracy": accuracy,
         "estimatedRating": est_ratings,
-        "phaseGrades": phase_grades["user"],
+        "phaseGrades": {
+            "white": phase_grades["white"],
+            "black": phase_grades["black"]
+        },
         "phaseGradesAll": phase_grades,
         "analysisLevel": level,
         "analysisDepth": real_depth

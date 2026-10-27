@@ -17,6 +17,26 @@ from app.auth import get_current_user
 from app.services.engine_service import analyze_game_moves_full, LEVEL_ORDER
 
 logger = logging.getLogger("all_chess.games_router")
+import re
+from typing import Any
+
+def extract_termination(dg: GameModel) -> Optional[str]:
+    if getattr(dg, "termination", None):
+        return dg.termination
+    if dg.pgn:
+        m = re.search(r'\[Termination\s+"([^"]+)"\]', dg.pgn)
+        if m:
+            return m.group(1)
+    return None
+
+def ensure_opening_name(op: Any) -> Dict[str, Any]:
+    res = dict(op or {})
+    name = res.get("name")
+    if not name or str(name).strip() in ("", "Unknown", "Unknown Opening"):
+        eco = res.get("eco", "A00")
+        res["name"] = f"Opening ({eco})"
+    return res
+
 router = APIRouter(prefix="/games", tags=["Games"])
 
 MOCK_GAMES_FILE = os.path.join(BACKEND_DIR, "app", "data", "mock_games.json")
@@ -136,12 +156,13 @@ def get_games(
                 speed=dg.speed,
                 source=dg.source,
                 platform=dg.platform,
-                opening=dg.opening,
+                opening=ensure_opening_name(dg.opening),
                 moves=dg.moves,
                 is_user_white=dg.is_user_white,
                 accuracy=dg.accuracy,
                 estimated_rating=dg.estimated_rating,
                 phase_grades=dg.phase_grades,
+                termination=extract_termination(dg),
                 analysis_level=dg.analysis_level or ("standard" if dg.accuracy else None),
                 analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None)
             )
@@ -174,12 +195,13 @@ def get_game_by_id(
         speed=dg.speed,
         source=dg.source,
         platform=dg.platform,
-        opening=dg.opening,
+        opening=ensure_opening_name(dg.opening),
         moves=dg.moves,
         is_user_white=dg.is_user_white,
         accuracy=dg.accuracy,
         estimated_rating=dg.estimated_rating,
         phase_grades=dg.phase_grades,
+        termination=extract_termination(dg),
         analysis_level=dg.analysis_level or ("standard" if dg.accuracy else None),
         analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None)
     )

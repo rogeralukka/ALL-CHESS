@@ -29,6 +29,7 @@ class MoveEval(CamelModel):
     best_move: Optional[str] = None
     win_pct: Optional[float] = None
     why: Optional[str] = None
+    best_why: Optional[str] = None
     lines: Optional[List[TopEngineLine]] = None
 
 class Move(CamelModel):
@@ -86,6 +87,7 @@ class Game(CamelModel):
     accuracy: Optional[Accuracy] = None
     estimated_rating: Optional[EstimatedRating] = None
     phase_grades: Optional[Union[PhaseGrade, Dict[str, PhaseGrade]]] = None
+    termination: Optional[str] = None
     analysis_depth: Optional[int] = None
     analysis_level: Optional[str] = None
 

@@ -178,6 +178,7 @@ def parse_pgn_game(
 
     time_control_label, speed = parse_time_control(headers.get("TimeControl"))
     date_iso = parse_iso_date(headers)
+    termination = headers.get('Termination')
 
     # Traverse moves
     board = parsed.board()
@@ -258,6 +259,7 @@ def parse_pgn_game(
         "isUserWhite": is_user_white,
         "accuracy": None,
         "estimatedRating": None,
-        "phaseGrades": None
+        "phaseGrades": None,
+        "termination": termination
     }
     return game_dict

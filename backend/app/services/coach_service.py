@@ -127,48 +127,47 @@ def generate_template_comment(
     """
     High-quality, grounded deterministic chess coach explanation fallback.
     Explains the exact tactical meaning based on classification and best move.
+    Includes refutation/pv lines for mistakes and blunders.
+    Clamped to <= 220 characters.
     """
-    eval_drop = None
-    if eval_before is not None and eval_after is not None:
-        if color == "w":
-            eval_drop = eval_before - eval_after
-        else:
-            eval_drop = eval_after - eval_before
-
     best_desc = f" The engine preferred {best_move}." if best_move and best_move != san else ""
+    ref_pv = ""
+    if pv and len(pv) >= 2:
+        ref_pv = f" ({' '.join(pv[:3])})"
 
     if classification == "brilliant":
-        return f"{san} is a brilliant move! You found a deep, sacrifice-backed tactical shot that seized control."
+        comment = f"{san} is a brilliant move! You found a deep, sacrifice-backed tactical shot that seized control."
     elif classification == "great":
-        return f"{san} is a great move. It was the only move that maintained your advantage in a sharp position."
+        comment = f"{san} is a great move. It was the only move that maintained your advantage in a sharp position."
     elif classification == "best":
         if best_move and best_move == san:
-            return f"{san} is the top engine recommendation, maintaining the optimal course for your pieces."
-        return f"{san} is the best move in the position, efficiently improving piece harmony."
+            comment = f"{san} is the top engine recommendation, maintaining the optimal course for your pieces."
+        else:
+            comment = f"{san} is the best move in the position, efficiently improving piece harmony."
     elif classification == "excellent":
-        return f"{san} is an excellent move, finding nearly all the benefits of the engine line."
+        comment = f"{san} is an excellent move, finding nearly all the benefits of the engine line."
     elif classification == "good":
-        return f"{san} is a solid and natural move, keeping your position steady.{best_desc}"
+        comment = f"{san} is a solid and natural move, keeping your position steady.{best_desc}"
     elif classification == "book":
-        return f"{san} follows established opening theory."
+        comment = f"{san} follows established opening theory."
     elif classification == "inaccuracy":
-        if eval_drop and eval_drop > 0:
-            return f"{san} is a slight inaccuracy, conceding about {eval_drop:.1f} pawns of evaluation.{best_desc}"
-        return f"{san} is slightly inaccurate.{best_desc}"
+        alt = f" Better was {best_move}." if best_move and best_move != san else ""
+        comment = f"{san} is a small slip that slightly loosens control.{alt}"
     elif classification == "mistake":
-        if best_move and best_move != san:
-            return f"{san} is a mistake that loses the initiative. Better was {best_move}."
-        return f"{san} is a mistake that gives the opponent an opening."
+        alt = f" Best was {best_move}{ref_pv}." if best_move and best_move != san else ""
+        comment = f"{san} is a mistake that gives up real ground.{alt}"
     elif classification == "miss":
-        if best_move and best_move != san:
-            return f"You missed a winning opportunity with {best_move}, playing {san} instead."
-        return f"A tactical opportunity was missed with {san}."
+        alt = f" {best_move}{ref_pv} was winning." if best_move and best_move != san else ""
+        comment = f"A critical opportunity was missed with {san}.{alt}"
     elif classification == "blunder":
-        if best_move and best_move != san:
-            return f"{san} is a serious blunder that significantly alters the game. {best_move} was required here."
-        return f"{san} is a blunder that immediately surrenders material or position."
+        alt = f" {best_move}{ref_pv} was required." if best_move and best_move != san else ""
+        comment = f"{san} is a blunder that loses decisive material or control.{alt}"
+    else:
+        comment = f"{san} was played."
 
-    return f"{san} was played."
+    if len(comment) > 220:
+        comment = comment[:217] + "..."
+    return comment
 
 
 def build_coach_prompt(
