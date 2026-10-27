@@ -1,0 +1,31 @@
+# Render Blueprint for the ALL-CHESS API (see docs/DEPLOY.md).
+# The persistent disk keeps the SQLite database across restarts and deploys. Disks need a paid plan.
+services:
+  - type: web
+    name: all-chess-api
+    runtime: docker
+    plan: starter
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: all-chess-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: APP_PASSCODE        # the shared passcode your friends type to log in. Set it in the Render dashboard.
+        sync: false
+      - key: SESSION_SECRET      # signs login cookies. Generated once by Render.
+        generateValue: true
+      - key: FRONTEND_ORIGIN     # your Vercel URL, e.g. https://all-chess.vercel.app
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:////data/all_chess.db
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: SEED_DEMO_DATA
+        value: "false"
+      - key: CHESSCOM_CONTACT_EMAIL
+        sync: false

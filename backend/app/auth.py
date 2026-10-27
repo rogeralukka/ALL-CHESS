@@ -35,8 +35,8 @@ def set_session_cookie(response: Response, user_id: str) -> None:
         value=token,
         max_age=86400 * 30, # 30 days
         httponly=True,
-        samesite="lax",
-        secure=False, # Allow local HTTP dev
+        samesite=settings.cookie_samesite if settings.cookie_samesite in ("lax", "strict", "none") else "lax",
+        secure=settings.cookie_secure or settings.cookie_samesite == "none",  # False allows local HTTP dev
         path="/"
     )
 
