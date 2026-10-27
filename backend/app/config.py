@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # expected_accuracy = base + (rating / 3000) * slope
     rating_expected_acc_base: float = Field(default=60.0)
     rating_expected_acc_slope: float = Field(default=35.0)
-    rating_sensitivity_k: float = Field(default=45.0)
+    rating_sensitivity_k: float = Field(default=33.0)
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),
@@ -77,12 +77,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Validate secrets on startup (skip only when running tests)
-if is_testing_environment():
-    if not settings.app_passcode or settings.app_passcode in PLACEHOLDER_SECRETS:
-        settings.app_passcode = "allchess123"
-    if not settings.session_secret or settings.session_secret in PLACEHOLDER_SECRETS:
-        settings.session_secret = "test-session-secret-key-32-chars-long-123456"
-else:
+if not is_testing_environment():
     if not settings.app_passcode.strip() or settings.app_passcode.strip() in PLACEHOLDER_SECRETS:
         raise RuntimeError("APP_PASSCODE is required in backend/.env and must not be a placeholder.")
     if not settings.session_secret.strip() or settings.session_secret.strip() in PLACEHOLDER_SECRETS:

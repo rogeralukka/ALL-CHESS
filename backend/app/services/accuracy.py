@@ -1,5 +1,5 @@
 import math
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from app.services.win_pct import eval_to_win_pct
 from app.config import settings
 
@@ -161,14 +161,71 @@ def estimate_performance_ratings(
     }
 
 
-def calculate_phase_grades_for_player(player_moves: List[Dict[str, Any]]) -> Dict[str, str]:
+PIECE_POINTS = {"q": 9, "r": 5, "b": 3, "n": 3}
+
+
+def non_pawn_material(fen: str) -> Dict[str, int]:
+    """Non-pawn material points for each side in a FEN position."""
+    board_part = fen.split(" ")[0] if fen else ""
+    w = 0
+    b = 0
+    queens = 0
+    for ch in board_part:
+        pts = PIECE_POINTS.get(ch.lower(), 0)
+        if pts:
+            if ch.isupper():
+                w += pts
+            else:
+                b += pts
+            if ch.lower() == "q":
+                queens += 1
+    return {"w": w, "b": b, "queens": queens}
+
+
+def last_book_index(moves: List[Dict[str, Any]]) -> int:
+    """Half-move index of the last book move, or -1."""
+    last = -1
+    for i, m in enumerate(moves):
+        if m.get("classification") == "book":
+            last = i
+    return last
+
+
+def endgame_start_index(moves: List[Dict[str, Any]]) -> int:
+    """Half-move index where the endgame begins (both sides <= 13 non-pawn material points)."""
+    for i, m in enumerate(moves):
+        fen = m.get("fen")
+        if fen:
+            mat = non_pawn_material(fen)
+            if mat["w"] <= 13 and mat["b"] <= 13:
+                return i + 1
+    return len(moves)
+
+
+def compute_phase_boundaries(moves: List[Dict[str, Any]]) -> Tuple[int, int]:
     """
-    Calculates phase grades (opening, middlegame, tactics, endgame) by directly averaging
-    pre-computed per-move accuracies over the player's moves:
-      - Opening: moves with move_number <= 10
-      - Middlegame: moves with 11 <= move_number <= 30
-      - Endgame: moves with move_number > 30
-      - Tactics: moves involving captures ('x'), checks ('+'), sacrifices, or eval swings
+    Computes openingEnd and endgameFrom half-move indices aligned with frontend phases.ts:
+      - Opening: start to 6 half-moves after last book move, clamped to [12, 24] and <= endgameFrom.
+      - Endgame: first position where both sides have <= 13 non-pawn material points (Q=9, R=5, B=3, N=3).
+      - Middlegame: everything in between.
+    """
+    endgame_from = endgame_start_index(moves)
+    last_book = last_book_index(moves)
+    opening_end = min(max(last_book + 1 + 6, 12), 24, endgame_from)
+    return opening_end, endgame_from
+
+
+def calculate_phase_grades_for_player(
+    player_moves: List[Tuple[int, Dict[str, Any]]],
+    opening_end: int,
+    endgame_from: int
+) -> Dict[str, str]:
+    """
+    Calculates phase grades for a player based on half-move index boundaries:
+      - Opening: ply_idx < opening_end
+      - Middlegame: opening_end <= ply_idx < endgame_from
+      - Endgame: ply_idx >= endgame_from
+      - Tactics: moves involving captures ('x'), checks ('+'), mates ('#'), or tactical swings
     """
     def grade_for_accs(accs: List[float]) -> str:
         if not accs:
@@ -184,18 +241,17 @@ def calculate_phase_grades_for_player(player_moves: List[Dict[str, Any]]) -> Dic
     endgame_accs: List[float] = []
     tactical_accs: List[float] = []
 
-    for m in player_moves:
+    for ply_idx, m in player_moves:
         acc = m.get("accuracy")
         if acc is None:
             continue
 
-        move_num = m.get("move_number") or m.get("moveNumber") or 1
         san = m.get("san", "")
         cls_name = m.get("classification", "")
 
-        if move_num <= 10:
+        if ply_idx < opening_end:
             opening_accs.append(acc)
-        elif move_num <= 30:
+        elif ply_idx < endgame_from:
             middle_accs.append(acc)
         else:
             endgame_accs.append(acc)
@@ -219,18 +275,26 @@ def calculate_phase_grades_for_player(player_moves: List[Dict[str, Any]]) -> Dic
 
 def calculate_phase_grades(moves: List[Dict[str, Any]], is_user_white: bool = True) -> Dict[str, Any]:
     """
-    Calculates phase grades for White and Black, and returns the user's side grades as the primary phaseGrades.
+    Calculates phase grades for White and Black using material & book-based phase boundaries.
+    Returns:
+      {
+        "white": {opening, middlegame, tactics, endgame},
+        "black": {opening, middlegame, tactics, endgame},
+        "user":  {...}
+      }
     """
-    white_moves = [m for m in moves if m.get("color") == "w"]
-    black_moves = [m for m in moves if m.get("color") == "b"]
+    opening_end, endgame_from = compute_phase_boundaries(moves)
 
-    white_grades = calculate_phase_grades_for_player(white_moves)
-    black_grades = calculate_phase_grades_for_player(black_moves)
+    white_moves = [(i, m) for i, m in enumerate(moves) if m.get("color") == "w"]
+    black_moves = [(i, m) for i, m in enumerate(moves) if m.get("color") == "b"]
+
+    white_grades = calculate_phase_grades_for_player(white_moves, opening_end, endgame_from)
+    black_grades = calculate_phase_grades_for_player(black_moves, opening_end, endgame_from)
 
     user_grades = white_grades if is_user_white else black_grades
 
     return {
-        "user": user_grades,
         "white": white_grades,
-        "black": black_grades
+        "black": black_grades,
+        "user": user_grades
     }

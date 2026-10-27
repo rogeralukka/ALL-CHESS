@@ -2,27 +2,23 @@ import React, { useState } from 'react';
 import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
 import { LessonStage } from '@/data/types';
 import { LessonPlayer } from './LessonPlayer';
-import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
-import { Segmented } from '@/components/Segmented';
-import { ProgressBar } from '@/components/ProgressBar';
 import { toast } from '@/components/Toast';
 import { IsoLevelMap } from '@/features/map/IsoLevelMap';
-import { PageContainer, PageHeader } from '@/components/PageHeader';
-import { Pill } from '@/components/Bits';
-import {
-  Play,
-  Flame,
-  Award,
-  Sparkles,
-  BookOpen,
-  HelpCircle,
-  Dumbbell,
-  Compass,
-} from 'lucide-react';
+import { PageContainer } from '@/components/PageHeader';
+import { PageTitle, SectionCard } from '@/components/ListUI';
+import { Play, Check, Lock, Award, BookOpen, Crown, Swords } from 'lucide-react';
+
+type Category = 'openings' | 'middlegame' | 'endgame';
+
+const CATEGORIES: { id: Category; label: string; icon: React.ReactNode }[] = [
+  { id: 'openings', label: 'Openings', icon: <BookOpen size={26} className="text-[#81b64c]" /> },
+  { id: 'middlegame', label: 'Middlegame', icon: <Swords size={26} className="text-[#81b64c]" /> },
+  { id: 'endgame', label: 'Endgames', icon: <Crown size={26} className="text-[#81b64c]" /> },
+];
 
 export const LearnPath: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<'endgame' | 'openings' | 'middlegame'>('endgame');
+  const [activeCategory, setActiveCategory] = useState<Category>('endgame');
   const stages = MOCK_LEARN_STAGES.filter((s) => s.category === activeCategory);
 
   const defaultSelected = stages.find((s) => s.status === 'current') || stages[0];
@@ -36,6 +32,13 @@ export const LearnPath: React.FC = () => {
   const unlockedUpTo = Math.max(currentIndex, lastOpen);
   const selectedIndex = selectedStage ? stages.findIndex((s) => s.id === selectedStage.id) : null;
   const isPhone = typeof window !== 'undefined' && window.innerWidth < 640;
+  const totalXp = MOCK_LEARN_STAGES.filter((s) => s.status === 'done').reduce((n, s) => n + s.xp, 0);
+
+  const pickCategory = (c: Category) => {
+    setActiveCategory(c);
+    const next = MOCK_LEARN_STAGES.filter((s) => s.category === c);
+    setSelectedStage(next.find((s) => s.status === 'current') || next[0]);
+  };
 
   const handleLessonComplete = () => {
     toast.achievement('Stage Completed!', `+${activeLessonStage?.xp || 50} XP earned`);
@@ -43,74 +46,53 @@ export const LearnPath: React.FC = () => {
   };
 
   if (activeLessonStage) {
-    return (
-      <LessonPlayer
-        stage={activeLessonStage}
-        onComplete={handleLessonComplete}
-        onExit={() => setActiveLessonStage(null)}
-      />
-    );
+    return <LessonPlayer stage={activeLessonStage} onComplete={handleLessonComplete} onExit={() => setActiveLessonStage(null)} />;
   }
 
   return (
     <PageContainer wide>
-      <PageHeader
+      <PageTitle
         title="Learn"
         icon="/assets/ui/icon_learn.webp"
-        subtitle="Your roadmap, built from your own games. This week: master the critical rook endgames."
-        eyebrow={
-          <>
-            <Pill tone="amber">
-              <Flame size={12} /> 5 day streak
-            </Pill>
-            <Pill>
-              <Award size={12} /> 420 XP
-            </Pill>
-          </>
+        right={
+          <span className="inline-flex items-center gap-2 h-10 px-4 rounded-[5px] font-display font-extrabold text-[18px] text-theme-text" style={{ background: 'var(--tile-bg)' }}>
+            <Award size={20} className="text-[var(--color-orange)]" />
+            {totalXp} XP
+          </span>
         }
       />
 
-      {/* Category Tabs: Openings, Middlegame, Endgame with Mobile Overflow Fix */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="w-full sm:w-auto overflow-x-auto no-scrollbar">
-          <Segmented<'endgame' | 'openings' | 'middlegame'>
-            value={activeCategory}
-            onChange={(v) => {
-              setActiveCategory(v);
-              const nextStages = MOCK_LEARN_STAGES.filter((s) => s.category === v);
-              setSelectedStage(nextStages.find((s) => s.status === 'current') || nextStages[0]);
-            }}
-            options={[
-              { value: 'endgame', label: 'Endgame' },
-              { value: 'openings', label: 'Openings' },
-              { value: 'middlegame', label: 'Middlegame' },
-            ]}
-          />
-        </div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-theme-muted">
-          <span>{completedStages} of {stages.length} Completed</span>
-          <span className="text-amber-500 font-bold font-mono">
-            ({Math.round((completedStages / Math.max(1, stages.length)) * 100)}%)
-          </span>
-        </div>
+      {/* Category tiles, each with its own progress */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="tablist" aria-label="Lesson categories">
+        {CATEGORIES.map((c) => {
+          const list = MOCK_LEARN_STAGES.filter((s) => s.category === c.id);
+          const done = list.filter((s) => s.status === 'done').length;
+          const active = c.id === activeCategory;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => pickCategory(c.id)}
+              className={`cc-card text-left px-5 py-4 flex items-center gap-4 transition-colors border-2 ${active ? 'border-[#81b64c]' : 'border-transparent hover:bg-white/[0.04]'}`}
+            >
+              <span className="w-12 h-12 rounded-[5px] flex items-center justify-center flex-shrink-0" style={{ background: 'var(--tile-bg)' }}>{c.icon}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-display font-extrabold text-[20px] text-theme-text">{c.label}</span>
+                <span className="block text-[13px] text-theme-muted mt-0.5">{done} of {list.length} lessons</span>
+                <span className="block h-1.5 rounded-full mt-2 overflow-hidden" style={{ background: 'var(--graph-dark)' }}>
+                  <span className="block h-full rounded-full bg-[var(--color-orange)]" style={{ width: `${(done / Math.max(1, list.length)) * 100}%` }} />
+                </span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Progress Bar */}
-      <ProgressBar value={completedStages} max={stages.length} height={6} />
-
-      {/* Main 2-Column Section: Winding Path on Left, Detail & Suggested on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: the stage map */}
-        <div className="lg:col-span-7 xl:col-span-8 rounded-2xl overflow-hidden border border-theme-border shadow-xl relative bg-[#5f9f45]">
-          <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-5 py-3 bg-gradient-to-b from-black/60 via-black/25 to-transparent pointer-events-none">
-            <div className="flex items-center gap-2">
-              <Compass size={18} className="text-amber-300" />
-              <span className="text-xs font-bold uppercase tracking-wider text-white drop-shadow">
-                {activeCategory} adventure
-              </span>
-            </div>
-            <span className="text-xs font-bold text-white/85 drop-shadow">{stages.length} stages</span>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* The stage map */}
+        <div className="lg:col-span-7 xl:col-span-8 rounded-[5px] overflow-hidden relative bg-[#5f9f45] shadow-[0_3px_0_rgba(0,0,0,0.2)]">
           <IsoLevelMap
             key={activeCategory}
             levelCount={stages.length}
@@ -126,112 +108,64 @@ export const LearnPath: React.FC = () => {
           />
         </div>
 
-        {/* Right Column: Stage Detail Card + Also Suggested Card */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-6">
-          {/* Stage Detail Card */}
+        {/* Right rail: the chosen lesson, then the lesson list */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-6">
           {selectedStage && (
-            <Card className="p-6 border-amber-500/40 bg-gradient-to-br from-theme-raised via-theme-card to-theme-card space-y-5 shadow-xl">
-              <div className="flex items-center justify-between border-b border-theme-border/60 pb-3">
-                <div>
-                  <span className="text-xs font-bold text-amber-500 uppercase tracking-widest block">
-                    {selectedStage.category} Path • Stage Details
-                  </span>
-                  <h2 className="text-xl font-bold font-display text-theme-text mt-0.5">
-                    {selectedStage.title}
-                  </h2>
-                </div>
-                <span className="text-xs font-bold font-mono px-2.5 py-1 rounded bg-amber-500/20 text-amber-500 border border-amber-500/40">
-                  +{selectedStage.xp} XP
-                </span>
+            <section className="cc-card overflow-hidden" data-testid="stage-detail">
+              <div className="px-5 pt-4 pb-1 text-[12px] font-bold uppercase tracking-wide text-theme-muted">
+                {selectedStage.status === 'current' ? 'Next lesson' : 'Lesson'}
               </div>
-
-              <p className="text-xs md:text-sm text-theme-text/90 leading-relaxed">
-                {selectedStage.description}
-              </p>
-
-              {/* 3 Step Types Breakdown */}
-              <div className="space-y-2.5 text-xs">
-                <div className="p-3 rounded-xl bg-theme-card border border-theme-border flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
-                    <BookOpen size={16} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-theme-text">Interactive Lesson</div>
-                    <div className="text-xs text-theme-muted">
-                      Step-by-step master walkthrough with visual board arrows
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-theme-card border border-theme-border flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
-                    <Dumbbell size={16} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-theme-text">Practice Positions</div>
-                    <div className="text-xs text-theme-muted">
-                      Solve the pattern live on the board with immediate feedback
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-theme-card border border-theme-border flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center flex-shrink-0">
-                    <HelpCircle size={16} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-theme-text">Mini Quiz Mastery</div>
-                    <div className="text-xs text-theme-muted">
-                      Certify retention under varied defender defenses
-                    </div>
-                  </div>
+              <div className="px-5 pb-4">
+                <h2 className="font-display font-extrabold text-[24px] leading-7 text-theme-text">{selectedStage.title}</h2>
+                <p className="text-[15px] text-theme-muted leading-relaxed mt-2">{selectedStage.description}</p>
+                <div className="flex items-center gap-3 mt-3 text-[13px] text-theme-muted">
+                  <span>{selectedStage.steps.length} steps</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-bold text-[var(--color-orange)]">+{selectedStage.xp} XP</span>
                 </div>
               </div>
-
-              <div className="pt-2">
+              <div className="p-4" style={{ background: 'var(--side-header-bg)' }}>
                 <Button
                   variant="primary"
                   size="lg"
-                  fullWidth
-                  icon={<Play size={16} className="fill-black" />}
+                  className="!h-14 w-full !text-[22px] !font-extrabold font-display"
+                  icon={<Play size={20} className="fill-current" />}
                   onClick={() => setActiveLessonStage(selectedStage)}
+                  disabled={selectedStage.status === 'locked'}
                 >
-                  Start lesson +{selectedStage.xp} XP
+                  {selectedStage.status === 'done' ? 'Review lesson' : 'Start lesson'}
                 </Button>
               </div>
-            </Card>
+            </section>
           )}
 
-          {/* Also Suggested Card */}
-          <Card className="p-5 border-theme-border/80 bg-theme-raised/40 space-y-3 shadow-md">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
-                <Sparkles size={14} /> Also suggested
-              </span>
-              <span className="text-xs font-mono font-bold text-neutral-400">+50 XP</span>
-            </div>
-
-            <div>
-              <h4 className="font-bold font-display text-theme-text text-sm">
-                Knight Endgames: Outposts &amp; Triangulation
-              </h4>
-              <p className="text-xs text-theme-muted mt-1 leading-relaxed">
-                Based on your recent game vs PawnStorm22 where minor piece coordination swung the advantage on move 6.
-              </p>
-            </div>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              fullWidth
-              onClick={() => {
-                const s3 = stages[2] || stages[0];
-                setSelectedStage(s3);
-              }}
-            >
-              Explore Stage
-            </Button>
-          </Card>
+          <SectionCard title={`${CATEGORIES.find((c) => c.id === activeCategory)?.label} lessons`} right={<span className="text-[13px] text-theme-muted">{completedStages}/{stages.length}</span>}>
+            <ul>
+              {stages.map((s, i) => {
+                const selected = selectedStage?.id === s.id;
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStage(s)}
+                      className={`w-full flex items-center gap-3 px-5 h-14 text-left transition-colors ${selected ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'}`}
+                    >
+                      <span
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[14px] font-extrabold ${
+                          s.status === 'done' ? 'bg-[#81b64c] text-white' : s.status === 'locked' ? 'text-theme-muted' : 'bg-[var(--color-orange)] text-white'
+                        }`}
+                        style={s.status === 'locked' ? { background: 'var(--tile-bg)' } : undefined}
+                      >
+                        {s.status === 'done' ? <Check size={16} strokeWidth={3} /> : s.status === 'locked' ? <Lock size={14} /> : i + 1}
+                      </span>
+                      <span className={`flex-1 min-w-0 truncate text-[16px] font-semibold ${s.status === 'locked' ? 'text-theme-muted' : 'text-theme-text'}`}>{s.title}</span>
+                      <span className="text-[13px] text-theme-muted tabular-nums">+{s.xp}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </SectionCard>
         </div>
       </div>
     </PageContainer>

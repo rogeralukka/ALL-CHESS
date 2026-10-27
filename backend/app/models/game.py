@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, JSON, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, String, Text, JSON, DateTime, ForeignKey, Boolean, Integer
 import uuid
 from app.database import Base, utc_now
 
@@ -26,5 +26,9 @@ class Game(Base):
     accuracy = Column(JSON, nullable=True) # { white, black }
     estimated_rating = Column(JSON, nullable=True) # { white, black }
     phase_grades = Column(JSON, nullable=True) # { opening, middlegame, tactics, endgame }
+    termination = Column(String(128), nullable=True) # e.g. "Aahanafrr won by resignation"
+    
+    analysis_level = Column(String(32), nullable=True) # 'standard' | 'deep' | 'deeper' | 'max'
+    analysis_depth = Column(Integer, nullable=True)
     
     created_at = Column(DateTime, default=utc_now, nullable=False)

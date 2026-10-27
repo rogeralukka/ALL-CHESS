@@ -1,5 +1,7 @@
 import { ModeIcon, GameMode } from '@/components/ModeIcon';
+import { useCurrentUser } from '@/lib/useCurrentUser';
 import React, { useEffect, useState } from 'react';
+import { InlineLoader } from '@/components/LoadingScreen';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/Card';
@@ -66,6 +68,7 @@ const LaunchCard: React.FC<{
 };
 
 export const Home: React.FC = () => {
+  const me = useCurrentUser();
   const navigate = useNavigate();
   const { isFull } = useMotion();
   const [coachDismissed, setCoachDismissed] = useState(false);
@@ -74,6 +77,7 @@ export const Home: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [currentStage, setCurrentStage] = useState<LessonStage | null>(null);
   const [dailyPuzzle, setDailyPuzzle] = useState<Puzzle | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -93,6 +97,10 @@ export const Home: React.FC = () => {
           setFriends(friendList);
           setCurrentStage(stages.find((s) => s.status === 'current') || stages[0] || null);
           setDailyPuzzle(puzzle);
+          setLoaded(true);
+        },
+        () => {
+          if (mounted) setLoaded(true);
         }
       );
     };
@@ -116,17 +124,23 @@ export const Home: React.FC = () => {
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const today = (new Date().getDay() + 6) % 7;
 
+  if (!loaded) {
+    return (
+      <PageContainer wide>
+        <InlineLoader label="Setting up your home…" size={140} className="py-24" />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer wide>
       {/* Greeting row */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="rounded-xl bg-black/20 border border-theme-border overflow-hidden">
-            <CoachAvatar expression="wave" size={48} />
-          </div>
+          <PlayerAvatar name="You" size={52} square />
           <div className="min-w-0">
             <div className="text-[13px] font-semibold text-theme-muted">{greeting()},</div>
-            <div className="text-[22px] font-black font-display text-theme-text leading-tight">Master</div>
+            <div className="text-[22px] font-black font-display text-theme-text leading-tight">{me.username}</div>
           </div>
         </div>
         <div className="flex items-center gap-3" data-testid="streak">

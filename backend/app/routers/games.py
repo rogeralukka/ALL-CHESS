@@ -2,7 +2,7 @@ import json
 import os
 import uuid
 import logging
-from typing import List, Optional, Literal
+from typing import Any, Dict, List, Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 import app.database
@@ -11,12 +11,31 @@ from app.database import get_db
 from app.models.user import User
 from app.models.game import Game as GameModel
 from app.models.analysis import AnalysisJob, GameAnalysis
-from app.schemas.game import Game
+from app.schemas.game import Game, AnalyzeGameRequest
 from app.schemas.job import JobResponse
 from app.auth import get_current_user
-from app.services.engine_service import analyze_game_moves_full
+from app.services.engine_service import analyze_game_moves_full, LEVEL_ORDER
 
 logger = logging.getLogger("all_chess.games_router")
+import re
+
+def extract_termination(dg: GameModel) -> Optional[str]:
+    if getattr(dg, "termination", None):
+        return dg.termination
+    if dg.pgn:
+        m = re.search(r'\[Termination\s+"([^"]+)"\]', dg.pgn)
+        if m:
+            return m.group(1)
+    return None
+
+def ensure_opening_name(op: Any) -> Dict[str, Any]:
+    res = dict(op or {})
+    name = res.get("name")
+    if not name or str(name).strip() in ("", "Unknown", "Unknown Opening"):
+        eco = res.get("eco", "A00")
+        res["name"] = f"Opening ({eco})"
+    return res
+
 router = APIRouter(prefix="/games", tags=["Games"])
 
 MOCK_GAMES_FILE = os.path.join(BACKEND_DIR, "app", "data", "mock_games.json")
@@ -136,12 +155,15 @@ def get_games(
                 speed=dg.speed,
                 source=dg.source,
                 platform=dg.platform,
-                opening=dg.opening,
+                opening=ensure_opening_name(dg.opening),
                 moves=dg.moves,
                 is_user_white=dg.is_user_white,
                 accuracy=dg.accuracy,
                 estimated_rating=dg.estimated_rating,
-                phase_grades=dg.phase_grades
+                phase_grades=dg.phase_grades,
+                termination=extract_termination(dg),
+                analysis_level=dg.analysis_level or ("standard" if dg.accuracy else None),
+                analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None)
             )
         )
 
@@ -172,12 +194,15 @@ def get_game_by_id(
         speed=dg.speed,
         source=dg.source,
         platform=dg.platform,
-        opening=dg.opening,
+        opening=ensure_opening_name(dg.opening),
         moves=dg.moves,
         is_user_white=dg.is_user_white,
         accuracy=dg.accuracy,
         estimated_rating=dg.estimated_rating,
-        phase_grades=dg.phase_grades
+        phase_grades=dg.phase_grades,
+        termination=extract_termination(dg),
+        analysis_level=dg.analysis_level or ("standard" if dg.accuracy else None),
+        analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None)
     )
 
 
@@ -185,7 +210,7 @@ async def run_game_analysis_task(
     job_id: str,
     game_id: str,
     user_id: str,
-    depth: int = 16
+    level: str = "standard"
 ) -> None:
     db = app.database.SessionLocal()
     try:
@@ -210,18 +235,20 @@ async def run_game_analysis_task(
 
         analysis_result = await analyze_game_moves_full(
             moves_list=game.moves or [],
-            depth=depth,
-            time_per_move=0.3,
+            level=level,
             is_user_white=game.is_user_white,
             white_rating=white_r,
             black_rating=black_r,
-            on_progress=update_progress
+            on_progress=update_progress,
+            db=db
         )
 
-        # Cache in game_analysis
+        real_depth = analysis_result.get("analysisDepth", 18)
+
+        # Cache in game_analysis table
         existing_analysis = db.query(GameAnalysis).filter(
             GameAnalysis.game_id == game.id,
-            GameAnalysis.depth == depth
+            GameAnalysis.depth == real_depth
         ).first()
 
         if existing_analysis:
@@ -229,23 +256,31 @@ async def run_game_analysis_task(
         else:
             new_analysis = GameAnalysis(
                 game_id=game.id,
-                depth=depth,
+                depth=real_depth,
                 analysis_data=analysis_result
             )
             db.add(new_analysis)
 
-        # Update game record
-        game.moves = analysis_result["moves"]
-        game.accuracy = analysis_result["accuracy"]
-        game.estimated_rating = analysis_result["estimatedRating"]
-        game.phase_grades = analysis_result["phaseGrades"]
+        # Never silently overwrite a deep analysis with a shallower one
+        current_level_rank = LEVEL_ORDER.get(game.analysis_level, 0) if game.analysis_level else 0
+        new_level_rank = LEVEL_ORDER.get(level, 1)
+
+        if new_level_rank >= current_level_rank:
+            game.moves = analysis_result["moves"]
+            game.accuracy = analysis_result["accuracy"]
+            game.estimated_rating = analysis_result["estimatedRating"]
+            game.phase_grades = analysis_result.get("phaseGradesAll") or analysis_result.get("phaseGrades")
+            game.analysis_level = level
+            game.analysis_depth = real_depth
 
         job.status = "done"
         job.progress = 100
         job.result = {
             "accuracy": analysis_result["accuracy"],
             "estimatedRating": analysis_result["estimatedRating"],
-            "phaseGrades": analysis_result["phaseGrades"]
+            "phaseGrades": game.phase_grades,
+            "analysisLevel": game.analysis_level,
+            "analysisDepth": game.analysis_depth
         }
         db.commit()
 
@@ -267,6 +302,7 @@ async def run_game_analysis_task(
 def analyze_game(
     game_id: str,
     background_tasks: BackgroundTasks,
+    payload: Optional[AnalyzeGameRequest] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -277,48 +313,42 @@ def analyze_game(
     if not game:
         raise HTTPException(status_code=404, detail=f"Game '{game_id}' not found.")
 
-    # 1. Check cache in game_analysis table
-    cached = db.query(GameAnalysis).filter(
-        GameAnalysis.game_id == game_id,
-        GameAnalysis.depth == 16
-    ).first()
+    req_level = payload.level if payload and payload.level else "standard"
+    force = payload.force if payload and payload.force is not None else False
+    req_rank = LEVEL_ORDER.get(req_level, 1)
 
-    if cached and cached.analysis_data:
-        # If game moves not yet backfilled from cache, update them
-        if not game.accuracy and isinstance(cached.analysis_data, dict):
-            game.moves = cached.analysis_data.get("moves", game.moves)
-            game.accuracy = cached.analysis_data.get("accuracy")
-            game.estimated_rating = cached.analysis_data.get("estimatedRating")
-            game.phase_grades = cached.analysis_data.get("phaseGrades")
+    # 1. Without force, return the cached analysis if it was made at the same or a deeper level
+    if not force and game.accuracy:
+        current_lvl = game.analysis_level or "standard"
+        current_rank = LEVEL_ORDER.get(current_lvl, 1)
+        if current_rank >= req_rank:
+            existing_done_job = db.query(AnalysisJob).filter(
+                AnalysisJob.game_id == game_id,
+                AnalysisJob.user_id == current_user.id,
+                AnalysisJob.job_type == "analysis",
+                AnalysisJob.status == "done"
+            ).first()
+            if existing_done_job:
+                return JobResponse(job_id=existing_done_job.id)
+
+            job = AnalysisJob(
+                user_id=current_user.id,
+                game_id=game.id,
+                job_type="analysis",
+                status="done",
+                progress=100,
+                result={
+                    "accuracy": game.accuracy,
+                    "estimatedRating": game.estimated_rating,
+                    "phaseGrades": game.phase_grades,
+                    "analysisLevel": current_lvl,
+                    "analysisDepth": game.analysis_depth or 18
+                }
+            )
+            db.add(job)
             db.commit()
-
-        # Return existing completed job or create a completed one
-        existing_done_job = db.query(AnalysisJob).filter(
-            AnalysisJob.game_id == game_id,
-            AnalysisJob.user_id == current_user.id,
-            AnalysisJob.job_type == "analysis",
-            AnalysisJob.status == "done"
-        ).first()
-
-        if existing_done_job:
-            return JobResponse(job_id=existing_done_job.id)
-
-        job = AnalysisJob(
-            user_id=current_user.id,
-            game_id=game.id,
-            job_type="analysis",
-            status="done",
-            progress=100,
-            result={
-                "accuracy": cached.analysis_data.get("accuracy"),
-                "estimatedRating": cached.analysis_data.get("estimatedRating"),
-                "phaseGrades": cached.analysis_data.get("phaseGrades")
-            }
-        )
-        db.add(job)
-        db.commit()
-        db.refresh(job)
-        return JobResponse(job_id=job.id)
+            db.refresh(job)
+            return JobResponse(job_id=job.id)
 
     # 2. Check for active queued/processing job
     active_job = db.query(AnalysisJob).filter(
@@ -328,7 +358,7 @@ def analyze_game(
         AnalysisJob.status.in_(["queued", "processing"])
     ).first()
 
-    if active_job:
+    if active_job and not force:
         return JobResponse(job_id=active_job.id)
 
     # 3. Create fresh job and queue in background
@@ -343,5 +373,5 @@ def analyze_game(
     db.commit()
     db.refresh(job)
 
-    background_tasks.add_task(run_game_analysis_task, job.id, game.id, current_user.id, 16)
+    background_tasks.add_task(run_game_analysis_task, job.id, game.id, current_user.id, req_level)
     return JobResponse(job_id=job.id)

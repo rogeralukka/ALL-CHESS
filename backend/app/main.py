@@ -15,8 +15,11 @@ from alembic.config import Config
 from alembic import command
 from app.config import settings
 from app.database import engine as db_engine, Base
-import app.models  # registers models with Base
-from app.routers import auth, games, sync, stats, jobs, engine as engine_router
+from app import models as _models
+_ = _models  # registers models with Base
+from app.routers import auth, games, sync, stats, jobs, engine as engine_router, puzzles, learn, friends, coach, scout
+from app.services.seeder import seed_puzzles
+from app.database import SessionLocal
 
 logger = logging.getLogger("all_chess")
 
@@ -39,6 +42,11 @@ def run_db_migrations():
 
 # Apply migrations on application startup
 run_db_migrations()
+try:
+    with SessionLocal() as db:
+        seed_puzzles(db)
+except Exception:
+    pass
 
 app = FastAPI(
     title="ALL-CHESS API",
@@ -101,3 +109,8 @@ app.include_router(sync.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(engine_router.router, prefix="/api/v1")
+app.include_router(puzzles.router, prefix="/api/v1")
+app.include_router(learn.router, prefix="/api/v1")
+app.include_router(friends.router, prefix="/api/v1")
+app.include_router(coach.router, prefix="/api/v1")
+app.include_router(scout.router, prefix="/api/v1")

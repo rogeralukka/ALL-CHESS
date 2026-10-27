@@ -3,6 +3,10 @@ import asyncio
 import json
 from typing import List, Dict, Any, Optional
 
+class LichessError(Exception):
+    """Exception raised when Lichess API returns an error or is unreachable."""
+    pass
+
 class LichessClient:
     def __init__(self):
         self.headers = {
@@ -36,7 +40,13 @@ class LichessClient:
 
         async with httpx.AsyncClient(headers=self.headers, timeout=self.timeout) as client:
             resp = await self._get_with_retry(client, url, params)
-            if not resp or resp.status_code != 200:
+            if not resp:
+                return []
+            if resp.status_code == 404:
+                return []
+            if resp.status_code >= 500:
+                raise LichessError(f"Lichess API returned status {resp.status_code} for user '{clean_user}' games.")
+            if resp.status_code != 200:
                 return []
 
             games = []
@@ -62,6 +72,10 @@ class LichessClient:
             resp = await self._get_with_retry(client, url, params={})
             if resp and resp.status_code == 200:
                 return resp.json()
+            if resp and resp.status_code == 404:
+                return None
+            if resp and resp.status_code >= 500:
+                raise LichessError(f"Lichess API returned status {resp.status_code} for user '{clean_user}' profile.")
             return None
 
     async def fetch_recent_games(self, username: str, max_games: int = 50) -> List[Dict[str, Any]]:
@@ -75,6 +89,7 @@ class LichessClient:
         max_retries: int = 3
     ) -> Optional[httpx.Response]:
         delay = 1.0
+        last_exc: Optional[Exception] = None
         for attempt in range(max_retries):
             try:
                 resp = await client.get(url, params=params)
@@ -83,9 +98,12 @@ class LichessClient:
                     delay *= 2.0
                     continue
                 return resp
-            except (httpx.RequestError, httpx.TimeoutException):
+            except (httpx.RequestError, httpx.TimeoutException) as exc:
+                last_exc = exc
                 if attempt == max_retries - 1:
-                    return None
+                    raise LichessError(f"Failed to connect to Lichess: {exc}")
                 await asyncio.sleep(delay)
                 delay *= 2.0
+        if last_exc:
+            raise LichessError(f"Failed to connect to Lichess: {last_exc}")
         return None

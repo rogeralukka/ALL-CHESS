@@ -53,12 +53,12 @@ def test_user_data_isolation(client, db_session):
 def test_two_users_login_list_games_isolation(client, db_session):
     """Asserts two users log in, both list games, neither errors, and each only sees their own."""
     # User 1 logs in via POST /session
-    resp1 = client.post("/api/v1/session", json={"passcode": "allchess123", "username": "alice"})
+    resp1 = client.post("/api/v1/session", json={"passcode": settings.app_passcode, "username": "alice"})
     assert resp1.status_code == 200
     user1_id = resp1.json()["user"]["id"]
 
     # User 2 logs in via POST /session
-    resp2 = client.post("/api/v1/session", json={"passcode": "allchess123", "username": "bob"})
+    resp2 = client.post("/api/v1/session", json={"passcode": settings.app_passcode, "username": "bob"})
     assert resp2.status_code == 200
     user2_id = resp2.json()["user"]["id"]
 

@@ -9,6 +9,7 @@ import { ToastContainer, toast } from '@/components/Toast';
 import { useMotion } from '@/lib/useMotion';
 import { storage } from '@/lib/storage';
 import { api } from '@/data/api';
+import { PieceHopper } from '@/components/LoadingScreen';
 import { gameRepository } from '@/data/repositories';
 
 /** 3D section icons, rendered from scripts/map-art/render_ui_art.py */
@@ -178,13 +179,9 @@ export const Layout: React.FC = () => {
     return (
       <div className="app-bg flex h-screen w-screen items-center justify-center text-theme-text font-sans">
         <div className="flex flex-col items-center gap-4">
-          <img
-            src="/assets/ui/logo_king.webp"
-            alt="ALL-CHESS"
-            className="w-14 h-16 object-contain animate-pulse"
-          />
+          <PieceHopper size={150} />
           <div className="text-xs font-display font-bold text-theme-muted tracking-wider uppercase">
-            Loading ALL-CHESS...
+            Loading ALL-CHESS…
           </div>
         </div>
       </div>
@@ -258,7 +255,7 @@ export const Layout: React.FC = () => {
         {/* Utilities: minimal flat icons, like the reference's bottom row */}
         <div className={`p-2 pb-3 flex ${collapsed ? 'flex-col items-center' : 'flex-col items-center lg:flex-row lg:justify-around'} gap-1`}>
           <button type="button" onClick={handleSync} disabled={isSyncing} className={utilBtn} title={isSyncing ? 'Syncing…' : 'Sync games from Chess.com and Lichess'} aria-label="Sync games with Chess.com and Lichess">
-            <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? <PieceHopper size={32} /> : <RefreshCw size={20} />}
           </button>
           <button
             type="button"

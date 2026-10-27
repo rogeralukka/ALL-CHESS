@@ -6,6 +6,10 @@ export interface UserSession {
   username: string;
   chesscomUsername?: string | null;
   lichessUsername?: string | null;
+  /** Profile picture from the linked Chess.com account, when the backend provides one. */
+  avatarUrl?: string | null;
+  countryCode?: string | null;
+  createdAt?: string | null;
 }
 
 interface AuthState {
@@ -13,7 +17,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  checkSession: () => Promise<boolean>;
+  /** `silent` re-checks (focus, tab return, cross-tab sync) never flip `isLoading`, so the UI is not unmounted. */
+  checkSession: (opts?: { silent?: boolean }) => Promise<boolean>;
   login: (data: {
     passcode: string;
     username: string;
@@ -36,19 +41,21 @@ export const useAuthStore = create<AuthState>((set, get) => {
     // Listen for login/logout in other tabs via storage events
     window.addEventListener('storage', (e) => {
       if (e.key === 'all_chess_auth_sync') {
-        get().checkSession();
+        get().checkSession({ silent: true });
       }
     });
 
-    // Re-verify session when returning focus to this tab
-    window.addEventListener('focus', () => {
-      get().checkSession();
-    });
-
+    // Re-verify session when returning to this tab, quietly and at most every 60s.
+    let lastBackgroundCheck = Date.now();
+    const backgroundCheck = () => {
+      const now = Date.now();
+      if (now - lastBackgroundCheck < 60_000) return;
+      lastBackgroundCheck = now;
+      void get().checkSession({ silent: true });
+    };
+    window.addEventListener('focus', backgroundCheck);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        get().checkSession();
-      }
+      if (document.visibilityState === 'visible') backgroundCheck();
     });
   }
 
@@ -58,17 +65,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isLoading: true,
     error: null,
 
-    checkSession: async () => {
-      set({ isLoading: true, error: null });
+    checkSession: async (opts) => {
+      const silent = !!opts?.silent;
+      if (!silent) set({ isLoading: true, error: null });
       try {
         const res = await api.get<{ user: UserSession }>('/session');
         if (res && res.user) {
-          set({ user: res.user, isAuthenticated: true, isLoading: false });
+          const prev = get().user;
+          const same = prev && JSON.stringify(prev) === JSON.stringify(res.user);
+          // Keep the same user object when nothing changed so subscribers don't re-render.
+          set({ user: same ? prev : res.user, isAuthenticated: true, isLoading: false });
           return true;
         }
         set({ user: null, isAuthenticated: false, isLoading: false });
         return false;
-      } catch {
+      } catch (err) {
+        // A background check that fails for a non-auth reason (offline, server blip) must not log the user out.
+        const authFailure = err instanceof ApiError && (err.status === 401 || err.status === 403);
+        if (silent && !authFailure) return get().isAuthenticated;
         set({ user: null, isAuthenticated: false, isLoading: false });
         return false;
       }

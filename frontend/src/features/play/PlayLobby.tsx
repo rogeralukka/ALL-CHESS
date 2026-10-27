@@ -5,7 +5,26 @@ import { Button } from '@/components/Button';
 import { Toggle } from '@/components/Toggle';
 import { Segmented } from '@/components/Segmented';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
-import { Swords, ChevronDown, ChevronUp, Zap, Shield, Sparkles, CheckCircle2, SlidersHorizontal } from 'lucide-react';
+import { Swords, ChevronDown, ChevronUp, CheckCircle2, SlidersHorizontal } from 'lucide-react';
+import { MAX_LEVEL } from '@/services/stockfishPlayService';
+
+const LEVELS: Array<{ rating: number; name: string; desc: string }> = [
+  { rating: 400, name: 'Beginner', desc: 'Learning how the pieces move; leaves pieces hanging.' },
+  { rating: 600, name: 'Casual', desc: 'Friendly sparring, gentle development.' },
+  { rating: 800, name: 'Novice', desc: 'Knows the basics but misses simple tactics.' },
+  { rating: 1000, name: 'Balanced', desc: 'Solid fundamentals and center control.' },
+  { rating: 1200, name: 'Club Player', desc: 'Spots one-move threats and develops sensibly.' },
+  { rating: 1400, name: 'Improver', desc: 'Plays real plans and punishes loose pieces.' },
+  { rating: 1600, name: 'Challenging', desc: 'Sharp tactics and punished inaccuracies.' },
+  { rating: 1800, name: 'Advanced', desc: 'Strong tactics and sound endgame technique.' },
+  { rating: 2000, name: 'Expert', desc: 'Rarely drops material; converts small edges.' },
+  { rating: 2200, name: 'Candidate Master', desc: 'Deep calculation and precise positional play.' },
+  { rating: 2400, name: 'Master', desc: 'Very few mistakes; wins on technique.' },
+  { rating: 2600, name: 'International Master', desc: 'Relentless accuracy under pressure.' },
+  { rating: 2800, name: 'Grandmaster', desc: 'Elite-level play; you will be tested every move.' },
+  { rating: 3000, name: 'Super Grandmaster', desc: 'Beyond any human champion.' },
+  { rating: MAX_LEVEL, name: 'Stockfish Max', desc: 'Full-strength Stockfish. Good luck.' },
+];
 
 export interface PlayConfig {
   levelRating: number;
@@ -39,7 +58,6 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
   };
 
   const [userColor, setUserColor] = useState<'white' | 'random' | 'black'>('white');
-  const [showAllLevels, setShowAllLevels] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
 
   // Coaching Assistance Toggles
@@ -51,17 +69,10 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
   const [suggestionArrows, setSuggestionArrows] = useState(true);
   const [moveFeedback, setMoveFeedback] = useState(true);
 
-  const levelPresets = [
-    { rating: 600, name: 'Casual', desc: 'Friendly sparring, gentle development', icon: <Shield size={16} /> },
-    { rating: 1000, name: 'Balanced', desc: 'Solid fundamentals and center control', icon: <Sparkles size={16} /> },
-    { rating: 1500, name: 'Challenging', desc: 'Sharp tactics and punished inaccuracies', icon: <Zap size={16} /> },
-  ];
-
-  const allRatings = [400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000];
+  const selected = LEVELS.find((l) => l.rating === selectedLevel) ?? LEVELS[2];
 
   const handleStart = () => {
-    const levelName =
-      levelPresets.find((p) => p.rating === selectedLevel)?.name || `Rated ${selectedLevel}`;
+    const levelName = selected.name;
     onStartGame({
       levelRating: selectedLevel,
       levelName,
@@ -85,77 +96,52 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
         text="Hey! Ready for a coaching game? I'll watch your moves, point out tactics, and help you improve as we play."
       />
 
-      {/* Level Selection Cards */}
+      {/* Level selection: every level in one place */}
       <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold font-display uppercase tracking-wider text-theme-muted">
-            Difficulty Level
-          </h2>
-          <button
-            type="button"
-            onClick={() => setShowAllLevels(!showAllLevels)}
-            className="text-xs font-semibold text-amber-500 hover:underline flex items-center gap-1"
-          >
-            <span>{showAllLevels ? 'Presets' : 'All (400-2000)'}</span>
-            {showAllLevels ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-
-        {!showAllLevels ? (
-          <div className="grid grid-cols-1 gap-2.5">
-            {levelPresets.map((lvl) => {
-              const isSelected = selectedLevel === lvl.rating;
-              return (
-                <button
-                  key={lvl.rating}
-                  type="button"
-                  onClick={() => setSelectedLevel(lvl.rating)}
-                  className={`p-3 rounded-[14px] text-left transition-all relative select-none flex items-center gap-3 border-2 active:translate-y-[2px] ${
-                    isSelected
-                      ? 'bg-amber-500/15 border-amber-500 shadow-[0_4px_0_#a85f00]'
-                      : 'bg-theme-card border-theme-border shadow-[0_4px_0_var(--panel-lip)] hover:border-amber-500/40'
-                  }`}
-                >
-                  <img src={rankFor(lvl.rating).tier.icon} alt="" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.35))' }} />
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-display font-black text-[15px] text-theme-text flex items-center gap-2">
-                      {lvl.name}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] font-display font-black tabular-nums well px-2 py-0.5 !rounded-[8px]">
-                        {lvl.rating}
-                      </span>
-                      {isSelected && (
-                        <CheckCircle2 size={16} className="text-amber-500 flex-shrink-0" />
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xs text-theme-muted leading-snug">{lvl.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-            {allRatings.map((r) => (
+        <h2 className="text-xs font-bold font-display uppercase tracking-wider text-theme-muted">
+          Difficulty Level
+        </h2>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" role="radiogroup" aria-label="Difficulty level">
+          {LEVELS.map((lvl) => {
+            const isSelected = lvl.rating === selectedLevel;
+            return (
               <button
-                key={r}
+                key={lvl.rating}
                 type="button"
-                onClick={() => setSelectedLevel(r)}
-                className={`py-2 px-1 rounded-md border text-center font-mono tabular-nums font-bold text-xs transition-all flex items-center justify-center gap-1 ${
-                  selectedLevel === r
-                    ? 'bg-amber-500 text-black border-2 border-amber-400 shadow ring-2 ring-amber-500/40'
-                    : 'bg-theme-card border-theme-border text-theme-text hover:bg-theme-raised'
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => setSelectedLevel(lvl.rating)}
+                className={`py-2 rounded-[10px] border-2 flex flex-col items-center gap-1 transition-all active:translate-y-[2px] ${
+                  isSelected
+                    ? 'bg-amber-500/15 border-amber-500 shadow-[0_3px_0_#a85f00]'
+                    : 'bg-theme-card border-theme-border shadow-[0_3px_0_var(--panel-lip)] hover:border-amber-500/40'
                 }`}
               >
-                <span>{r}</span>
-                {selectedLevel === r && <CheckCircle2 size={12} className="stroke-[3]" />}
+                <img
+                  src={rankFor(lvl.rating).tier.icon}
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                  style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.35))' }}
+                />
+                <span className="font-display font-black text-[13px] tabular-nums text-theme-text">
+                  {lvl.rating >= MAX_LEVEL ? 'Max' : lvl.rating}
+                </span>
               </button>
-            ))}
+            );
+          })}
+        </div>
+        <div className="well flex items-center gap-3 px-3 py-2.5 !rounded-[10px]">
+          <CheckCircle2 size={16} className="text-amber-500 flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="font-display font-black text-[15px] text-theme-text">
+              {selected.name}
+              {selected.rating < MAX_LEVEL && (
+                <span className="ml-2 text-xs tabular-nums text-theme-muted">≈ {selected.rating}</span>
+              )}
+            </div>
+            <p className="text-xs text-theme-muted leading-snug">{selected.desc}</p>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Play As Color */}

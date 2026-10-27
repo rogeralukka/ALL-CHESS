@@ -1,4 +1,5 @@
 import { Chess, Square } from 'chess.js';
+import { stockfishPlay } from './stockfishPlayService';
 
 export interface EngineSearchOptions {
   levelRating: number;
@@ -236,9 +237,22 @@ export class EngineService {
     // Sort scored moves (higher score is better for side to move)
     scoredMoves.sort((a, b) => b.score - a.score);
 
-    // Choose move based on blunder chance
+    // Prefer real Stockfish (strength-limited to the level); the light engine is the fallback.
     let selectedMove = scoredMoves[0];
-    if (blunderChance > 0 && scoredMoves.length > 1 && Math.random() < blunderChance) {
+    let usedStockfish = false;
+    const uci = await stockfishPlay.bestMove(fen, options.levelRating);
+    if (uci) {
+      const hit = scoredMoves.find(
+        (m) => m.move.from + m.move.to + (m.move.promotion ?? '') === uci,
+      );
+      if (hit) {
+        selectedMove = hit;
+        usedStockfish = true;
+      }
+    }
+
+    // Choose move based on blunder chance (light engine only)
+    if (!usedStockfish && blunderChance > 0 && scoredMoves.length > 1 && Math.random() < blunderChance) {
       const candidates = scoredMoves.slice(0, Math.min(scoredMoves.length, topN));
       selectedMove = candidates[Math.floor(Math.random() * candidates.length)];
     }

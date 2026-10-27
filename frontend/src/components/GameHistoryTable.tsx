@@ -1,8 +1,12 @@
+import { MiniHopper } from '@/components/LoadingScreen';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Game } from '@/data/types';
 import { PlayerAvatar } from './Bits';
+import { useCurrentUser } from '@/lib/useCurrentUser';
 import { ModeIcon, GameMode } from './ModeIcon';
+import { openingNameFor, terminationFor } from '@/lib/gameMeta';
+import { BookOpen } from 'lucide-react';
 
 const accTone = (v?: number) => (v === undefined ? 'text-theme-muted' : v >= 85 ? 'text-[var(--color-win)]' : v >= 70 ? 'text-theme-text' : 'text-[#e6912c]');
 
@@ -31,6 +35,7 @@ const ResultMark: React.FC<{ kind: 'win' | 'loss' | 'draw' }> = ({ kind }) => {
  * moves, date and a Review button. The whole row opens the review.
  */
 export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; analyzingId?: string }> = ({ games, compact, analyzingId }) => {
+  const me = useCurrentUser();
   const navigate = useNavigate();
   return (
     <div className="w-full overflow-x-auto" data-testid="game-history">
@@ -83,10 +88,21 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
                           <PlayerAvatar name={p.username} size={20} square />
                         </span>
                         <span className={`w-[10px] h-[10px] rounded-[2px] flex-shrink-0 ${i === 0 ? 'bg-white' : 'bg-[#5a5754] border border-white/20'}`} />
-                        <span className="text-[14px] font-semibold text-theme-text truncate">{p.username}</span>
+                        <span className="text-[14px] font-semibold text-theme-text truncate">{me.label(p.username)}</span>
                         <span className="text-[14px] text-theme-muted tabular-nums">({p.rating > 0 ? p.rating : '–'})</span>
                       </div>
                     ))}
+                    {(() => {
+                      const opening = openingNameFor(g);
+                      const ended = terminationFor(g);
+                      const parts = [opening, `${moves} moves`, ended].filter(Boolean) as string[];
+                      return (
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-theme-muted min-w-0" data-testid="game-meta">
+                          <BookOpen size={13} className="flex-shrink-0 opacity-80" aria-hidden="true" />
+                          <span className="truncate">{parts.join(' · ')}</span>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 px-2">
                     <div className="flex items-center justify-center gap-2">
@@ -100,7 +116,7 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
                   {!compact && (
                     <td className="py-3 px-2 text-center hidden md:table-cell">
                       {analyzingId === g.id ? (
-                        <span className="text-[12px] font-semibold text-theme-muted animate-pulse">Analysing…</span>
+                        <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-theme-muted"><MiniHopper size={26} />Analysing…</span>
                       ) : (
                         <div className="flex flex-col text-[14px] font-semibold tabular-nums leading-6">
                           <span className={accTone(g.accuracy?.white)}>{g.accuracy?.white ?? '–'}</span>

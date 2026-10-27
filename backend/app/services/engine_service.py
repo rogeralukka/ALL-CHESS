@@ -15,7 +15,10 @@ from app.services.accuracy import (
     estimate_performance_ratings,
     calculate_phase_grades
 )
+from app.config import is_testing_environment
+from app.services.coach_service import generate_template_comment, generate_batch_move_comments_async
 from app.schemas.game import TopEngineLine
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger("all_chess.engine")
 
@@ -75,19 +78,130 @@ def get_stockfish_executable_path() -> str:
 
 
 def generate_line_why_template(board: chess.Board, move: chess.Move) -> str:
-    """Generates a human-friendly template reason for the suggested line."""
+    """Generates a human-friendly, piece-aware concrete reason for the suggested line."""
     to_sq_name = chess.square_name(move.to_square)
+    from_sq_name = chess.square_name(move.from_square)
+
+    # 1. Castling
+    if board.is_castling(move) or move in (
+        chess.Move.from_uci("e1g1"), chess.Move.from_uci("e1c1"),
+        chess.Move.from_uci("e8g8"), chess.Move.from_uci("e8c8")
+    ):
+        side = "kingside" if chess.square_file(move.to_square) > chess.square_file(move.from_square) else "queenside"
+        return f"Castles {side} to secure king safety and activate the rook."
+
+    piece = board.piece_at(move.from_square)
+    if not piece:
+        return ""
+
+    piece_type = piece.piece_type
+    color = piece.color
+    mover_name = chess.piece_name(piece_type)
+
+    # 2. Captures
     if board.is_capture(move):
         captured = board.piece_at(move.to_square)
-        cap_name = chess.piece_name(captured.piece_type) if captured else "piece"
-        return f"Captures {cap_name} on {to_sq_name}, winning material or relieving tactical tension."
+        cap_name = chess.piece_name(captured.piece_type) if captured else ("pawn" if board.is_en_passant(move) else "piece")
+        return f"Captures {cap_name} on {to_sq_name} with the {mover_name}."
+
+    # 3. Check / Checkmate
     if board.gives_check(move):
+        b_after = board.copy()
+        b_after.push(move)
+        if b_after.is_checkmate():
+            return f"Delivers checkmate on {to_sq_name}."
         return f"Delivers check on {to_sq_name}, disrupting opponent coordination."
-    if move in (chess.Move.from_uci("e1g1"), chess.Move.from_uci("e1c1"), chess.Move.from_uci("e8g8"), chess.Move.from_uci("e8c8")):
-        return "Castles to secure king safety and activate the rook on an open file."
-    if to_sq_name in ("e4", "d4", "e5", "d5", "c4", "c5"):
-        return f"Stakes a central claim on {to_sq_name} and expands board influence."
-    return f"Advances to {to_sq_name}, coordinating pieces and maintaining pressure."
+
+    # 4. Piece-specific concrete logic
+    if piece_type == chess.BISHOP:
+        is_white_starting = (color == chess.WHITE and from_sq_name in ("c1", "f1"))
+        is_black_starting = (color == chess.BLACK and from_sq_name in ("c8", "f8"))
+        if is_white_starting or is_black_starting:
+            prepares_castling = False
+            if color == chess.WHITE:
+                if from_sq_name == "f1" and board.has_kingside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+                elif from_sq_name == "c1" and board.has_queenside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+            else:
+                if from_sq_name == "f8" and board.has_kingside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+                elif from_sq_name == "c8" and board.has_queenside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+
+            if prepares_castling:
+                return f"Develops the bishop to {to_sq_name} and prepares castling."
+            return f"Develops the bishop to {to_sq_name}."
+
+        if to_sq_name in ("b2", "g2", "b7", "g7"):
+            return f"Fianchettos the bishop on {to_sq_name} along the long diagonal."
+        return ""
+
+    if piece_type == chess.KNIGHT:
+        is_white_starting = (color == chess.WHITE and from_sq_name in ("b1", "g1"))
+        is_black_starting = (color == chess.BLACK and from_sq_name in ("b8", "g8"))
+        if is_white_starting or is_black_starting:
+            prepares_castling = False
+            if color == chess.WHITE:
+                if from_sq_name == "g1" and board.has_kingside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+                elif from_sq_name == "b1" and board.has_queenside_castling_rights(chess.WHITE):
+                    prepares_castling = True
+            else:
+                if from_sq_name == "g8" and board.has_kingside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+                elif from_sq_name == "b8" and board.has_queenside_castling_rights(chess.BLACK):
+                    prepares_castling = True
+
+            if prepares_castling:
+                return f"Develops the knight to {to_sq_name} and prepares castling."
+            return f"Develops the knight to {to_sq_name}."
+
+        if to_sq_name in ("d5", "e5", "d4", "e4", "f5", "c5", "f4", "c4"):
+            return f"Posts the knight on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.PAWN:
+        if move.promotion:
+            return f"Promotes pawn to {chess.piece_name(move.promotion)} on {to_sq_name}."
+        if (color == chess.WHITE and chess.square_rank(move.to_square) == 6) or            (color == chess.BLACK and chess.square_rank(move.to_square) == 1):
+            return f"Advances dangerous passed pawn to {to_sq_name}."
+        if to_sq_name in ("e4", "d4", "e5", "d5"):
+            return f"Claims central space with the pawn on {to_sq_name}."
+        if to_sq_name in ("c4", "c5", "f4", "f5"):
+            return f"Challenges the center with {to_sq_name}."
+        if to_sq_name in ("c3", "c6", "e3", "e6", "d3", "d6"):
+            return f"Solidifies pawn structure with {to_sq_name}."
+        return ""
+
+    if piece_type == chess.ROOK:
+        file_idx = chess.square_file(move.to_square)
+        pawns_on_file = [
+            sq for sq in chess.SQUARES
+            if chess.square_file(sq) == file_idx and board.piece_at(sq) and board.piece_at(sq).piece_type == chess.PAWN
+        ]
+        if len(pawns_on_file) == 0:
+            file_letter = chr(ord('a') + file_idx)
+            return f"Places the rook on the open {file_letter}-file."
+        if len(pawns_on_file) == 1 and board.piece_at(pawns_on_file[0]).color != color:
+            file_letter = chr(ord('a') + file_idx)
+            return f"Positions the rook on the semi-open {file_letter}-file."
+        if (color == chess.WHITE and chess.square_rank(move.to_square) == 6) or            (color == chess.BLACK and chess.square_rank(move.to_square) == 1):
+            return f"Infiltrates the 7th rank with the rook on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.QUEEN:
+        if to_sq_name in ("d4", "e4", "d5", "e5", "c4", "f4", "c5", "f5"):
+            return f"Centralizes the queen on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.KING:
+        central_squares = {"d4", "e4", "d5", "e5", "c4", "c5", "f4", "f5", "d3", "e3", "d6", "e6"}
+        if len(board.piece_map()) <= 10 and to_sq_name in central_squares:
+            return f"Centralizes the king on {to_sq_name} for the endgame."
+        return ""
+
+    return ""
 
 
 def _analyse_fen_sync(
@@ -218,6 +332,20 @@ class EnginePool:
 
 
 _GLOBAL_ENGINE_POOL = EnginePool(size=2)
+ANALYSIS_LEVELS: Dict[str, Dict[str, Any]] = {
+    "standard": {"depth": 18, "time_per_move": 0.35, "multipv": 3},
+    "deep": {"depth": 22, "time_per_move": 0.6, "multipv": 3},
+    "deeper": {"depth": 26, "time_per_move": 1.0, "multipv": 3},
+    "max": {"depth": 32, "time_per_move": 2.0, "multipv": 3},
+}
+
+LEVEL_ORDER: Dict[str, int] = {
+    "standard": 1,
+    "deep": 2,
+    "deeper": 3,
+    "max": 4,
+}
+
 
 
 def get_global_engine_pool() -> EnginePool:
@@ -239,12 +367,15 @@ async def analyze_position(
 def _run_single_pass_review_sync(
     engine: chess.engine.SimpleEngine,
     moves_list: List[Dict[str, Any]],
-    depth: int = 16,
-    time_per_move: float = 0.3,
+    depth: int = 18,
+    time_per_move: float = 0.35,
+    multipv: int = 3,
     is_user_white: bool = True,
     white_rating: Optional[int] = None,
     black_rating: Optional[int] = None,
-    on_progress: Optional[Callable[[int], None]] = None
+    on_progress: Optional[Callable[[int], None]] = None,
+    db: Optional[Session] = None,
+    level: str = "standard"
 ) -> Dict[str, Any]:
     """
     ONE EVAL PER POSITION:
@@ -297,6 +428,7 @@ def _run_single_pass_review_sync(
 
     # Now evaluate positions 0 .. total_moves (N + 1 positions total)
     pos_evals: List[Dict[str, Any]] = []
+    depths_reached: List[int] = []
     total_positions = len(positions)
 
     for p_idx, pos_board in enumerate(positions):
@@ -322,7 +454,7 @@ def _run_single_pass_review_sync(
         else:
             # Engine search
             limit = chess.engine.Limit(depth=depth, time=time_per_move)
-            infos = engine.analyse(pos_board, limit=limit, multipv=3)
+            infos = engine.analyse(pos_board, limit=limit, multipv=multipv)
             if isinstance(infos, dict):
                 infos = [infos]
 
@@ -381,6 +513,8 @@ def _run_single_pass_review_sync(
                 w2 = eval_to_win_pct(top_lines[1]["eval"], top_lines[1]["mate"])
                 gap_2nd = abs(w1 - w2)
 
+            if top_lines:
+                depths_reached.append(top_lines[0].get("depth", depth))
             pos_evals.append({
                 "eval": best_eval,
                 "mate": best_mate,
@@ -429,15 +563,8 @@ def _run_single_pass_review_sync(
                 if b_copy.is_capture(prev_m) and board_before.is_capture(cur_m):
                     is_recap = True
 
-        # Check if played move is top move OR has equal eval/mate to top line
+        # Check if played move is top move ONLY (second lines with equal eval become excellent)
         is_top = (san_move == pos_before["best_move_san"])
-        if not is_top and pos_before.get("top_lines"):
-            top_line = pos_before["top_lines"][0]
-            for line in pos_before["top_lines"][1:]:
-                if line.get("move") == san_move:
-                    if line.get("eval") == top_line.get("eval") and line.get("mate") == top_line.get("mate"):
-                        is_top = True
-                    break
 
         is_cm = (pos_after["mate"] == 0)
 
@@ -472,6 +599,7 @@ def _run_single_pass_review_sync(
                         best_wins_material_or_mate = True
                         break
 
+        mover_rating = white_rating if color == 'w' else black_rating
         classification = classify_move(
             eval_before_pawns=pos_before["eval"],
             eval_after_pawns=pos_after["eval"],
@@ -487,26 +615,56 @@ def _run_single_pass_review_sync(
             is_recapture=is_recap,
             num_legal_moves=n_legal,
             best_wins_material_or_mate=best_wins_material_or_mate,
-            best_eval_gap=best_eval_gap
+            best_eval_gap=best_eval_gap,
+            rating=mover_rating,
         )
 
-        last_mover_made_mistake = (classification in ("inaccuracy", "mistake", "blunder"))
+        last_mover_made_mistake = (classification in ("inaccuracy", "mistake", "miss", "blunder"))
 
         # Win% calculation
-        played_win_pct = eval_to_win_pct(pos_after["eval"], pos_after["mate"])
+        played_win_pct = eval_to_win_pct(pos_after["eval"], pos_after["mate"], rating=mover_rating)
         if color == 'b':
             played_win_pct = round(100.0 - played_win_pct, 1)
 
+        top_lines = pos_before["top_lines"]
+        top_pv = top_lines[0].get("pv", []) if top_lines else []
+        engine_line_why = top_lines[0].get("why", "Engine recommended line") if top_lines else "Engine recommended line"
+
+        # Generate why for the move actually played
+        cur_chess_m = played_chess_moves[idx]
+        played_move_why = ""
+        if cur_chess_m and cur_chess_m in board_before.legal_moves:
+            played_move_why = generate_line_why_template(board_before, cur_chess_m)
+
+        # Fast template comment for baseline
+        tmpl_comment = generate_template_comment(
+            san=raw_move["san"],
+            classification=classification,
+            best_move=pos_before["best_move_san"],
+            eval_before=pos_before["eval"],
+            eval_after=pos_after["eval"],
+            pv=top_pv,
+            color=color,
+        )
+
         updated_m = dict(raw_move)
         updated_m["classification"] = classification
+        updated_m["coachComment"] = tmpl_comment
         updated_m["eval"] = {
             "eval": pos_after["eval"],
             "mate": pos_after["mate"],
             "bestMove": pos_before["best_move_san"],
             "winPct": played_win_pct,
-            "why": pos_before["top_lines"][0]["why"] if pos_before["top_lines"] else "",
+            "why": played_move_why if played_move_why else (engine_line_why if is_top else ""),
+            "bestWhy": engine_line_why,
             "lines": pos_before["top_lines"]
         }
+        # Metadata for post-engine turning-point LLM pass
+        updated_m["_fen_before"] = board_before.fen()
+        updated_m["_fen_after"] = positions[idx + 1].fen()
+        updated_m["_eval_before"] = pos_before["eval"]
+        updated_m["_eval_after"] = pos_after["eval"]
+        updated_m["_color"] = color
         analyzed_moves.append(updated_m)
 
     # Compute game-level accuracy using the Chess.com calibrated method
@@ -518,38 +676,133 @@ def _run_single_pass_review_sync(
     )
     phase_grades = calculate_phase_grades(analyzed_moves, is_user_white=is_user_white)
 
+    real_depth = int(round(sum(depths_reached) / len(depths_reached))) if depths_reached else depth
     return {
         "moves": analyzed_moves,
         "accuracy": accuracy,
         "estimatedRating": est_ratings,
-        "phaseGrades": phase_grades["user"],
-        "phaseGradesAll": phase_grades
+        "phaseGrades": {
+            "white": phase_grades["white"],
+            "black": phase_grades["black"]
+        },
+        "phaseGradesAll": phase_grades,
+        "analysisLevel": level,
+        "analysisDepth": real_depth
     }
+
+
+def select_critical_turning_point_indices(analyzed_moves: List[Dict[str, Any]], max_llm_calls: int = 8) -> List[int]:
+    blunders = []
+    misses = []
+    brilliants_greats = []
+    mistakes = []
+    critical_bests = []
+
+    for idx, m in enumerate(analyzed_moves):
+        cls = m.get("classification")
+        if cls == "blunder":
+            blunders.append(idx)
+        elif cls == "miss":
+            misses.append(idx)
+        elif cls in ("brilliant", "great"):
+            brilliants_greats.append(idx)
+        elif cls == "mistake":
+            mistakes.append(idx)
+        elif cls == "best":
+            lines = m.get("eval", {}).get("lines", [])
+            if len(lines) >= 2:
+                eval1 = lines[0].get("eval", 0.0) or 0.0
+                eval2 = lines[1].get("eval", 0.0) or 0.0
+                if abs(eval1 - eval2) >= 1.5:
+                    critical_bests.append(idx)
+
+    critical_bests = critical_bests[:2]
+    selected = []
+    for group in (blunders, misses, brilliants_greats, mistakes, critical_bests):
+        for idx in group:
+            if idx not in selected and len(selected) < max_llm_calls:
+                selected.append(idx)
+
+    return sorted(selected)
 
 
 async def analyze_game_moves_full(
     moves_list: List[Dict[str, Any]],
-    depth: int = 16,
-    time_per_move: float = 0.3,
+    level: str = "standard",
+    depth: Optional[int] = None,
+    time_per_move: Optional[float] = None,
     is_user_white: bool = True,
     white_rating: Optional[int] = None,
     black_rating: Optional[int] = None,
-    on_progress: Optional[Callable[[int], None]] = None
+    on_progress: Optional[Callable[[int], None]] = None,
+    db: Optional[Session] = None
 ) -> Dict[str, Any]:
     """
-    Performs full depth 16 game review across every position in a game.
+    Performs game review across every position in a game according to specified analysis level.
     Acquires an exclusive SimpleEngine instance from the pool.
     """
+    level_cfg = ANALYSIS_LEVELS.get(level, ANALYSIS_LEVELS["standard"])
+    target_depth = depth if depth is not None else level_cfg["depth"]
+    target_time = time_per_move if time_per_move is not None else level_cfg["time_per_move"]
+    multipv = level_cfg.get("multipv", 3)
+
     pool = get_global_engine_pool()
     async with pool.acquire() as engine:
-        return await asyncio.to_thread(
+        review_data = await asyncio.to_thread(
             _run_single_pass_review_sync,
             engine,
             moves_list,
-            depth,
-            time_per_move,
+            target_depth,
+            target_time,
+            multipv,
             is_user_white,
             white_rating,
             black_rating,
-            on_progress
+            on_progress,
+            db,
+            level
         )
+
+    # Scale turning points comment limit with depth level
+    level_comment_limits = {
+        "standard": 8,
+        "deep": 12,
+        "deeper": 16,
+        "max": 20
+    }
+    max_llm_calls = level_comment_limits.get(level, 8)
+    analyzed_moves = review_data["moves"]
+    critical_indices = select_critical_turning_point_indices(analyzed_moves, max_llm_calls=max_llm_calls)
+
+    if critical_indices and not is_testing_environment():
+        items_to_generate = []
+        for c_idx in critical_indices:
+            m = analyzed_moves[c_idx]
+            lines = m.get("eval", {}).get("lines", [])
+            top_pv = lines[0].get("pv", []) if lines else []
+            items_to_generate.append({
+                "fen_before": m["_fen_before"],
+                "san": m["san"],
+                "classification": m["classification"],
+                "fen_after": m["_fen_after"],
+                "eval_before": m["_eval_before"],
+                "eval_after": m["_eval_after"],
+                "best_move": m["eval"]["bestMove"],
+                "pv": top_pv,
+                "color": m["_color"],
+            })
+
+        try:
+            llm_results = await generate_batch_move_comments_async(items_to_generate, db=db, concurrency_limit=2)
+            for c_idx, res in zip(critical_indices, llm_results):
+                if res and res.get("comment"):
+                    analyzed_moves[c_idx]["coachComment"] = res["comment"]
+        except Exception as e:
+            logger.warning(f"[EngineService] LLM commentary batch generation error: {e}")
+
+    # Remove temporary internal keys
+    for m in analyzed_moves:
+        for k in ("_fen_before", "_fen_after", "_eval_before", "_eval_after", "_color"):
+            m.pop(k, None)
+
+    return review_data

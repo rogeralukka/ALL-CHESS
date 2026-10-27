@@ -272,3 +272,19 @@ select:focus-visible,
   0%, 100% { opacity: 0.65; transform: scale(0.96); }
   50% { opacity: 1; transform: scale(1.04); }
 }
+
+/* Reference-style content card: flat slab with a darker lower edge */
+.cc-card {
+  background: var(--color-card);
+  border-radius: 5px;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.2);
+}
+:root[data-theme='dawn'] .cc-card {
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08);
+}
+.cc-title {
+  font-family: 'Figtree', 'Segoe UI', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  color: var(--color-text-strong);
+}

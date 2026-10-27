@@ -1,3 +1,4 @@
+import { backendGrades } from '@/features/review/phases';
 import { describe, it, expect } from 'vitest';
 import { Chess } from 'chess.js';
 import { gameRepository } from '@/data/repositories';
@@ -175,7 +176,7 @@ describe('ALL-CHESS Step 1B: Review Suite', () => {
       expect(g.accuracy?.white).toBeGreaterThan(50);
       expect(g.accuracy?.black).toBeGreaterThan(50);
       expect(g.phaseGrades).toBeDefined();
-      expect(g.phaseGrades?.opening).toMatch(/^[ABCD]|N\/A$/);
+      expect(backendGrades(g).white?.opening ?? (g.phaseGrades as { opening: string }).opening).toMatch(/^[ABCD]|N\/A$/);
     }
   });
 });

@@ -1,0 +1,1331 @@
+[
+  {
+    "id": "endgame-1",
+    "title": "King + Rook vs King",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Master the box method and rook barrier technique to force the enemy king to the edge.",
+    "steps": [
+      {
+        "id": "step-1-1",
+        "title": "The Cut-Off Barrier",
+        "instruction": "To box in the enemy king, your first goal is establishing an impassable wall along a rank or file with your rook.",
+        "buttonText": "Next: Demonstration",
+        "fen": "8/8/8/4k3/8/8/4K3/R7 w - - 0 1",
+        "arrows": [
+          {
+            "from": "a1",
+            "to": "a4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "a4"
+        ],
+        "isInteractive": false,
+        "explanation": "Notice how the rook on the 4th rank creates a horizontal fence preventing Black's king from advancing."
+      },
+      {
+        "id": "step-1-2",
+        "title": "Establish the Fence",
+        "instruction": "Your turn! Move the rook from a1 to a4 to establish the fourth-rank barrier.",
+        "buttonText": "Next: Step Forward",
+        "fen": "8/8/8/4k3/8/8/4K3/R7 w - - 0 1",
+        "requiredMove": "Ra4",
+        "arrows": [
+          {
+            "from": "a1",
+            "to": "a4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "a4"
+        ],
+        "isInteractive": true,
+        "explanation": "Excellent! The fourth rank is completely sealed off."
+      },
+      {
+        "id": "step-1-3",
+        "title": "Marching the King",
+        "instruction": "The rook holds the fence while our king marches forward into opposition to push Black backward.",
+        "buttonText": "Next: Take Opposition",
+        "fen": "8/8/8/4k3/R7/8/4K3/8 w - - 0 2",
+        "arrows": [
+          {
+            "from": "e2",
+            "to": "e3",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e3"
+        ],
+        "isInteractive": false,
+        "explanation": "King opposition takes away squares directly opposite, compelling the defender to give ground."
+      },
+      {
+        "id": "step-1-4",
+        "title": "Claim Direct Opposition",
+        "instruction": "Move your white king to e4 to confront Black's king directly across the rook barrier.",
+        "buttonText": "Next: Shrink the Box",
+        "fen": "8/8/4k3/8/R7/4K3/8/8 w - - 0 3",
+        "requiredMove": "Ke4",
+        "arrows": [
+          {
+            "from": "e3",
+            "to": "e4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e4"
+        ],
+        "isInteractive": true,
+        "explanation": "Perfect! With White claiming opposition, Black must retreat backward."
+      },
+      {
+        "id": "step-1-5",
+        "title": "Shrinking the Box",
+        "instruction": "Black retreated to e7. Advance your rook to the 5th rank to shrink the box!",
+        "buttonText": "Next: Checkmate",
+        "fen": "8/4k3/8/8/R7/4K3/8/8 w - - 0 4",
+        "requiredMove": "Ra5",
+        "arrows": [
+          {
+            "from": "a4",
+            "to": "a5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "a5"
+        ],
+        "isInteractive": true,
+        "explanation": "Great job! The enemy king is now confined to ranks 6, 7, and 8."
+      },
+      {
+        "id": "step-1-6",
+        "title": "The Final Checkmate",
+        "instruction": "The black king is trapped on the back rank opposite your king. Deliver checkmate with Ra8#!",
+        "buttonText": "Complete Stage",
+        "fen": "4k3/8/4K3/R7/8/8/8/8 w - - 0 5",
+        "requiredMove": "Ra8#",
+        "arrows": [
+          {
+            "from": "a5",
+            "to": "a8",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "a8"
+        ],
+        "isInteractive": true,
+        "explanation": "Checkmate! The enemy king has no escape squares."
+      }
+    ]
+  },
+  {
+    "id": "endgame-2",
+    "title": "King + Queen vs King",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Box the king efficiently by placing your queen a knight's move away, avoiding stalemate traps.",
+    "steps": [
+      {
+        "id": "step-2-1",
+        "title": "The Knight's Distance",
+        "instruction": "A queen placed a knight's move away from the enemy king cuts off the maximum number of squares without giving check.",
+        "buttonText": "Next: Try It",
+        "fen": "8/8/4k3/8/8/8/8/Q3K3 w - - 0 1",
+        "arrows": [
+          {
+            "from": "a1",
+            "to": "d4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d4"
+        ],
+        "isInteractive": false,
+        "explanation": "From d4, the queen is a knight's jump away from e6, cutting off ranks 4, files d, and the e5 diagonal."
+      },
+      {
+        "id": "step-2-2",
+        "title": "Apply the Clamp",
+        "instruction": "Move your queen to d4 to clamp down on Black's movement.",
+        "buttonText": "Next: Step In",
+        "fen": "8/8/4k3/8/8/8/8/Q3K3 w - - 0 1",
+        "requiredMove": "Qd4",
+        "arrows": [
+          {
+            "from": "a1",
+            "to": "d4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d4"
+        ],
+        "isInteractive": true,
+        "explanation": "Nicely done! Black's king has only 4 legal moves left."
+      },
+      {
+        "id": "step-2-3",
+        "title": "Shrinking the Box",
+        "instruction": "Black's king stepped back to e7. Advance your queen to d5 to confine the king to ranks 7 and 8.",
+        "buttonText": "Next: Avoid Stalemate",
+        "fen": "8/4k3/8/8/3Q4/8/4K3/8 w - - 0 2",
+        "requiredMove": "Qd5",
+        "arrows": [
+          {
+            "from": "d4",
+            "to": "d5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d5"
+        ],
+        "isInteractive": true,
+        "explanation": "The box shrinks further, forcing Black into the corner."
+      },
+      {
+        "id": "step-2-4",
+        "title": "Beware of Stalemate",
+        "instruction": "Never place the queen too close when the king is in the corner unless you are delivering checkmate or supported by your king.",
+        "buttonText": "Next: Deliver Mate",
+        "fen": "7k/8/5K2/8/6Q1/8/8/8 w - - 0 3",
+        "arrows": [
+          {
+            "from": "g4",
+            "to": "g7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "g7"
+        ],
+        "isInteractive": false,
+        "explanation": "If your queen goes to g6 here, it's stalemate! But Qg7# is checkmate supported by the king on f6."
+      },
+      {
+        "id": "step-2-5",
+        "title": "The Kiss of Death",
+        "instruction": "Deliver checkmate right in the black king's face with Qg7#!",
+        "buttonText": "Complete Stage",
+        "fen": "7k/8/5K2/8/6Q1/8/8/8 w - - 0 3",
+        "requiredMove": "Qg7#",
+        "arrows": [
+          {
+            "from": "g4",
+            "to": "g7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "g7"
+        ],
+        "isInteractive": true,
+        "explanation": "Checkmate! The queen is safely protected by the king on f6."
+      }
+    ]
+  },
+  {
+    "id": "endgame-3",
+    "title": "King Opposition & Key Squares",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Understand direct opposition, outflanking, and control of critical squares in king and pawn endings.",
+    "steps": [
+      {
+        "id": "step-3-1",
+        "title": "Understanding Opposition",
+        "instruction": "When two kings face each other with one square between them, the player NOT having to move holds the opposition.",
+        "buttonText": "Next: Claim Opposition",
+        "fen": "8/8/4k3/8/8/4K3/8/8 w - - 0 1",
+        "arrows": [
+          {
+            "from": "e3",
+            "to": "e4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e4"
+        ],
+        "isInteractive": false,
+        "explanation": "Holding the opposition forces the defender to yield key invasion squares."
+      },
+      {
+        "id": "step-3-2",
+        "title": "Step into Opposition",
+        "instruction": "Step forward with your king to e4 to claim the opposition.",
+        "buttonText": "Next: Outflanking",
+        "fen": "8/8/4k3/8/8/4K3/8/8 w - - 0 1",
+        "requiredMove": "Ke4",
+        "arrows": [
+          {
+            "from": "e3",
+            "to": "e4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e4"
+        ],
+        "isInteractive": true,
+        "explanation": "Well done! Black is forced to move aside."
+      },
+      {
+        "id": "step-3-3",
+        "title": "The Outflanking Technique",
+        "instruction": "When Black steps sideways to f6, do not follow him directly. Outflank him by advancing to d5!",
+        "buttonText": "Next: Advance",
+        "fen": "8/8/5k2/8/4K3/8/8/8 w - - 0 2",
+        "arrows": [
+          {
+            "from": "e4",
+            "to": "d5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d5"
+        ],
+        "isInteractive": false,
+        "explanation": "Outflanking allows your king to penetrate behind enemy lines."
+      },
+      {
+        "id": "step-3-4",
+        "title": "Outflank the Defender",
+        "instruction": "Play Kd5 to outflank Black and clear a path forward.",
+        "buttonText": "Complete Stage",
+        "fen": "8/8/5k2/8/4K3/8/8/8 w - - 0 2",
+        "requiredMove": "Kd5",
+        "arrows": [
+          {
+            "from": "e4",
+            "to": "d5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d5"
+        ],
+        "isInteractive": true,
+        "explanation": "Masterful! You have outflanked the king and secured the winning advance."
+      }
+    ]
+  },
+  {
+    "id": "endgame-4",
+    "title": "Pawn Promotion & Square of the Pawn",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Calculate pawn races instantly using the rule of the square and shouldering techniques.",
+    "steps": [
+      {
+        "id": "step-4-1",
+        "title": "The Rule of the Square",
+        "instruction": "Count the squares from your passed pawn to the queening square to form a square box. If the enemy king cannot enter this box, the pawn promotes unaided!",
+        "buttonText": "Next: Push the Pawn",
+        "fen": "8/8/1P6/8/8/8/8/4k1K1 w - - 0 1",
+        "arrows": [
+          {
+            "from": "b6",
+            "to": "b7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "b7"
+        ],
+        "isInteractive": false,
+        "explanation": "The b6 pawn creates a box from b6 to b8, across to d8, and down to d6. Black's king on e1 is outside the square!"
+      },
+      {
+        "id": "step-4-2",
+        "title": "Push the Runner",
+        "instruction": "Advance the passed pawn to b7. Black's king is too slow to catch it!",
+        "buttonText": "Next: Shouldering",
+        "fen": "8/8/1P6/8/8/8/8/4k1K1 w - - 0 1",
+        "requiredMove": "b7",
+        "arrows": [
+          {
+            "from": "b6",
+            "to": "b7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "b7"
+        ],
+        "isInteractive": true,
+        "explanation": "Black cannot enter the square in time. The pawn will queen next turn!"
+      },
+      {
+        "id": "step-4-3",
+        "title": "Shouldering the Enemy King",
+        "instruction": "When the enemy king tries to chase your pawn, use your king's body to block his diagonal path.",
+        "buttonText": "Next: Shoulder",
+        "fen": "8/8/8/4k3/8/5K2/4P3/8 w - - 0 1",
+        "arrows": [
+          {
+            "from": "f3",
+            "to": "e3",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e3"
+        ],
+        "isInteractive": false,
+        "explanation": "Playing Ke3 takes away d4 and f4, preventing Black from approaching the e2 pawn."
+      },
+      {
+        "id": "step-4-4",
+        "title": "Take the Key Square",
+        "instruction": "Move your king to e3 to shoulder Black and shield your e-pawn.",
+        "buttonText": "Next: Promote",
+        "fen": "8/8/8/4k3/8/5K2/4P3/8 w - - 0 1",
+        "requiredMove": "Ke3",
+        "arrows": [
+          {
+            "from": "f3",
+            "to": "e3",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e3"
+        ],
+        "isInteractive": true,
+        "explanation": "Solid! Black's king is held at bay."
+      },
+      {
+        "id": "step-4-5",
+        "title": "Crown the Queen",
+        "instruction": "Push your b-pawn to b8 and promote to a Queen!",
+        "buttonText": "Complete Stage",
+        "fen": "8/1P6/8/8/8/5k2/8/4K3 w - - 0 1",
+        "requiredMove": "b8=Q",
+        "arrows": [
+          {
+            "from": "b7",
+            "to": "b8",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "b8"
+        ],
+        "isInteractive": true,
+        "explanation": "Promotion achieved! A completely winning advantage."
+      }
+    ]
+  },
+  {
+    "id": "endgame-5",
+    "title": "Lucena Position (Building the Bridge)",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Learn the most famous winning technique in rook endgames: building a rook bridge to shield the king.",
+    "steps": [
+      {
+        "id": "step-5-1",
+        "title": "The Lucena Setup",
+        "instruction": "In the Lucena position, White has a passed pawn on the 7th rank with the king in front. To win, White must build a bridge with the rook.",
+        "buttonText": "Next: Fourth Rank",
+        "fen": "3K4/3P2k1/8/8/8/8/r7/5R2 w - - 0 1",
+        "arrows": [
+          {
+            "from": "f1",
+            "to": "f4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "f4"
+        ],
+        "isInteractive": false,
+        "explanation": "Placing the rook on the 4th rank prepares to intercept vertical checks from Black's rook."
+      },
+      {
+        "id": "step-5-2",
+        "title": "The Fourth Rank Bridge",
+        "instruction": "Play Rf4 to set up the classic bridge-building shelter on the 4th rank.",
+        "buttonText": "Next: King Out",
+        "fen": "3K4/3P2k1/8/8/8/8/r7/5R2 w - - 0 1",
+        "requiredMove": "Rf4",
+        "arrows": [
+          {
+            "from": "f1",
+            "to": "f4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "f4"
+        ],
+        "isInteractive": true,
+        "explanation": "Brilliant! The rook is perfectly stationed on the fourth rank."
+      },
+      {
+        "id": "step-5-3",
+        "title": "Step the King Out",
+        "instruction": "Black waits with Rd2. Step your king out of the pawn's path to c7!",
+        "buttonText": "Next: The Bridge",
+        "fen": "3K4/3P2k1/8/8/5R2/8/3r4/8 w - - 2 2",
+        "requiredMove": "Kc7",
+        "arrows": [
+          {
+            "from": "d8",
+            "to": "c7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c7"
+        ],
+        "isInteractive": true,
+        "explanation": "The king steps out, threatening immediate promotion."
+      },
+      {
+        "id": "step-5-4",
+        "title": "Interception - The Bridge",
+        "instruction": "Black checks from behind with Rc2+. Block the check with Rc4 to complete the bridge!",
+        "buttonText": "Complete Stage",
+        "fen": "8/3P2k1/2K5/8/5R2/8/2r5/8 w - - 8 5",
+        "requiredMove": "Rc4",
+        "arrows": [
+          {
+            "from": "f4",
+            "to": "c4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c4"
+        ],
+        "isInteractive": true,
+        "explanation": "The bridge is built! Black cannot stop the pawn from queening next move."
+      }
+    ]
+  },
+  {
+    "id": "endgame-6",
+    "title": "Philidor Defense (Third Rank Defense)",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Learn the essential drawing technique against rook and pawn by anchoring your rook on the third rank.",
+    "steps": [
+      {
+        "id": "step-6-1",
+        "title": "The Defensive Barrier",
+        "instruction": "As Black defending against an advanced pawn, keep your rook on the 6th rank (your 3rd rank) to block the White king from invading.",
+        "buttonText": "Next: Hold Rank",
+        "fen": "4k3/8/r7/4KP2/8/8/8/5R2 b - - 0 1",
+        "arrows": [
+          {
+            "from": "a6",
+            "to": "b6",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "b6"
+        ],
+        "isInteractive": false,
+        "explanation": "White cannot advance their king past the 5th rank without pushing the pawn first."
+      },
+      {
+        "id": "step-6-2",
+        "title": "Maintain the Horizontal Clamp",
+        "instruction": "Slide your rook along the 6th rank to b6 to wait safely.",
+        "buttonText": "Next: Drop Back",
+        "fen": "4k3/8/r7/4KP2/8/8/8/5R2 b - - 0 1",
+        "requiredMove": "Rb6",
+        "arrows": [
+          {
+            "from": "a6",
+            "to": "b6",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "b6"
+        ],
+        "isInteractive": true,
+        "explanation": "Well held! The white king has no shelter on the 6th rank."
+      },
+      {
+        "id": "step-6-3",
+        "title": "When the Pawn Pushes, Drop Back",
+        "instruction": "White pushed e6! Now the pawn blocks their own king from checks from behind. Drop your rook to the 1st rank immediately!",
+        "buttonText": "Next: Drop to 1st",
+        "fen": "4k3/8/1r2P3/4K3/8/8/8/5R2 b - - 0 2",
+        "arrows": [
+          {
+            "from": "b6",
+            "to": "b1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "b1"
+        ],
+        "isInteractive": false,
+        "explanation": "From the 1st rank, Black will give perpetual vertical checks from behind."
+      },
+      {
+        "id": "step-6-4",
+        "title": "Drop Your Rook to the Rear",
+        "instruction": "Move your rook from b6 down to b1.",
+        "buttonText": "Next: Deliver Checks",
+        "fen": "4k3/8/1r2P3/4K3/8/8/8/5R2 b - - 0 2",
+        "requiredMove": "Rb1",
+        "arrows": [
+          {
+            "from": "b6",
+            "to": "b1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "b1"
+        ],
+        "isInteractive": true,
+        "explanation": "Excellent! You are now positioned to deliver endless rear checks."
+      },
+      {
+        "id": "step-6-5",
+        "title": "The Perpetual Check",
+        "instruction": "White tries Kd5. Check the exposed king with Rd1+ to seal the draw!",
+        "buttonText": "Complete Stage",
+        "fen": "4k3/8/4P3/3K4/8/8/8/1r3R2 b - - 0 3",
+        "requiredMove": "Rd1+",
+        "arrows": [
+          {
+            "from": "b1",
+            "to": "d1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d1"
+        ],
+        "isInteractive": true,
+        "explanation": "Draw secured! The white king cannot escape the hail of vertical checks."
+      }
+    ]
+  },
+  {
+    "id": "endgame-7",
+    "title": "Bishop + Knight Checkmate",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Coordinate minor pieces to drive the enemy king into a corner matching your bishop's square color.",
+    "steps": [
+      {
+        "id": "step-7-1",
+        "title": "The Corner of the Bishop's Color",
+        "instruction": "You can only force checkmate in a corner that matches your bishop's color (here, light squares: a1 or h8).",
+        "buttonText": "Next: Cut Off Escape",
+        "fen": "8/8/8/8/8/5N2/5B2/k3K3 w - - 0 1",
+        "arrows": [
+          {
+            "from": "f2",
+            "to": "d4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d4"
+        ],
+        "isInteractive": false,
+        "explanation": "Black's king on a1 is already trapped in the correct light-squared corner."
+      },
+      {
+        "id": "step-7-2",
+        "title": "Seal the Diagonal",
+        "instruction": "Play Bd4+ to take away the king's flight squares along the long diagonal.",
+        "buttonText": "Next: Knight Maneuver",
+        "fen": "8/8/8/8/8/5N2/5B2/k3K3 w - - 0 1",
+        "requiredMove": "Bd4+",
+        "arrows": [
+          {
+            "from": "f2",
+            "to": "d4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d4"
+        ],
+        "isInteractive": true,
+        "explanation": "Check! The enemy king is confined strictly to the corner."
+      },
+      {
+        "id": "step-7-3",
+        "title": "The W-Maneuver",
+        "instruction": "The knight hops in a W-shaped pattern across the board to take away the dark squares that the bishop cannot control.",
+        "buttonText": "Next: Cover Dark Squares",
+        "fen": "k7/8/1K6/5N2/3B4/8/8/8 w - - 0 1",
+        "arrows": [
+          {
+            "from": "f5",
+            "to": "e7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e7"
+        ],
+        "isInteractive": false,
+        "explanation": "From e7 and c7, the knight covers the dark squares, guiding the king to checkmate."
+      },
+      {
+        "id": "step-7-4",
+        "title": "Close the Net",
+        "instruction": "Hop your knight to e7 to take away c8 and d7.",
+        "buttonText": "Complete Stage",
+        "fen": "k7/8/1K6/5N2/3B4/8/8/8 w - - 0 1",
+        "requiredMove": "Ne7",
+        "arrows": [
+          {
+            "from": "f5",
+            "to": "e7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e7"
+        ],
+        "isInteractive": true,
+        "explanation": "Superb! The king is completely immobilized."
+      }
+    ]
+  },
+  {
+    "id": "endgame-8",
+    "title": "Rook + Pawn vs Rook (Tarrasch Rule)",
+    "category": "endgame",
+    "xp": 50,
+    "description": "Apply Tarrasch's principle: rooks belong behind passed pawns, whether attacking or defending.",
+    "steps": [
+      {
+        "id": "step-8-1",
+        "title": "Tarrasch's Golden Rule",
+        "instruction": "Siegbert Tarrasch formulated the classic principle: place your rook BEHIND passed pawns \u2014 behind your own to push them, behind the opponent's to stop them.",
+        "buttonText": "Next: Get Behind",
+        "fen": "6k1/8/8/P7/8/8/4K3/r3R3 w - - 0 1",
+        "arrows": [
+          {
+            "from": "e1",
+            "to": "a1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "a1"
+        ],
+        "isInteractive": false,
+        "explanation": "Behind the pawn, the rook gains mobility as the pawn advances forward."
+      },
+      {
+        "id": "step-8-2",
+        "title": "Get Behind Your Passed Pawn",
+        "instruction": "Move your rook from e1 to a1 to support the a5 pawn from behind.",
+        "buttonText": "Next: Advance",
+        "fen": "6k1/8/8/P7/8/8/4K3/r3R3 w - - 0 1",
+        "requiredMove": "Ra1",
+        "arrows": [
+          {
+            "from": "e1",
+            "to": "a1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "a1"
+        ],
+        "isInteractive": true,
+        "explanation": "Spot on! The rook now shields the pawn's entire journey to promotion."
+      },
+      {
+        "id": "step-8-3",
+        "title": "March the Pawn",
+        "instruction": "Push the passed pawn to a6 under the protection of your rook.",
+        "buttonText": "Next: Active King",
+        "fen": "6k1/8/8/P7/8/8/4K3/R7 w - - 0 2",
+        "requiredMove": "a6",
+        "arrows": [
+          {
+            "from": "a5",
+            "to": "a6",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "a6"
+        ],
+        "isInteractive": true,
+        "explanation": "The pawn advances smoothly with full rook protection."
+      },
+      {
+        "id": "step-8-4",
+        "title": "Activate Your King",
+        "instruction": "Bring your king up to f3 to assist the rook and escort the pawn.",
+        "buttonText": "Complete Stage",
+        "fen": "6k1/8/P7/8/8/8/4K3/R7 w - - 0 3",
+        "requiredMove": "Kf3",
+        "arrows": [
+          {
+            "from": "e2",
+            "to": "f3",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "f3"
+        ],
+        "isInteractive": true,
+        "explanation": "Active king plus Tarrasch rook ensures a textbook endgame victory."
+      }
+    ]
+  },
+  {
+    "id": "opening-1",
+    "title": "Controlling the Center",
+    "category": "openings",
+    "xp": 50,
+    "description": "Understand why e4, d4, e5, and d5 dictate opening play and learn to establish central pawn duos.",
+    "steps": [
+      {
+        "id": "step-9-1",
+        "title": "The Four Central Squares",
+        "instruction": "The squares e4, d4, e5, and d5 are the center of the chess board. Controlling them grants piece mobility and territory.",
+        "buttonText": "Next: First Move",
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "arrows": [
+          {
+            "from": "e2",
+            "to": "e4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e4",
+          "d4",
+          "e5",
+          "d5"
+        ],
+        "isInteractive": false,
+        "explanation": "Opening with a central pawn immediately claims space and frees your queen and bishop."
+      },
+      {
+        "id": "step-9-2",
+        "title": "Stake Your Central Claim",
+        "instruction": "Advance your king's pawn two squares to e4.",
+        "buttonText": "Next: The Pawn Duo",
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "requiredMove": "e4",
+        "arrows": [
+          {
+            "from": "e2",
+            "to": "e4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e4"
+        ],
+        "isInteractive": true,
+        "explanation": "Strong start! e4 controls d5 and f5 while opening pathways."
+      },
+      {
+        "id": "step-9-3",
+        "title": "Establish the Classical Pawn Duo",
+        "instruction": "Black played 1...Nf6. Expand your central dominance with d4!",
+        "buttonText": "Next: Support",
+        "fen": "rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2",
+        "requiredMove": "d4",
+        "arrows": [
+          {
+            "from": "d2",
+            "to": "d4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d4"
+        ],
+        "isInteractive": true,
+        "explanation": "The dream central duo (e4 + d4) controls c5, d5, e5, and f5."
+      },
+      {
+        "id": "step-9-4",
+        "title": "Develop with Central Support",
+        "instruction": "Develop your knight to c3 to reinforce e4 and control the center.",
+        "buttonText": "Complete Stage",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 2 3",
+        "requiredMove": "Nc3",
+        "arrows": [
+          {
+            "from": "b1",
+            "to": "c3",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c3"
+        ],
+        "isInteractive": true,
+        "explanation": "Pieces developed toward the center exert maximum influence."
+      }
+    ]
+  },
+  {
+    "id": "opening-2",
+    "title": "Minor Piece Development & Castling",
+    "category": "openings",
+    "xp": 50,
+    "description": "Follow the golden rules: knights before bishops, king safety first, and rapid harmonious development.",
+    "steps": [
+      {
+        "id": "step-10-1",
+        "title": "Knights Before Bishops",
+        "instruction": "Knights develop to natural central squares (f3/c3), while bishops need the right diagonal chosen depending on the opponent's setup.",
+        "buttonText": "Next: Develop Knight",
+        "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+        "arrows": [
+          {
+            "from": "g1",
+            "to": "f3",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "f3"
+        ],
+        "isInteractive": false,
+        "explanation": "Nf3 attacks e5 and prepares kingside castling."
+      },
+      {
+        "id": "step-10-2",
+        "title": "Develop the King's Knight",
+        "instruction": "Play Nf3 to attack e5 and develop your minor piece.",
+        "buttonText": "Next: Bishop Next",
+        "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+        "requiredMove": "Nf3",
+        "arrows": [
+          {
+            "from": "g1",
+            "to": "f3",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "f3"
+        ],
+        "isInteractive": true,
+        "explanation": "Active and purposeful development!"
+      },
+      {
+        "id": "step-10-3",
+        "title": "Develop the Bishop to an Active Diagonal",
+        "instruction": "Develop your light-squared bishop to c4, aiming at Black's weak f7 square.",
+        "buttonText": "Next: Castling",
+        "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+        "requiredMove": "Bc4",
+        "arrows": [
+          {
+            "from": "f1",
+            "to": "c4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c4"
+        ],
+        "isInteractive": true,
+        "explanation": "The Italian Bishop puts direct pressure on Black's vulnerable pawn."
+      },
+      {
+        "id": "step-10-4",
+        "title": "Castle for King Safety",
+        "instruction": "Now that minor pieces are out, tuck your king away safely by castling kingside (O-O).",
+        "buttonText": "Complete Stage",
+        "fen": "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+        "requiredMove": "O-O",
+        "arrows": [
+          {
+            "from": "e1",
+            "to": "g1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "g1"
+        ],
+        "isInteractive": true,
+        "explanation": "King is safe behind three pawns, and your rook is ready for action!"
+      }
+    ]
+  },
+  {
+    "id": "opening-3",
+    "title": "Avoiding Early Queen Outings & Traps",
+    "category": "openings",
+    "xp": 50,
+    "description": "Punish premature queen attacks and defend against cheap tactical tricks like Scholar's Mate.",
+    "steps": [
+      {
+        "id": "step-11-1",
+        "title": "The Danger of Early Queen Attacks",
+        "instruction": "White brought their queen to f3 on move 2 hunting for Scholar's Mate. Early queen sorties waste time and invite counter-attacks.",
+        "buttonText": "Next: Defend & Develop",
+        "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR b KQkq - 3 3",
+        "arrows": [
+          {
+            "from": "f3",
+            "to": "f7",
+            "color": "red"
+          }
+        ],
+        "highlightSquares": [
+          "f7"
+        ],
+        "isInteractive": false,
+        "explanation": "White threatens Qxf7#. Defend calmly while developing a minor piece."
+      },
+      {
+        "id": "step-11-2",
+        "title": "Block the Threat and Develop",
+        "instruction": "Play Nf6 to block the queen's battery on f7 while developing your knight.",
+        "buttonText": "Next: Attack the Queen",
+        "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR b KQkq - 3 3",
+        "requiredMove": "Nf6",
+        "arrows": [
+          {
+            "from": "g8",
+            "to": "f6",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "f6"
+        ],
+        "isInteractive": true,
+        "explanation": "Perfect! Threat eliminated and your kingside knight is active."
+      },
+      {
+        "id": "step-11-3",
+        "title": "Punish the Overextended Queen",
+        "instruction": "White wastes another move with h3. Jump your knight to d4, attacking both the queen on f3 and the c2 fork square!",
+        "buttonText": "Next: Seize Initiative",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5Q1P/PPPP1PP1/RNB1K1NR b KQkq - 0 4",
+        "requiredMove": "Nd4",
+        "arrows": [
+          {
+            "from": "c6",
+            "to": "d4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d4"
+        ],
+        "isInteractive": true,
+        "explanation": "Crushing! The queen must flee while c2 is under severe threat."
+      },
+      {
+        "id": "step-11-4",
+        "title": "Strike in the Center",
+        "instruction": "White retreated the queen back to d1. Strike boldly in the center with d5!",
+        "buttonText": "Complete Stage",
+        "fen": "r1bqkb1r/pppp1ppp/5n2/4p3/2BnP3/7P/PPPP1PP1/RNBQK1NR b KQkq - 2 5",
+        "requiredMove": "d5",
+        "arrows": [
+          {
+            "from": "d7",
+            "to": "d5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d5"
+        ],
+        "isInteractive": true,
+        "explanation": "Outstanding! Black has superior development, central space, and a decisive lead."
+      }
+    ]
+  },
+  {
+    "id": "middle-1",
+    "title": "Piece Activity & Outposts",
+    "category": "middlegame",
+    "xp": 50,
+    "description": "Establish dominant outposts for knights and coordinate pieces to maximize board control.",
+    "steps": [
+      {
+        "id": "step-12-1",
+        "title": "What is an Outpost?",
+        "instruction": "An outpost is a square on the 4th, 5th, or 6th rank defended by a pawn that cannot be attacked by an enemy pawn.",
+        "buttonText": "Next: Plant the Knight",
+        "fen": "r2q1rk1/pp1nbppp/2p1pn2/3p4/2PP4/2N1PN2/PP2BPPP/R1BQ1RK1 w - - 0 8",
+        "arrows": [
+          {
+            "from": "f3",
+            "to": "e5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e5"
+        ],
+        "isInteractive": false,
+        "explanation": "e5 is a permanent outpost because Black's pawns on d5 and f7 cannot kick the knight away."
+      },
+      {
+        "id": "step-12-2",
+        "title": "Plant Your Knight on the Outpost",
+        "instruction": "Move your knight to the e5 outpost to dominate the center.",
+        "buttonText": "Next: Eliminate Defenders",
+        "fen": "r2q1rk1/pp1nbppp/2p1pn2/3p4/2PP4/2N1PN2/PP2BPPP/R1BQ1RK1 w - - 0 8",
+        "requiredMove": "Ne5",
+        "arrows": [
+          {
+            "from": "f3",
+            "to": "e5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e5"
+        ],
+        "isInteractive": true,
+        "explanation": "Monstrous knight! It controls key squares deep in Black's camp."
+      },
+      {
+        "id": "step-12-3",
+        "title": "Remove Black's Counter-Piece",
+        "instruction": "Black challenges with Nd7. Capture on d7 to retain spatial superiority.",
+        "buttonText": "Next: Central Clamp",
+        "fen": "r2q1rk1/pp1nbppp/2p1pn2/3pN3/2PP4/2N1P3/PP2BPPP/R1BQ1RK1 w - - 0 9",
+        "requiredMove": "Nxd7",
+        "arrows": [
+          {
+            "from": "e5",
+            "to": "d7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d7"
+        ],
+        "isInteractive": true,
+        "explanation": "Crisp exchange. Black's minor pieces remain cramped."
+      },
+      {
+        "id": "step-12-4",
+        "title": "Lock Down the Queenside Space",
+        "instruction": "Push c5 to clamp down Black's queenside expansion.",
+        "buttonText": "Complete Stage",
+        "fen": "r2q1rk1/pp1nbppp/2p1pn2/3p4/2PP4/2N1P3/PP2BPPP/R1BQ1RK1 w - - 0 10",
+        "requiredMove": "c5",
+        "arrows": [
+          {
+            "from": "c4",
+            "to": "c5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c5"
+        ],
+        "isInteractive": true,
+        "explanation": "Total spatial dominance achieved!"
+      }
+    ]
+  },
+  {
+    "id": "middle-2",
+    "title": "Open Files & 7th Rank Rooks",
+    "category": "middlegame",
+    "xp": 50,
+    "description": "Seize open files with your heavy pieces and infiltrate the deadly 7th rank.",
+    "steps": [
+      {
+        "id": "step-13-1",
+        "title": "Seizing the Open File",
+        "instruction": "An open file has no pawns on it. Rooks must occupy open files to prepare invasion routes.",
+        "buttonText": "Next: Take the File",
+        "fen": "r4rk1/pp2qppp/2n1pn2/3p4/3P4/2N1PN2/PP2QPPP/R4RK1 w - - 0 12",
+        "arrows": [
+          {
+            "from": "f1",
+            "to": "c1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c1"
+        ],
+        "isInteractive": false,
+        "explanation": "The c-file is the only fully open file on the board."
+      },
+      {
+        "id": "step-13-2",
+        "title": "Occupy the C-File",
+        "instruction": "Move your rook from f1 to c1 to control the c-file.",
+        "buttonText": "Next: Doubling",
+        "fen": "r4rk1/pp2qppp/2n1pn2/3p4/3P4/2N1PN2/PP2QPPP/R4RK1 w - - 0 12",
+        "requiredMove": "Rfc1",
+        "arrows": [
+          {
+            "from": "f1",
+            "to": "c1",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c1"
+        ],
+        "isInteractive": true,
+        "explanation": "Mastery of the open file begins with solid placement."
+      },
+      {
+        "id": "step-13-3",
+        "title": "Double the Heavy Artillery",
+        "instruction": "Place your queen on c2 behind the rook to dominate the file.",
+        "buttonText": "Next: Infiltration",
+        "fen": "5rk1/pp2qppp/4pn2/8/3P4/2R1PN2/PP2QPPP/6K1 w - - 0 18",
+        "requiredMove": "Qc2",
+        "arrows": [
+          {
+            "from": "e2",
+            "to": "c2",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c2"
+        ],
+        "isInteractive": true,
+        "explanation": "Doubling on the open file creates overwhelming pressure."
+      },
+      {
+        "id": "step-13-4",
+        "title": "Infiltrate the 7th Rank",
+        "instruction": "Invade the 7th rank with Qc7, attacking Black's pawn base!",
+        "buttonText": "Complete Stage",
+        "fen": "5rk1/pp2qppp/4pn2/8/3P4/4PN2/PPQ2PPP/2R3K1 w - - 0 19",
+        "requiredMove": "Qc7",
+        "arrows": [
+          {
+            "from": "c2",
+            "to": "c7",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "c7"
+        ],
+        "isInteractive": true,
+        "explanation": "Infiltration complete! The 7th rank yields decisive tactical shots."
+      }
+    ]
+  },
+  {
+    "id": "middle-3",
+    "title": "Pawn Structure & Weaknesses",
+    "category": "middlegame",
+    "xp": 50,
+    "description": "Identify structural flaws like isolated and backward pawns, and execute blockades to win material.",
+    "steps": [
+      {
+        "id": "step-14-1",
+        "title": "The Isolated Pawn Weakness",
+        "instruction": "An isolated pawn has no friendly pawns on neighboring files. It cannot be defended by another pawn and requires piece babysitting.",
+        "buttonText": "Next: Create Weakness",
+        "fen": "r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP2BPPP/R1BQ1RK1 w - - 0 9",
+        "arrows": [
+          {
+            "from": "c4",
+            "to": "d5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d5"
+        ],
+        "isInteractive": false,
+        "explanation": "Exchanging on d5 isolates Black's d-pawn permanently."
+      },
+      {
+        "id": "step-14-2",
+        "title": "Isolate the Enemy Pawn",
+        "instruction": "Play cxd5 to saddle Black with an isolated queen's pawn.",
+        "buttonText": "Next: The Blockade",
+        "fen": "r1bq1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP2BPPP/R1BQ1RK1 w - - 0 9",
+        "requiredMove": "cxd5",
+        "arrows": [
+          {
+            "from": "c4",
+            "to": "d5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "d5"
+        ],
+        "isInteractive": true,
+        "explanation": "Black recaptures with exd5, leaving d5 permanently isolated!"
+      },
+      {
+        "id": "step-14-3",
+        "title": "Blockade the Weakness",
+        "instruction": "Nimzowitsch rule: always blockade an isolated pawn! Place your knight on the d4 square right in front of the pawn.",
+        "buttonText": "Next: Lock the Flank",
+        "fen": "r1bq1rk1/pp2bppp/2n2n2/3p4/3P4/2N1PN2/PP2BPPP/R1BQ1RK1 w - - 0 10",
+        "requiredMove": "Ne5",
+        "arrows": [
+          {
+            "from": "f3",
+            "to": "e5",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "e5"
+        ],
+        "isInteractive": true,
+        "explanation": "A firmly anchored knight blockades the pawn and controls the center."
+      },
+      {
+        "id": "step-14-4",
+        "title": "Solidify the Center",
+        "instruction": "Reinforce your central structure with f4 to secure the knight forever.",
+        "buttonText": "Complete Stage",
+        "fen": "r1bq1rk1/pp1nbppp/4pn2/2ppN3/3P4/2N1P3/PP2BPPP/R1BQ1RK1 w - - 0 10",
+        "requiredMove": "f4",
+        "arrows": [
+          {
+            "from": "f2",
+            "to": "f4",
+            "color": "green"
+          }
+        ],
+        "highlightSquares": [
+          "f4"
+        ],
+        "isInteractive": true,
+        "explanation": "The stronghold is impenetrable. Black's pawn weakness is permanently exploited."
+      }
+    ]
+  }
+]
