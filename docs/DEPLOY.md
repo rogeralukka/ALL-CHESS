@@ -35,3 +35,10 @@ The Starter plan is needed for the persistent disk. On the free plan the service
 - Each friend logs in with the shared passcode and their own username; games and stats are separate per username.
 - Reviewing a game runs Stockfish on the server. The Starter plan has 0.5 CPU, so a deep review of a long game takes a while; the in-browser Play Coach engine does not use the server.
 - Never commit `.env` or a database file.
+
+## Free option: Render free web service + Neon Postgres
+
+Render's free tier has no persistent disk, so SQLite would be wiped on every restart. Point `DATABASE_URL` at a free Neon Postgres database instead
+(`postgresql+psycopg2://USER:PASS@HOST/DB?sslmode=require`, copied from the Neon dashboard) and remove the disk. Migrations and the login/save-game flow were
+tested against PostgreSQL 16. Caveats: the free service sleeps after ~15 min idle (first request takes ~30-60 s to wake) and its CPU is slow, so game
+reviews take noticeably longer than on a paid instance.
