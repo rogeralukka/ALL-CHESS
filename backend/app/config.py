@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # expected_accuracy = base + (rating / 3000) * slope
     rating_expected_acc_base: float = Field(default=60.0)
     rating_expected_acc_slope: float = Field(default=35.0)
-    rating_sensitivity_k: float = Field(default=45.0)
+    rating_sensitivity_k: float = Field(default=33.0)
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),

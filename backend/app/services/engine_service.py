@@ -563,15 +563,8 @@ def _run_single_pass_review_sync(
                 if b_copy.is_capture(prev_m) and board_before.is_capture(cur_m):
                     is_recap = True
 
-        # Check if played move is top move OR has equal eval/mate to top line
+        # Check if played move is top move ONLY (second lines with equal eval become excellent)
         is_top = (san_move == pos_before["best_move_san"])
-        if not is_top and pos_before.get("top_lines"):
-            top_line = pos_before["top_lines"][0]
-            for line in pos_before["top_lines"][1:]:
-                if line.get("move") == san_move:
-                    if line.get("eval") == top_line.get("eval") and line.get("mate") == top_line.get("mate"):
-                        is_top = True
-                    break
 
         is_cm = (pos_after["mate"] == 0)
 
@@ -606,6 +599,7 @@ def _run_single_pass_review_sync(
                         best_wins_material_or_mate = True
                         break
 
+        mover_rating = white_rating if color == 'w' else black_rating
         classification = classify_move(
             eval_before_pawns=pos_before["eval"],
             eval_after_pawns=pos_after["eval"],
@@ -621,13 +615,14 @@ def _run_single_pass_review_sync(
             is_recapture=is_recap,
             num_legal_moves=n_legal,
             best_wins_material_or_mate=best_wins_material_or_mate,
-            best_eval_gap=best_eval_gap
+            best_eval_gap=best_eval_gap,
+            rating=mover_rating,
         )
 
-        last_mover_made_mistake = (classification in ("inaccuracy", "mistake", "blunder"))
+        last_mover_made_mistake = (classification in ("inaccuracy", "mistake", "miss", "blunder"))
 
         # Win% calculation
-        played_win_pct = eval_to_win_pct(pos_after["eval"], pos_after["mate"])
+        played_win_pct = eval_to_win_pct(pos_after["eval"], pos_after["mate"], rating=mover_rating)
         if color == 'b':
             played_win_pct = round(100.0 - played_win_pct, 1)
 

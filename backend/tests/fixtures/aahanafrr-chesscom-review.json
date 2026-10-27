@@ -1,0 +1,412 @@
+{
+ "source": "Chess.com Game Review, https://www.chess.com/analysis/game/live/185643420616/review (free account, Oct 2026)",
+ "players": {
+  "white": "Aahanafrr (270)",
+  "black": "rogeralukka (885)"
+ },
+ "result": "0-1",
+ "termination": "Resignation",
+ "timeControl": "20 min",
+ "summary": {
+  "acc": {
+   "white": 53.9,
+   "black": 63.2
+  },
+  "rating": {
+   "white": 100,
+   "black": 650
+  },
+  "brilliant": {
+   "white": 0,
+   "black": 0
+  },
+  "great": {
+   "white": 1,
+   "black": 2
+  },
+  "book": {
+   "white": 1,
+   "black": 1
+  },
+  "best": {
+   "white": 6,
+   "black": 6
+  },
+  "excellent": {
+   "white": 6,
+   "black": 8
+  },
+  "good": {
+   "white": 5,
+   "black": 4
+  },
+  "inaccuracy": {
+   "white": 4,
+   "black": 4
+  },
+  "mistake": {
+   "white": 1,
+   "black": 1
+  },
+  "miss": {
+   "white": 4,
+   "black": 1
+  },
+  "blunder": {
+   "white": 1,
+   "black": 2
+  }
+ },
+ "coachLine": "Way to go! You took the advantage when you saw your chance.",
+ "plies": [
+  {
+   "ply": 0,
+   "san": "e4",
+   "label": "book",
+   "evalWhitePov": 0.27
+  },
+  {
+   "ply": 1,
+   "san": "d5",
+   "label": "book",
+   "evalWhitePov": 0.61
+  },
+  {
+   "ply": 2,
+   "san": "d3",
+   "label": "good",
+   "evalWhitePov": -0.14
+  },
+  {
+   "ply": 3,
+   "san": "d4",
+   "label": "good",
+   "evalWhitePov": 0.24
+  },
+  {
+   "ply": 4,
+   "san": "Nh3",
+   "label": "good",
+   "evalWhitePov": -0.57
+  },
+  {
+   "ply": 5,
+   "san": "Bxh3",
+   "label": "excellent",
+   "evalWhitePov": -0.56
+  },
+  {
+   "ply": 6,
+   "san": "gxh3",
+   "label": "best",
+   "evalWhitePov": -0.56
+  },
+  {
+   "ply": 7,
+   "san": "e5",
+   "label": "excellent",
+   "evalWhitePov": -0.52
+  },
+  {
+   "ply": 8,
+   "san": "Na3",
+   "label": "inaccuracy",
+   "evalWhitePov": -1.28
+  },
+  {
+   "ply": 9,
+   "san": "Nc6",
+   "label": "good",
+   "evalWhitePov": -0.85
+  },
+  {
+   "ply": 10,
+   "san": "Nc4",
+   "label": "excellent",
+   "evalWhitePov": -0.86
+  },
+  {
+   "ply": 11,
+   "san": "Nge7",
+   "label": "best",
+   "evalWhitePov": -0.86
+  },
+  {
+   "ply": 12,
+   "san": "f4",
+   "label": "mistake",
+   "evalWhitePov": -2.03
+  },
+  {
+   "ply": 13,
+   "san": "f6",
+   "label": "miss",
+   "evalWhitePov": -0.08
+  },
+  {
+   "ply": 14,
+   "san": "fxe5",
+   "label": "good",
+   "evalWhitePov": -0.65
+  },
+  {
+   "ply": 15,
+   "san": "fxe5",
+   "label": "good",
+   "evalWhitePov": -0.01
+  },
+  {
+   "ply": 16,
+   "san": "Nd2",
+   "label": "good",
+   "evalWhitePov": -0.65
+  },
+  {
+   "ply": 17,
+   "san": "Ng6",
+   "label": "best",
+   "evalWhitePov": -0.65
+  },
+  {
+   "ply": 18,
+   "san": "Nf3",
+   "label": "inaccuracy",
+   "evalWhitePov": -1.42
+  },
+  {
+   "ply": 19,
+   "san": "Qe7",
+   "label": "inaccuracy",
+   "evalWhitePov": -0.36
+  },
+  {
+   "ply": 20,
+   "san": "c3",
+   "label": "good",
+   "evalWhitePov": -0.96
+  },
+  {
+   "ply": 21,
+   "san": "O-O-O",
+   "label": "inaccuracy",
+   "evalWhitePov": -0.11
+  },
+  {
+   "ply": 22,
+   "san": "cxd4",
+   "label": "miss",
+   "evalWhitePov": -2.37
+  },
+  {
+   "ply": 23,
+   "san": "exd4",
+   "label": "inaccuracy",
+   "evalWhitePov": -1.42
+  },
+  {
+   "ply": 24,
+   "san": "Be2",
+   "label": "best",
+   "evalWhitePov": -1.42
+  },
+  {
+   "ply": 25,
+   "san": "Nf4",
+   "label": "blunder",
+   "evalWhitePov": 4.0
+  },
+  {
+   "ply": 26,
+   "san": "Bxf4",
+   "label": "great",
+   "evalWhitePov": 4.0
+  },
+  {
+   "ply": 27,
+   "san": "Qb4+",
+   "label": "excellent",
+   "evalWhitePov": 4.07
+  },
+  {
+   "ply": 28,
+   "san": "Kf1",
+   "label": "excellent",
+   "evalWhitePov": 3.66
+  },
+  {
+   "ply": 29,
+   "san": "Qxb2",
+   "label": "excellent",
+   "evalWhitePov": 3.76
+  },
+  {
+   "ply": 30,
+   "san": "Qa4",
+   "label": "blunder",
+   "evalWhitePov": -3.05
+  },
+  {
+   "ply": 31,
+   "san": "Qxa1+",
+   "label": "great",
+   "evalWhitePov": -3.05
+  },
+  {
+   "ply": 32,
+   "san": "Kg2",
+   "label": "best",
+   "evalWhitePov": -3.05
+  },
+  {
+   "ply": 33,
+   "san": "Qb2",
+   "label": "best",
+   "evalWhitePov": -3.05
+  },
+  {
+   "ply": 34,
+   "san": "Qd1",
+   "label": "inaccuracy",
+   "evalWhitePov": -4.08
+  },
+  {
+   "ply": 35,
+   "san": "Qxa2",
+   "label": "best",
+   "evalWhitePov": -4.08
+  },
+  {
+   "ply": 36,
+   "san": "Ng5",
+   "label": "excellent",
+   "evalWhitePov": -4.33
+  },
+  {
+   "ply": 37,
+   "san": "h6",
+   "label": "excellent",
+   "evalWhitePov": -4.26
+  },
+  {
+   "ply": 38,
+   "san": "Ne6",
+   "label": "excellent",
+   "evalWhitePov": -4.29
+  },
+  {
+   "ply": 39,
+   "san": "Qxe6",
+   "label": "blunder",
+   "evalWhitePov": -0.07
+  },
+  {
+   "ply": 40,
+   "san": "Qa4",
+   "label": "miss",
+   "evalWhitePov": -5.02
+  },
+  {
+   "ply": 41,
+   "san": "g5",
+   "label": "inaccuracy",
+   "evalWhitePov": -3.49
+  },
+  {
+   "ply": 42,
+   "san": "Bxg5",
+   "label": "miss",
+   "evalWhitePov": -5.92
+  },
+  {
+   "ply": 43,
+   "san": "hxg5",
+   "label": "mistake",
+   "evalWhitePov": -3.81
+  },
+  {
+   "ply": 44,
+   "san": "e5",
+   "label": "miss",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 45,
+   "san": "Qxh3+",
+   "label": "great",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 46,
+   "san": "Kf2",
+   "label": "best",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 47,
+   "san": "Nxe5",
+   "label": "good",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 48,
+   "san": "Ke1",
+   "label": "inaccuracy",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 49,
+   "san": "Nxd3+",
+   "label": "best",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 50,
+   "san": "Bxd3",
+   "label": "excellent",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 51,
+   "san": "Qxd3",
+   "label": "best",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 52,
+   "san": "Kf2",
+   "label": "best",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 53,
+   "san": "Qe3+",
+   "label": "excellent",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 54,
+   "san": "Kg2",
+   "label": "best",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 55,
+   "san": "g4",
+   "label": "excellent",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 56,
+   "san": "h3",
+   "label": "excellent",
+   "evalWhitePov": null
+  },
+  {
+   "ply": 57,
+   "san": "Qf3+",
+   "label": "excellent",
+   "evalWhitePov": null
+  }
+ ],
+ "notes": "Evals missing from ply 44 on because Chess.com shows mate distances there (M11, M10 ...). Chess.com's free Advanced Stats (Opening / Tactics / Strategy) are locked, so no values were captured."
+}
