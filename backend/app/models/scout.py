@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, JSON, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, JSON, DateTime, Text
 import uuid
 from app.database import Base, utc_now
 

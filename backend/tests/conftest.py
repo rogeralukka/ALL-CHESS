@@ -1,5 +1,9 @@
 import os
+
+TEST_PASSCODE = "test-passcode-for-ci"
 os.environ["TESTING"] = "1"
+os.environ["APP_PASSCODE"] = TEST_PASSCODE
+os.environ["SESSION_SECRET"] = "test-session-secret-key-32-chars-long-123456"
 
 import pytest
 import sys

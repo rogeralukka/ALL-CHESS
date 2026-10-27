@@ -15,7 +15,8 @@ from alembic.config import Config
 from alembic import command
 from app.config import settings
 from app.database import engine as db_engine, Base
-import app.models  # registers models with Base
+from app import models as _models
+_ = _models  # registers models with Base
 from app.routers import auth, games, sync, stats, jobs, engine as engine_router, puzzles, learn, friends, coach, scout
 from app.services.seeder import seed_puzzles
 from app.database import SessionLocal

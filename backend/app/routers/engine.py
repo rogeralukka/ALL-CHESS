@@ -1,7 +1,7 @@
 import time
 import logging
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import Field
 import chess
 from app.auth import get_current_user

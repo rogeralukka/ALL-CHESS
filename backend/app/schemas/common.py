@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from typing import Any, Optional
+from typing import Any
 
 class CamelModel(BaseModel):
     model_config = ConfigDict(

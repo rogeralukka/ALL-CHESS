@@ -77,12 +77,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Validate secrets on startup (skip only when running tests)
-if is_testing_environment():
-    if not settings.app_passcode or settings.app_passcode in PLACEHOLDER_SECRETS:
-        settings.app_passcode = "allchess123"
-    if not settings.session_secret or settings.session_secret in PLACEHOLDER_SECRETS:
-        settings.session_secret = "test-session-secret-key-32-chars-long-123456"
-else:
+if not is_testing_environment():
     if not settings.app_passcode.strip() or settings.app_passcode.strip() in PLACEHOLDER_SECRETS:
         raise RuntimeError("APP_PASSCODE is required in backend/.env and must not be a placeholder.")
     if not settings.session_secret.strip() or settings.session_secret.strip() in PLACEHOLDER_SECRETS:

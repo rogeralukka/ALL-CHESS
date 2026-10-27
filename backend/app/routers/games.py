@@ -18,7 +18,6 @@ from app.services.engine_service import analyze_game_moves_full, LEVEL_ORDER
 
 logger = logging.getLogger("all_chess.games_router")
 import re
-from typing import Any
 
 def extract_termination(dg: GameModel) -> Optional[str]:
     if getattr(dg, "termination", None):

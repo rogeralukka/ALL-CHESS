@@ -1,4 +1,4 @@
-from typing import Optional, Literal, Dict, Any, List
+from typing import Optional, Literal, Dict
 import chess
 from app.services.win_pct import eval_to_win_pct
 
@@ -91,7 +91,6 @@ def is_material_sacrifice(board: chess.Board, move: chess.Move) -> bool:
     if not piece or piece.piece_type in (chess.PAWN, chess.KING):
         return False
 
-    mover_val = SEE_PIECE_VALUES.get(piece.piece_type, 0)
     captured = board.piece_at(move.to_square)
     captured_val = SEE_PIECE_VALUES.get(captured.piece_type, 0) if captured else 0
 

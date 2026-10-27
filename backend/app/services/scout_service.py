@@ -1,5 +1,4 @@
 import logging
-import asyncio
 import httpx
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List, Tuple
@@ -10,8 +9,6 @@ from app.database import utc_now
 from app.services.chesscom_client import ChesscomClient, ChesscomError
 from app.services.lichess_client import LichessClient, LichessError
 from app.services.pgn_parser import parse_pgn_game
-from app.schemas.stats import OpeningStat
-from app.schemas.game import Game
 
 logger = logging.getLogger("all_chess.scout")
 
