@@ -148,7 +148,7 @@ export const Leaderboard: React.FC = () => {
     return (
       <PageContainer wide className="!max-w-[1100px]">
         <PageTitle icon="/assets/ui/icon_leaderboard.webp" title="Leaderboard" />
-        <InlineLoader label="Loading the leaderboard…" size={130} className="py-20" />
+        <InlineLoader label="Loading the leaderboard…" page />
       </PageContainer>
     );
   }

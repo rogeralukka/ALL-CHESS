@@ -11,13 +11,17 @@ from app.database import get_db
 from app.models.user import User
 from app.models.game import Game as GameModel
 from app.models.analysis import AnalysisJob, GameAnalysis
-from app.schemas.game import Game, AnalyzeGameRequest
+from app.schemas.game import Game, AnalyzeGameRequest, CoachGameCreate, CoachGameCreated
 from app.schemas.job import JobResponse
 from app.auth import get_current_user
 from app.services.engine_service import analyze_game_moves_full, LEVEL_ORDER
 
 logger = logging.getLogger("all_chess.games_router")
 import re
+import chess
+import chess.pgn
+from datetime import datetime, timezone
+from app.services.pgn_parser import parse_pgn_game
 
 def extract_termination(dg: GameModel) -> Optional[str]:
     if getattr(dg, "termination", None):
@@ -168,6 +172,70 @@ def get_games(
         )
 
     return results
+
+@router.post("/coach", response_model=CoachGameCreated, status_code=201)
+def save_coach_game(
+    body: CoachGameCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Save a finished Play Coach game so it can be opened in Review."""
+    board = chess.Board()
+    game = chess.pgn.Game()
+    user_is_white = body.user_color == "white"
+    user_name = current_user.username
+    game.headers["Event"] = "Play Coach"
+    game.headers["Site"] = "ALL-CHESS"
+    game.headers["Date"] = datetime.now(timezone.utc).strftime("%Y.%m.%d")
+    game.headers["White"] = user_name if user_is_white else body.opponent_name
+    game.headers["Black"] = body.opponent_name if user_is_white else user_name
+    user_elo = str(body.user_rating or 800)
+    game.headers["WhiteElo"] = user_elo if user_is_white else str(body.opponent_rating)
+    game.headers["BlackElo"] = str(body.opponent_rating) if user_is_white else user_elo
+    game.headers["Result"] = body.result
+    if body.termination:
+        game.headers["Termination"] = body.termination
+
+    node = game
+    for san in body.moves:
+        try:
+            move = board.parse_san(san)
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"Illegal move '{san}' at ply {len(board.move_stack) + 1}.")
+        node = node.add_variation(move)
+        board.push(move)
+
+    pgn_text = str(game)
+    parsed = parse_pgn_game(
+        pgn_text=pgn_text,
+        target_user_names=[user_name],
+        source="vs_coach",
+        platform="coach",
+    )
+    db_game = GameModel(
+        user_id=current_user.id,
+        source=parsed["source"],
+        platform=parsed["platform"],
+        pgn=parsed["pgn"],
+        white=parsed["white"],
+        black=parsed["black"],
+        result=parsed["result"],
+        date=parsed["date"],
+        time_control=parsed["timeControl"],
+        speed=parsed["speed"],
+        opening=parsed["opening"],
+        moves=parsed["moves"],
+        is_user_white=parsed["isUserWhite"],
+        accuracy=parsed["accuracy"],
+        estimated_rating=parsed["estimatedRating"],
+        phase_grades=parsed["phaseGrades"],
+        termination=body.termination,
+    )
+    db.add(db_game)
+    db.commit()
+    db.refresh(db_game)
+    return CoachGameCreated(id=db_game.id)
+
 
 @router.get("/{game_id}", response_model=Game, response_model_exclude_none=True)
 def get_game_by_id(

@@ -45,11 +45,19 @@ export const PieceHopper: React.FC<{ size?: number }> = ({ size = 120 }) => {
   );
 };
 
-/** Hopper + label for loading a panel or list inside a page (no full-screen takeover). */
-export const InlineLoader: React.FC<{ label?: string; size?: number; className?: string }> = ({ label = 'Loading…', size = 96, className = '' }) => (
-  <div className={`flex flex-col items-center justify-center gap-2 py-8 select-none ${className}`} role="status" aria-live="polite" data-testid="inline-loader">
-    <PieceHopper size={size} />
-    <div className="font-display font-bold text-[14px] text-theme-muted">{label}</div>
+/**
+ * Hopper + label for loading a panel or list inside a page (no full-screen takeover).
+ * `page` makes it fill the page and sit in the middle, bigger: use it when it is the only thing on screen.
+ */
+export const InlineLoader: React.FC<{ label?: string; size?: number; className?: string; page?: boolean }> = ({ label = 'Loading…', size, className = '', page = false }) => (
+  <div
+    className={`flex flex-col items-center justify-center gap-2 select-none ${page ? 'flex-1 min-h-[calc(100vh-150px)] py-8' : 'py-8'} ${className}`}
+    role="status"
+    aria-live="polite"
+    data-testid="inline-loader"
+  >
+    <PieceHopper size={size ?? (page ? 260 : 96)} />
+    <div className={`font-display font-bold text-theme-muted ${page ? 'text-[17px]' : 'text-[14px]'}`}>{label}</div>
   </div>
 );
 

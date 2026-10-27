@@ -127,7 +127,7 @@ export const Home: React.FC = () => {
   if (!loaded) {
     return (
       <PageContainer wide>
-        <InlineLoader label="Setting up your home…" size={140} className="py-24" />
+        <InlineLoader label="Setting up your home…" page />
       </PageContainer>
     );
   }

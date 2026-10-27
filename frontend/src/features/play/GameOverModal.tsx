@@ -11,6 +11,7 @@ interface GameOverModalProps {
   userAccuracy?: number;
   onNewGame: () => void;
   onGameReview: () => void;
+  reviewBusy?: boolean;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -20,6 +21,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   userAccuracy,
   onNewGame,
   onGameReview,
+  reviewBusy = false,
 }) => {
   if (!isOpen) return null;
 
@@ -77,8 +79,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               fullWidth
               icon={<Sparkles size={16} />}
               onClick={onGameReview}
+              disabled={reviewBusy}
             >
-              Game Review
+              {reviewBusy ? 'Saving game…' : 'Game Review'}
             </Button>
             <Button
               variant="secondary"

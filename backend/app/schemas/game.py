@@ -91,6 +91,19 @@ class Game(CamelModel):
     analysis_depth: Optional[int] = None
     analysis_level: Optional[str] = None
 
+class CoachGameCreate(CamelModel):
+    """A finished Play Coach game, saved so it can be reviewed like any other game."""
+    moves: List[str] = Field(..., min_length=1, max_length=600)  # SAN, in play order
+    user_color: Literal['white', 'black']
+    result: Literal['1-0', '0-1', '1/2-1/2']
+    opponent_name: str = Field(default="Coach All-Chess", max_length=64)
+    opponent_rating: int = Field(default=800, ge=100, le=3500)
+    user_rating: Optional[int] = Field(default=None, ge=100, le=3500)
+    termination: Optional[str] = Field(default=None, max_length=128)
+
+class CoachGameCreated(CamelModel):
+    id: str
+
 class AnalyzeGameRequest(CamelModel):
     level: Optional[Literal['standard', 'deep', 'deeper', 'max']] = 'standard'
     force: Optional[bool] = False

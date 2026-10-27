@@ -36,6 +36,27 @@ function generateCoachSummary(game: Game): { text: string; expression: CoachExpr
   const userWon = (userIsWhite && isWhiteWin) || (!userIsWhite && isBlackWin);
   const userLost = (userIsWhite && isBlackWin) || (!userIsWhite && isWhiteWin);
 
+  // Very short games (a quick resignation) have no story to tell yet.
+  if (game.moves.length < 8) {
+    const how = game.termination ? game.termination.toLowerCase() : 'a very short game';
+    return {
+      text: `That was over after only ${Math.ceil(game.moves.length / 2)} move${game.moves.length <= 2 ? '' : 's'} (${how}). Play a longer game and I will have more to say.`,
+      expression: 'neutral',
+    };
+  }
+
+  // Not analysed yet: don't invent a story from empty evaluations.
+  if (game.moves.every((m) => !m.eval)) {
+    return {
+      text: userWon
+        ? 'You won this one! Start the review and I will check every move and show where it was decided.'
+        : userLost
+        ? 'Start the review and I will check every move and show you where this game turned.'
+        : 'Start the review and I will check every move and show you the key moments.',
+      expression: userWon ? 'brilliant' : 'neutral',
+    };
+  }
+
   // Find biggest swing move (ignoring final checkmate move, clamping to graph momentum scale)
   const clamp = (val: number) => Math.min(6.0, Math.max(-6.0, val));
   let biggestSwingMove: Move | null = null;
