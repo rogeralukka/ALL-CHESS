@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     seed_demo_data: bool = Field(default=False)
     frontend_origin: str = Field(default="http://localhost:5173")
     database_url: str = Field(default="sqlite:///./all_chess.db")
+    # Engine resources. Defaults suit a desktop; on a 512 MB host set ENGINE_POOL_SIZE=1, ENGINE_HASH_MB=16, ENGINE_THREADS=1.
+    engine_pool_size: int = Field(default=2, ge=1, le=8)
+    engine_hash_mb: int = Field(default=128, ge=1, le=4096)
+    engine_threads: int = Field(default=2, ge=1, le=64)
     stockfish_path: str = Field(default="backend/bin/stockfish.exe")
     chesscom_contact_email: str = Field(default="contact@allchess.local")
     
