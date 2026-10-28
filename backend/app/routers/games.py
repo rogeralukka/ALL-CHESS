@@ -11,7 +11,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.game import Game as GameModel
 from app.models.analysis import AnalysisJob, GameAnalysis, STALE_JOB_MINUTES
-from app.schemas.game import Game, AnalyzeGameRequest, CoachGameCreate, CoachGameCreated
+from app.schemas.game import Game, AnalyzeGameRequest, BrowserEvaluationsRequest, CoachGameCreate, CoachGameCreated
 from app.schemas.job import JobResponse
 from app.auth import get_current_user
 from app.services.engine_service import analyze_game_moves_full, LEVEL_ORDER
@@ -278,7 +278,8 @@ async def run_game_analysis_task(
     job_id: str,
     game_id: str,
     user_id: str,
-    level: str = "standard"
+    level: str = "standard",
+    external_evals: Optional[List[Dict[str, Any]]] = None
 ) -> None:
     db = app.database.SessionLocal()
     try:
@@ -308,7 +309,8 @@ async def run_game_analysis_task(
             white_rating=white_r,
             black_rating=black_r,
             on_progress=update_progress,
-            db=db
+            db=db,
+            external_evals=external_evals
         )
 
         real_depth = analysis_result.get("analysisDepth", 18)
@@ -448,4 +450,44 @@ def analyze_game(
     db.refresh(job)
 
     background_tasks.add_task(run_game_analysis_task, job.id, game.id, current_user.id, req_level)
+    return JobResponse(job_id=job.id)
+
+
+@router.post("/{game_id}/evaluations", response_model=JobResponse)
+def submit_browser_evaluations(
+    game_id: str,
+    payload: BrowserEvaluationsRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Finish a review whose engine search ran in the user's browser. The server only grades the moves,
+    computes accuracy and writes commentary, so no engine is needed here. Poll /jobs/{id} as usual."""
+    game = db.query(GameModel).filter(
+        GameModel.id == game_id,
+        GameModel.user_id == current_user.id
+    ).first()
+    if not game:
+        raise HTTPException(status_code=404, detail=f"Game '{game_id}' not found.")
+
+    expected = len(game.moves or []) + 1
+    if len(payload.positions) != expected:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Expected {expected} positions (moves + 1), got {len(payload.positions)}."
+        )
+
+    job = AnalysisJob(
+        user_id=current_user.id,
+        game_id=game.id,
+        job_type="analysis",
+        status="queued",
+        progress=0
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    external = [{"lines": [ln.model_dump() for ln in pos.lines]} for pos in payload.positions]
+    background_tasks.add_task(run_game_analysis_task, job.id, game.id, current_user.id, payload.level, external)
     return JobResponse(job_id=job.id)

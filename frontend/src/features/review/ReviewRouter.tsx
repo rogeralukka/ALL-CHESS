@@ -9,6 +9,7 @@ import { GameSummary } from './GameSummary';
 import { ReviewBoard } from './ReviewBoard';
 import { PieceHopper } from '@/components/LoadingScreen';
 import { AnalysisLevel, loadLevel, saveLevel } from './analysisLevels';
+import { BROWSER_LIMITS, START_FEN, searchPositions } from '@/services/browserReviewService';
 
 export const ReviewRouter: React.FC = () => {
   const params = useParams();
@@ -45,23 +46,62 @@ export const ReviewRouter: React.FC = () => {
     saveLevel(id);
   };
 
-  /** Runs (or re-runs) the Stockfish review on the backend and waits for it. Returns the fresh game. */
-  const analyzeGame = async (id: string, lvl: string, force: boolean, isActive: () => boolean): Promise<Game | null> => {
-    const analyzeRes = await api.post<{ jobId: string }>(`/games/${id}/analyze`, { level: lvl, force });
-    const jobId = analyzeRes?.jobId;
-    if (!jobId) return null;
+  /** Polls a backend job until it finishes. Progress from `from` to `to` is mapped onto the bar. */
+  const waitForJob = async (id: string, jobId: string, isActive: () => boolean, from = 0, to = 100): Promise<Game | null> => {
     for (let attempts = 0; attempts < 300 && isActive(); attempts++) {
       await new Promise((r) => setTimeout(r, 800));
       try {
         const job = await api.get<{ id: string; status: 'queued' | 'processing' | 'done' | 'failed'; progress: number }>(`/jobs/${jobId}`);
         if (job.status === 'done') return gameRepository.getGameById(id);
         if (job.status === 'failed') return null;
-        if (isActive()) setAnalysisProgress(job.progress);
+        if (isActive()) setAnalysisProgress(Math.round(from + (job.progress / 100) * (to - from)));
       } catch {
         // transient error during polling
       }
     }
     return null;
+  };
+
+  /**
+   * Preferred path: Stockfish runs in this browser (the person's own CPU), then the backend only grades the moves.
+   * Returns undefined when the browser can't do it (no Worker, engine error), so the caller falls back to the server.
+   */
+  const analyzeOnDevice = async (game: Game, lvl: AnalysisLevel['id'], isActive: () => boolean): Promise<Game | null | undefined> => {
+    if (!game.moves?.length || game.moves.some((m) => !m.fen)) return undefined;
+    let positions;
+    try {
+      positions = await searchPositions([START_FEN, ...game.moves.map((m) => m.fen)], BROWSER_LIMITS[lvl], {
+        isCancelled: () => !isActive(),
+        onProgress: (pct) => {
+          if (isActive()) setAnalysisProgress(Math.round(pct * 0.9));
+        },
+      });
+    } catch (err) {
+      console.warn('On-device analysis unavailable, using the server instead:', err);
+      return undefined;
+    }
+    if (!isActive()) return null;
+    try {
+      const res = await api.post<{ jobId: string }>(`/games/${game.id}/evaluations`, { level: lvl, positions });
+      if (!res?.jobId) return undefined;
+      return await waitForJob(game.id, res.jobId, isActive, 90, 100);
+    } catch (err) {
+      console.warn('Server rejected on-device evaluations, using the server engine instead:', err);
+      return undefined;
+    }
+  };
+
+  /** Runs (or re-runs) the Stockfish review: on this device when possible, otherwise on the backend. Returns the fresh game. */
+  const analyzeGame = async (id: string, lvl: AnalysisLevel['id'], force: boolean, isActive: () => boolean, known?: Game | null): Promise<Game | null> => {
+    const current = known ?? (await gameRepository.getGameById(id));
+    if (current) {
+      const local = await analyzeOnDevice(current, lvl, isActive);
+      if (local !== undefined) return local;
+    }
+    const analyzeRes = await api.post<{ jobId: string }>(`/games/${id}/analyze`, { level: lvl, force });
+    const jobId = analyzeRes?.jobId;
+    if (!jobId) return null;
+    return waitForJob(id, jobId, isActive);
   };
 
   const reanalyze = async (lvl: AnalysisLevel['id']) => {
@@ -70,7 +110,7 @@ export const ReviewRouter: React.FC = () => {
     setLoading(true);
     setAnalysisProgress(0);
     try {
-      const fresh = await analyzeGame(gameId, lvl, true, () => true);
+      const fresh = await analyzeGame(gameId, lvl, true, () => true, currentGame);
       if (fresh) setCurrentGame(fresh);
     } catch (err) {
       console.error('Failed to re-analyze game:', err);
@@ -111,7 +151,7 @@ export const ReviewRouter: React.FC = () => {
 
         if (!isAnalyzed && import.meta.env.VITE_USE_MOCKS !== 'true') {
           try {
-            const analyzed = await analyzeGame(gameId, loadLevel(), false, () => active);
+            const analyzed = await analyzeGame(gameId, loadLevel(), false, () => active, game);
             if (active && analyzed) game = analyzed;
           } catch (analyzeErr) {
             console.error('Failed to analyze game:', analyzeErr);
@@ -153,7 +193,7 @@ export const ReviewRouter: React.FC = () => {
         </div>
         {analysisProgress !== null && (
           <>
-            <div className="text-[14px] text-theme-muted -mt-1">Stockfish is checking every move · {analysisProgress}%</div>
+            <div className="text-[14px] text-theme-muted -mt-1">Stockfish is checking every move on your device · {analysisProgress}%</div>
             <div className="w-64 h-2.5 bg-black/30 rounded-full overflow-hidden" aria-hidden="true">
               <div className="h-full bg-[#81b64c] transition-all duration-300 rounded-full" style={{ width: `${analysisProgress}%` }} />
             </div>
