@@ -108,6 +108,26 @@ class AnalyzeGameRequest(CamelModel):
     level: Optional[Literal['standard', 'deep', 'deeper', 'max']] = 'standard'
     force: Optional[bool] = False
 
+class BrowserEngineLine(CamelModel):
+    """One engine line as reported by the browser's Stockfish: UCI moves and the raw UCI score
+    from the point of view of the side to move."""
+    pv: List[str] = Field(..., min_length=1, max_length=24)
+    cp: Optional[int] = Field(default=None, ge=-100000, le=100000)
+    mate: Optional[int] = Field(default=None, ge=-1000, le=1000)
+    depth: int = Field(default=1, ge=0, le=128)
+
+
+class BrowserPosition(CamelModel):
+    lines: List[BrowserEngineLine] = Field(default_factory=list, max_length=5)
+
+
+class BrowserEvaluationsRequest(CamelModel):
+    """Per-position engine results computed on the user's own device. positions[i] is the position before
+    move i, and the last entry is the final position, so there are len(moves) + 1 of them."""
+    level: Literal['standard', 'deep', 'deeper', 'max'] = 'standard'
+    positions: List[BrowserPosition] = Field(..., min_length=1, max_length=1201)
+
+
 class GameFilterParams(CamelModel):
     opening: Optional[str] = None
     color: Optional[Literal['white', 'black', 'all']] = 'all'

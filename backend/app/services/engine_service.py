@@ -364,6 +364,34 @@ async def analyze_position(
         return await asyncio.to_thread(_analyse_fen_sync, engine, fen, depth, multipv, time_limit)
 
 
+def _infos_from_external(pos_board: chess.Board, ext: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Turns engine lines reported by the browser into the same info dicts python-chess returns, so the
+    rest of the review code is shared. Scores are from the side to move's point of view (raw UCI)."""
+    infos: List[Dict[str, Any]] = []
+    for line in (ext or {}).get("lines", []):
+        cp, mate = line.get("cp"), line.get("mate")
+        if mate is not None:
+            score = chess.engine.PovScore(chess.engine.Mate(int(mate)), pos_board.turn)
+        elif cp is not None:
+            score = chess.engine.PovScore(chess.engine.Cp(int(cp)), pos_board.turn)
+        else:
+            continue
+        pv: List[chess.Move] = []
+        tb = pos_board.copy()
+        for uci in line.get("pv", []):
+            try:
+                mv = chess.Move.from_uci(uci)
+            except Exception:
+                break
+            if mv not in tb.legal_moves:
+                break
+            pv.append(mv)
+            tb.push(mv)
+        if pv:
+            infos.append({"pv": pv, "score": score, "depth": int(line.get("depth") or 1)})
+    return infos
+
+
 def _run_single_pass_review_sync(
     engine: chess.engine.SimpleEngine,
     moves_list: List[Dict[str, Any]],
@@ -375,10 +403,11 @@ def _run_single_pass_review_sync(
     black_rating: Optional[int] = None,
     on_progress: Optional[Callable[[int], None]] = None,
     db: Optional[Session] = None,
-    level: str = "standard"
+    level: str = "standard",
+    external_evals: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
-    ONE EVAL PER POSITION:
+    ONE EVAL PER POSITION (searched here, or supplied by the browser through external_evals):
     Evaluates each position in the game exactly once (depth 16 / 0.3s, MultiPV 3).
     A move's 'after' eval is the 'before' eval of the next position.
     Checkmate / stalemate are identified without wasteful engine searches.
@@ -452,11 +481,16 @@ def _run_single_pass_review_sync(
                 "top_lines": []
             })
         else:
-            # Engine search
-            limit = chess.engine.Limit(depth=depth, time=time_per_move)
-            infos = engine.analyse(pos_board, limit=limit, multipv=multipv)
-            if isinstance(infos, dict):
-                infos = [infos]
+            if external_evals is not None:
+                infos = _infos_from_external(pos_board, external_evals[p_idx])
+                if not infos:
+                    raise ValueError(f"No usable engine lines for position {p_idx}")
+            else:
+                # Engine search
+                limit = chess.engine.Limit(depth=depth, time=time_per_move)
+                infos = engine.analyse(pos_board, limit=limit, multipv=multipv)
+                if isinstance(infos, dict):
+                    infos = [infos]
 
             top_lines: List[Dict[str, Any]] = []
             best_eval = 0.2
@@ -735,33 +769,29 @@ async def analyze_game_moves_full(
     white_rating: Optional[int] = None,
     black_rating: Optional[int] = None,
     on_progress: Optional[Callable[[int], None]] = None,
-    db: Optional[Session] = None
+    db: Optional[Session] = None,
+    external_evals: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Performs game review across every position in a game according to specified analysis level.
-    Acquires an exclusive SimpleEngine instance from the pool.
+    Acquires an exclusive SimpleEngine instance from the pool, unless the browser already searched the
+    positions (external_evals), in which case no engine is needed here.
     """
     level_cfg = ANALYSIS_LEVELS.get(level, ANALYSIS_LEVELS["standard"])
     target_depth = depth if depth is not None else level_cfg["depth"]
     target_time = time_per_move if time_per_move is not None else level_cfg["time_per_move"]
     multipv = level_cfg.get("multipv", 3)
 
-    pool = get_global_engine_pool()
-    async with pool.acquire() as engine:
-        review_data = await asyncio.to_thread(
-            _run_single_pass_review_sync,
-            engine,
-            moves_list,
-            target_depth,
-            target_time,
-            multipv,
-            is_user_white,
-            white_rating,
-            black_rating,
-            on_progress,
-            db,
-            level
-        )
+    args = (
+        moves_list, target_depth, target_time, multipv, is_user_white,
+        white_rating, black_rating, on_progress, db, level,
+    )
+    if external_evals is not None:
+        review_data = await asyncio.to_thread(_run_single_pass_review_sync, None, *args, external_evals)
+    else:
+        pool = get_global_engine_pool()
+        async with pool.acquire() as engine:
+            review_data = await asyncio.to_thread(_run_single_pass_review_sync, engine, *args)
 
     # Scale turning points comment limit with depth level
     level_comment_limits = {
