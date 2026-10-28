@@ -24,3 +24,19 @@ class AnalysisJob(Base):
     result = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+
+# A background analysis runs inside the API process, so it dies whenever the process restarts (deploy, crash, free-tier
+# restart) and its row would stay "processing" forever. These helpers keep such rows from blocking new reviews.
+STALE_JOB_MINUTES = 10
+
+
+def fail_orphaned_jobs(db) -> int:
+    """Mark every queued/processing job as failed. Call once at startup, when no job can really be running."""
+    jobs = db.query(AnalysisJob).filter(AnalysisJob.status.in_(["queued", "processing"])).all()
+    for job in jobs:
+        job.status = "failed"
+        job.error_message = "Interrupted by a server restart. Please start the review again."
+    if jobs:
+        db.commit()
+    return len(jobs)

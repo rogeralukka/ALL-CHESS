@@ -10,7 +10,7 @@ from app.config import BACKEND_DIR, settings
 from app.database import get_db
 from app.models.user import User
 from app.models.game import Game as GameModel
-from app.models.analysis import AnalysisJob, GameAnalysis
+from app.models.analysis import AnalysisJob, GameAnalysis, STALE_JOB_MINUTES
 from app.schemas.game import Game, AnalyzeGameRequest, CoachGameCreate, CoachGameCreated
 from app.schemas.job import JobResponse
 from app.auth import get_current_user
@@ -20,7 +20,7 @@ logger = logging.getLogger("all_chess.games_router")
 import re
 import chess
 import chess.pgn
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from app.services.pgn_parser import parse_pgn_game
 
 def extract_termination(dg: GameModel) -> Optional[str]:
@@ -427,7 +427,13 @@ def analyze_game(
     ).first()
 
     if active_job and not force:
-        return JobResponse(job_id=active_job.id)
+        age = datetime.now(timezone.utc) - active_job.updated_at.replace(tzinfo=timezone.utc)
+        if age <= timedelta(minutes=STALE_JOB_MINUTES):
+            return JobResponse(job_id=active_job.id)
+        # No progress for a long time: its worker is gone. Fail it and start fresh.
+        active_job.status = "failed"
+        active_job.error_message = "Stalled. Restarted."
+        db.commit()
 
     # 3. Create fresh job and queue in background
     job = AnalysisJob(
