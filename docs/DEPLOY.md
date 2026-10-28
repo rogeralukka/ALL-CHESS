@@ -42,3 +42,8 @@ Render's free tier has no persistent disk, so SQLite would be wiped on every res
 (`postgresql+psycopg2://USER:PASS@HOST/DB?sslmode=require`, copied from the Neon dashboard) and remove the disk. Migrations and the login/save-game flow were
 tested against PostgreSQL 16. Caveats: the free service sleeps after ~15 min idle (first request takes ~30-60 s to wake) and its CPU is slow, so game
 reviews take noticeably longer than on a paid instance.
+
+### Free tier memory (512 MB)
+
+Stockfish with the desktop defaults (2 engines x 128 MB hash) runs the free instance out of memory and Render restarts it mid-review. Set these on the service:
+`ENGINE_POOL_SIZE=1`, `ENGINE_HASH_MB=16`, `ENGINE_THREADS=1`.

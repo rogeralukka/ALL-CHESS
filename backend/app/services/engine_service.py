@@ -294,7 +294,7 @@ class EnginePool:
         path = get_stockfish_executable_path()
         for _ in range(self.size):
             engine = chess.engine.SimpleEngine.popen_uci(path)
-            engine.configure({"Threads": 2, "Hash": 128})
+            engine.configure({"Threads": settings.engine_threads, "Hash": settings.engine_hash_mb})
             self._all_engines.append(engine)
             await self._queue.put(engine)
 
@@ -316,7 +316,7 @@ class EnginePool:
                     pass
                 path = get_stockfish_executable_path()
                 engine = chess.engine.SimpleEngine.popen_uci(path)
-                engine.configure({"Threads": 2, "Hash": 128})
+                engine.configure({"Threads": settings.engine_threads, "Hash": settings.engine_hash_mb})
             yield engine
         finally:
             await self._queue.put(engine)
@@ -331,7 +331,7 @@ class EnginePool:
         self._queue = None
 
 
-_GLOBAL_ENGINE_POOL = EnginePool(size=2)
+_GLOBAL_ENGINE_POOL = EnginePool(size=settings.engine_pool_size)
 ANALYSIS_LEVELS: Dict[str, Dict[str, Any]] = {
     "standard": {"depth": 18, "time_per_move": 0.35, "multipv": 3},
     "deep": {"depth": 22, "time_per_move": 0.6, "multipv": 3},
