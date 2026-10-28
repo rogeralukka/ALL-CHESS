@@ -47,6 +47,15 @@ try:
         seed_puzzles(db)
 except Exception:
     pass
+try:
+    if os.environ.get("TESTING") != "1":
+        from app.models.analysis import fail_orphaned_jobs
+        with SessionLocal() as db:
+            n = fail_orphaned_jobs(db)
+            if n:
+                logger.warning("Marked %d interrupted analysis job(s) as failed.", n)
+except Exception as e:
+    logger.warning("Could not clean up interrupted analysis jobs: %s", e)
 
 app = FastAPI(
     title="ALL-CHESS API",
