@@ -48,7 +48,8 @@ const PHONE_TABS: Array<{ to: string; label: string; short?: string; icon: strin
 ];
 const MORE_ITEMS = [
   { to: '/play', label: 'Play Coach', icon: 'play' },
-  { to: '/profile', label: 'Profile & Stats', icon: 'profile' },
+  { to: '/profile', label: 'Profile', icon: 'profile' },
+  { to: '/stats', label: 'Advanced Stats', icon: 'leaderboard' },
   { to: '/scout', label: 'Scout', icon: 'scout' },
   { to: '/leaderboard', label: 'Leaderboard', icon: 'leaderboard' },
   { to: '/settings', label: 'Settings', icon: 'settings' },

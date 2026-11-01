@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { InlineLoader } from '@/components/LoadingScreen';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ChevronRight, Pencil } from 'lucide-react';
@@ -76,6 +76,7 @@ const RatingTile: React.FC<{ mode: GameMode; label: string; rating: number; delt
 
 export const Profile: React.FC = () => {
   const me = useCurrentUser();
+  const navigate = useNavigate();
   const puzzleRating = storage.get<number>('all_chess_puzzle_rating', 0);
   const [tab, setTab] = useState<Tab>('overview');
   const [speed, setSpeed] = useState<Speed>('rapid');
@@ -379,6 +380,16 @@ export const Profile: React.FC = () => {
               </div>
             </div>
           </Card>
+
+          <button
+            type="button"
+            onClick={() => navigate(`/stats?mode=${speed}`)}
+            className="w-full flex items-center gap-3 rounded-[8px] px-4 h-16 text-left bg-[var(--color-win)]/15 border border-[var(--color-win)]/40 active:opacity-80"
+            data-testid="open-advanced-stats"
+          >
+            <span className="flex-1 font-display font-extrabold text-[18px] text-theme-text">Advanced Stats<span className="block text-[13px] font-semibold text-theme-muted">Openings, tactics, strategy and endgames</span></span>
+            <span className="text-theme-muted text-[22px]">›</span>
+          </button>
 
           {/* Opening stats + Phase accuracy + Strengths */}
           <StatsSections />
