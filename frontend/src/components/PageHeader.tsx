@@ -63,7 +63,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, a
 
 /** Standard page width + padding for non-board pages. */
 export const PageContainer: React.FC<{ children: React.ReactNode; className?: string; wide?: boolean }> = ({ children, className = '', wide }) => (
-  <div className={`w-full mx-auto px-4 md:px-8 py-5 md:py-7 space-y-5 ${wide ? 'max-w-[1280px]' : 'max-w-[1120px]'} ${className}`}>{children}</div>
+  <div className={`w-full mx-auto px-4 md:px-8 pt-5 pb-[84px] sm:pb-5 md:py-7 space-y-5 ${wide ? 'max-w-[1280px]' : 'max-w-[1120px]'} ${className}`}>{children}</div>
 );
 
 /** Section title used inside pages (matches the reference's bold section heads). */

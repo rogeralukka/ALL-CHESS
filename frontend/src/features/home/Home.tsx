@@ -21,6 +21,8 @@ import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
 import { storage } from '@/lib/storage';
 import { useMotion } from '@/lib/useMotion';
 import { Flame, ChevronRight, Sparkles, Users } from 'lucide-react';
+import { useMediaQuery } from '@/lib/useMediaQuery';
+import { PhoneHome } from './PhoneHome';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -71,6 +73,7 @@ export const Home: React.FC = () => {
   const me = useCurrentUser();
   const navigate = useNavigate();
   const { isFull } = useMotion();
+  const isPhone = useMediaQuery('(max-width: 639px)');
   const [coachDismissed, setCoachDismissed] = useState(false);
   const [recentGames, setRecentGames] = useState<Game[]>([]);
   const [ratings, setRatings] = useState<RatingSummary[]>([]);
@@ -119,7 +122,7 @@ export const Home: React.FC = () => {
   const puzzleStreak = storage.get('all_chess_puzzle_streak', 0);
   const puzzleIndex = storage.get('all_chess_puzzle_index', 0);
   const puzzleLevel = Math.floor(puzzleIndex / 5) + 1;
-  const stageNo = currentStage ? MOCK_LEARN_STAGES.filter((s) => s.category === currentStage.category).indexOf(currentStage) + 1 : 1;
+  const stageNo = currentStage ? Math.max(1, MOCK_LEARN_STAGES.filter((s) => s.category === currentStage.category).findIndex((s) => s.id === currentStage.id) + 1) : 1;
 
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const today = (new Date().getDay() + 6) % 7;
@@ -129,6 +132,21 @@ export const Home: React.FC = () => {
       <PageContainer wide>
         <InlineLoader label="Setting up your home…" page />
       </PageContainer>
+    );
+  }
+
+  if (isPhone) {
+    return (
+      <PhoneHome
+        username={me.username}
+        streak={5}
+        recentGames={recentGames}
+        ratings={ratings}
+        friends={friends}
+        currentStage={currentStage}
+        stageNo={stageNo}
+        puzzle={{ rating: puzzleRating, streak: puzzleStreak, level: puzzleLevel, solvedInLevel: puzzleIndex % 5, perLevel: 5 }}
+      />
     );
   }
 
@@ -331,12 +349,6 @@ export const Home: React.FC = () => {
         <GameHistoryTable games={recentGames} analyzingId={recentGames[2]?.id} />
       </Card>
 
-      {/* Phones: the big green Play button that floats above the bottom bar, as in the Chess.com app */}
-      <div className="sm:hidden sticky bottom-[calc(64px+12px+env(safe-area-inset-bottom))] z-30 pt-1" data-testid="home-play">
-        <Button variant="primary" size="lg" fullWidth className="!h-14 !text-[22px] !font-extrabold font-display shadow-lg" onClick={() => navigate('/play')}>
-          Play
-        </Button>
-      </div>
     </PageContainer>
   );
 };

@@ -185,12 +185,12 @@ export const Leaderboard: React.FC = () => {
               <input
                 value={newFriend}
                 onChange={(e) => setNewFriend(e.target.value)}
-                placeholder="Add a friend by their Chess.com username"
+                placeholder="Friend's Chess.com username"
                 aria-label="Friend's Chess.com username"
-                className="flex-1 h-11 px-4 rounded-[5px] text-[15px] text-theme-text placeholder:text-theme-muted focus:outline-none focus-visible:!outline-none border border-transparent focus:border-[#81b64c]"
+                className="flex-1 min-w-0 h-11 px-4 rounded-[5px] text-[15px] text-theme-text placeholder:text-theme-muted focus:outline-none focus-visible:!outline-none border border-transparent focus:border-[#81b64c]"
                 style={{ background: 'var(--input-bg)' }}
               />
-              <button type="submit" disabled={!newFriend.trim() || adding} className="btn-primary h-11 px-5 rounded-[5px] text-[15px] font-extrabold inline-flex items-center gap-1.5 disabled:opacity-60">
+              <button type="submit" disabled={!newFriend.trim() || adding} className="btn-primary flex-shrink-0 h-11 px-4 sm:px-5 rounded-[5px] text-[15px] font-extrabold inline-flex items-center gap-1.5 disabled:opacity-60">
                 <Plus size={17} /> {adding ? 'Adding…' : 'Add'}
               </button>
             </form>
@@ -205,13 +205,13 @@ export const Leaderboard: React.FC = () => {
             return (
               <section key={s} className="cc-card overflow-hidden" data-testid={`leaderboard-${s}`}>
                 <div className="flex flex-col sm:flex-row">
-                  <div className="sm:w-[170px] flex sm:flex-col items-center justify-center gap-3 px-5 pt-5 sm:py-6">
-                    <ModeIcon mode={s as GameMode} size={60} />
-                    <h2 className="text-[22px] font-display font-extrabold text-theme-text">{LABEL[s]}</h2>
+                  <div className="sm:w-[170px] flex sm:flex-col items-center justify-start sm:justify-center gap-3 px-4 sm:px-5 pt-4 sm:py-6">
+                    <ModeIcon mode={s as GameMode} size={36} className="sm:w-[60px] sm:h-[60px]" />
+                    <h2 className="text-[19px] sm:text-[22px] font-display font-extrabold text-theme-text">{LABEL[s]}</h2>
                   </div>
                   <div className="flex-1 min-w-0 px-4 sm:px-2 py-4 sm:pr-6">
                     {rows.length === 0 ? (
-                      <p className="py-8 text-[14px] text-theme-muted text-center sm:text-left">
+                      <p className="py-2 sm:py-8 text-[14px] text-theme-muted text-left">
                         {scope === 'friends' ? `No ${LABEL[s].toLowerCase()} ratings yet. Add a friend above to compare.` : `You haven't played any ${LABEL[s].toLowerCase()} games yet.`}
                       </p>
                     ) : (

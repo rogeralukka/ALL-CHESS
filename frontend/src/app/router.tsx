@@ -4,11 +4,27 @@ import { Layout } from './Layout';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { NotFound } from './NotFound';
 
-const Home = lazy(() => import('@/features/home/Home'));
-const ReviewRouter = lazy(() => import('@/features/review/ReviewRouter'));
-const PlayGame = lazy(() => import('@/features/play/PlayGame'));
-const LearnPath = lazy(() => import('@/features/learn/LearnPath'));
-const PuzzleScreen = lazy(() => import('@/features/puzzles/PuzzleScreen'));
+const loadHome = () => import('@/features/home/Home');
+const loadReview = () => import('@/features/review/ReviewRouter');
+const loadPlay = () => import('@/features/play/PlayGame');
+const loadLearn = () => import('@/features/learn/LearnPath');
+const loadPuzzles = () => import('@/features/puzzles/PuzzleScreen');
+
+// The first screen downloads while the session check is still running instead of after it,
+// and the other tab-bar screens follow once the browser is idle, so switching tabs is instant.
+if (typeof window !== 'undefined') {
+  const first = window.location.pathname.split('/')[1];
+  const firstLoader = ({ review: loadReview, play: loadPlay, learn: loadLearn, puzzles: loadPuzzles } as Record<string, () => Promise<unknown>>)[first] ?? loadHome;
+  firstLoader().catch(() => undefined);
+  const idle = (cb: () => void) => ('requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 4000 }) : setTimeout(cb, 2500));
+  idle(() => [loadHome, loadPuzzles, loadLearn, loadReview].forEach((f) => f().catch(() => undefined)));
+}
+
+const Home = lazy(loadHome);
+const ReviewRouter = lazy(loadReview);
+const PlayGame = lazy(loadPlay);
+const LearnPath = lazy(loadLearn);
+const PuzzleScreen = lazy(loadPuzzles);
 const ScoutSearch = lazy(() => import('@/features/scout/ScoutSearch'));
 const Profile = lazy(() => import('@/features/profile/Profile'));
 const AdvancedStats = lazy(() => import('@/features/stats/AdvancedStats'));

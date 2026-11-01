@@ -254,7 +254,10 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
       </div>
 
       {/* Primary Play Button - Pinned at the bottom of the panel (48px tall) */}
-      <div className="sticky bottom-0 bg-theme-card/95 backdrop-blur-sm pt-2 pb-1 border-t border-theme-border/50 z-10">
+      <div
+        className={phone ? 'sticky -bottom-4 -mx-4 px-4 pt-3 pb-4 z-10' : 'sticky bottom-0 bg-theme-card/95 backdrop-blur-sm pt-2 pb-1 border-t border-theme-border/50 z-10'}
+        style={phone ? { background: 'var(--side-panel-bg)' } : undefined}
+      >
         <Button
           variant="primary"
           size="lg"

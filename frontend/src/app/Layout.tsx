@@ -206,7 +206,7 @@ export const Layout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="app-bg flex h-screen w-screen items-center justify-center text-theme-text font-sans">
+      <div className="app-bg flex h-[100dvh] w-screen items-center justify-center text-theme-text font-sans">
         <div className="flex flex-col items-center gap-4">
           <PieceHopper size={150} />
           <div className="text-xs font-display font-bold text-theme-muted tracking-wider uppercase">
@@ -219,7 +219,7 @@ export const Layout: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="app-bg flex h-screen w-screen items-center justify-center text-theme-text font-sans">
+      <div className="app-bg flex h-[100dvh] w-screen items-center justify-center text-theme-text font-sans">
         <LoginGate onSuccess={checkGamesAndAutoSync} />
         <ToastContainer />
       </div>
@@ -227,7 +227,7 @@ export const Layout: React.FC = () => {
   }
 
   return (
-    <div className="app-bg flex h-screen w-screen overflow-hidden text-theme-text font-sans relative">
+    <div className="app-bg flex h-[100dvh] w-screen overflow-hidden text-theme-text font-sans relative">
       {/* --- DESKTOP & TABLET SIDEBAR --- */}
       <aside
         className={`hidden sm:flex flex-col flex-shrink-0 transition-[width] duration-200 ease-out z-30 relative ${widthCls}`}
@@ -303,7 +303,7 @@ export const Layout: React.FC = () => {
       </aside>
 
       {/* --- MAIN --- */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto pb-16 sm:pb-0 relative z-10">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overscroll-contain pb-16 sm:pb-0 relative z-10">
         {/* soft page entrance when switching sections */}
         <motion.div
           key={location.pathname.split('/')[1] || 'home'}

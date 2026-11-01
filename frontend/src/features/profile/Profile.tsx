@@ -8,6 +8,8 @@ import { Card } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
 import { PageContainer } from '@/components/PageHeader';
 import { GameHistoryTable } from '@/components/GameHistoryTable';
+import { PhoneGameRows } from '@/components/PhoneGameRows';
+import { useMediaQuery } from '@/lib/useMediaQuery';
 import { ModeIcon, GameMode } from '@/components/ModeIcon';
 import { Sparkline } from '@/components/Charts';
 import { PlayerAvatar } from '@/components/Bits';
@@ -68,14 +70,18 @@ const RatingTile: React.FC<{ mode: GameMode; label: string; rating: number; delt
         </span>
       )}
     </div>
-    <div className="w-full rounded-[3px] overflow-hidden bg-black/[0.06] dark:bg-black/20">
-      <Sparkline values={trend} height={40} />
-    </div>
+    {/* a flat line of zeros says nothing: only draw the trend once there is one */}
+    {trend.filter((v) => v > 0).length > 1 && (
+      <div className="w-full rounded-[3px] overflow-hidden bg-black/[0.06] dark:bg-black/20">
+        <Sparkline values={trend} height={40} />
+      </div>
+    )}
   </button>
 );
 
 export const Profile: React.FC = () => {
   const me = useCurrentUser();
+  const isPhone = useMediaQuery('(max-width: 639px)');
   const navigate = useNavigate();
   const puzzleRating = storage.get<number>('all_chess_puzzle_rating', 0);
   const [tab, setTab] = useState<Tab>('overview');
@@ -150,10 +156,10 @@ export const Profile: React.FC = () => {
   const ladder = [...friends.map((f) => ({ name: f.username, rating: f.rating })), { name: 'You', rating: ratingOf('rapid') }].sort((a, b) => b.rating - a.rating);
   const friendsRank = ladder.findIndex((p) => p.name === 'You') + 1;
 
-  const speedGames = games.filter((g) => g.speed === speed && (color === 'all' || (color === 'white' ? g.white.username === 'You' : g.black.username === 'You')));
+  const speedGames = games.filter((g) => g.speed === speed && (color === 'all' || (color === 'white') === (g.isUserWhite ?? g.white.username === 'You')));
   const tally = speedGames.reduce(
     (t, g) => {
-      const w = g.white.username === 'You';
+      const w = g.isUserWhite ?? g.white.username === 'You';
       if (g.result === '1/2-1/2') t.d++;
       else if ((w && g.result === '1-0') || (!w && g.result === '0-1')) t.w++;
       else t.l++;
@@ -179,16 +185,16 @@ export const Profile: React.FC = () => {
     <PageContainer wide className="!max-w-[1200px]">
       {/* ---------------- header card */}
       <section className="panel overflow-hidden" data-testid="profile-hero">
-        <div className="p-5 flex flex-col sm:flex-row gap-5">
+        <div className="p-4 sm:p-5 flex flex-row gap-4 sm:gap-5">
           <div className="flex-shrink-0 self-start" data-testid="profile-avatar">
-            <PlayerAvatar name="You" size={168} square />
+            <PlayerAvatar name="You" size={isPhone ? 84 : 168} square />
           </div>
           <div className="flex-1 min-w-0 flex flex-col">
             <div className="flex items-start gap-3">
-              <h1 className="text-[28px] font-display font-bold text-theme-text leading-9 truncate" data-testid="profile-name">{me.username}</h1>
+              <h1 className="text-[24px] sm:text-[28px] font-display font-bold text-theme-text leading-8 sm:leading-9 truncate" data-testid="profile-name">{me.username}</h1>
               <img src={rank.tier.icon} alt={`${rank.tier.name} rank`} title={`${rank.tier.name} rank`} className="w-8 h-8 object-contain mt-0.5" />
               <Link to="/settings" className="btn-secondary ml-auto inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[3px] text-[14px] font-semibold text-theme-text">
-                <Pencil size={14} /> Edit Profile
+                <Pencil size={14} /> <span className="hidden sm:inline">Edit Profile</span>
               </Link>
             </div>
             <div className="text-[14px] text-theme-muted mt-1">Training to reach {rank.next ? rank.next.name : 'King'} rank</div>
@@ -221,9 +227,6 @@ export const Profile: React.FC = () => {
                     <div className="text-[22px] font-bold font-display text-theme-text leading-6 tabular-nums">{puzzleRating > 0 ? puzzleRating : '–'}</div>
                   </div>
                 </div>
-                <div className="rounded-[3px] overflow-hidden bg-black/[0.06] dark:bg-black/20">
-                  <Sparkline values={[0, 0]} height={40} />
-                </div>
               </Link>
             </div>
 
@@ -233,7 +236,7 @@ export const Profile: React.FC = () => {
                   Game History <span className="text-theme-muted">({games.length})</span>
                 </h2>
               </div>
-              <GameHistoryTable games={games.slice(0, 5)} />
+              {isPhone ? <PhoneGameRows games={games.slice(0, 5)} className="!rounded-none" /> : <GameHistoryTable games={games.slice(0, 5)} />}
               <button type="button" onClick={() => setTab('games')} className="w-full h-11 flex items-center justify-center gap-1 text-[14px] font-semibold text-theme-muted hover:text-theme-text border-t border-theme-border">
                 See More <ChevronRight size={15} />
               </button>
@@ -270,7 +273,7 @@ export const Profile: React.FC = () => {
               Game History <span className="text-theme-muted">({games.length})</span>
             </h2>
           </div>
-          <GameHistoryTable games={games} />
+          {isPhone ? <PhoneGameRows games={games} className="!rounded-none" /> : <GameHistoryTable games={games} />}
         </Card>
       )}
 

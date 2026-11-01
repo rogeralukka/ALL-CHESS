@@ -32,7 +32,7 @@ const clamp = (val: number) => Math.min(6.0, Math.max(-6.0, val));
 function generateCoachSummary(game: Game): { text: string; expression: CoachExpression } {
   const isWhiteWin = game.result === '1-0';
   const isBlackWin = game.result === '0-1';
-  const userIsWhite = game.white.username === 'You';
+  const userIsWhite = game.isUserWhite ?? game.white.username === 'You';
   const userWon = (userIsWhite && isWhiteWin) || (!userIsWhite && isBlackWin);
   const userLost = (userIsWhite && isBlackWin) || (!userIsWhite && isWhiteWin);
 
