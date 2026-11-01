@@ -28,13 +28,20 @@ from app.services.win_pct import eval_to_win_pct
 
 logger = logging.getLogger("all_chess.engine")
 
-# Load openings.json once and index book sequences
+# Load openings.json and ecoOpenings.json once and index book sequences
 OPENINGS_FILE = os.path.join(BACKEND_DIR, "app", "data", "openings.json")
 try:
     with open(OPENINGS_FILE, "r", encoding="utf-8") as f:
         _RAW_OPENINGS = json.load(f)
 except Exception:
     _RAW_OPENINGS = []
+
+ECO_FILE = os.path.join(BACKEND_DIR, "app", "data", "ecoOpenings.json")
+try:
+    with open(ECO_FILE, "r", encoding="utf-8") as f:
+        _RAW_ECO = json.load(f)
+except Exception:
+    _RAW_ECO = []
 
 BOOK_PREFIXES = set()
 BOOK_POSITION_EPDS = set()
@@ -52,6 +59,20 @@ for entry in _RAW_OPENINGS:
                 BOOK_POSITION_EPDS.add(b_temp.epd())
             except Exception:
                 break
+
+for entry in _RAW_ECO:
+    if len(entry) >= 3 and isinstance(entry[2], str):
+        m_list = entry[2].split()
+        if m_list:
+            for k in range(1, len(m_list) + 1):
+                BOOK_PREFIXES.add(tuple(m_list[:k]))
+            b_temp = chess.Board()
+            for san_move in m_list:
+                try:
+                    b_temp.push_san(san_move)
+                    BOOK_POSITION_EPDS.add(b_temp.epd())
+                except Exception:
+                    break
 
 
 def get_stockfish_executable_path() -> str:
@@ -270,14 +291,14 @@ def _analyse_fen_sync(
         eval_pawns = 99.0 if mover_color == chess.WHITE else -99.0
         return [
             TopEngineLine(
-                move="", eval=eval_pawns, mate=0, depth=depth, why="Checkmate", pv=[]
+                move="", eval=eval_pawns, mate=0, mate_in=0, depth=depth, why="Checkmate", pv=[]
             )
         ]
 
     if board.is_stalemate() or board.is_insufficient_material():
         return [
             TopEngineLine(
-                move="", eval=0.0, mate=None, depth=depth, why="Drawn position", pv=[]
+                move="", eval=0.0, mate=None, mate_in=None, depth=depth, why="Drawn position", pv=[]
             )
         ]
 
@@ -327,6 +348,7 @@ def _analyse_fen_sync(
                 move=first_move_san,
                 eval=eval_pawns,
                 mate=mate_val,
+                mate_in=mate_val,
                 depth=info.get("depth", depth),
                 why=why_text,
                 pv=pv_sans,
@@ -615,6 +637,7 @@ def _run_single_pass_review_sync(
                         "move": pv_sans[0] if pv_sans else pv[0].uci(),
                         "eval": line_eval,
                         "mate": line_mate,
+                        "mateIn": line_mate,
                         "depth": info.get("depth", depth),
                         "why": why_desc,
                         "pv": pv_sans,
@@ -647,6 +670,7 @@ def _run_single_pass_review_sync(
     is_in_book = True
     current_move_sans: list[str] = []
     last_mover_made_mistake = False
+    book_end_ply: int | None = None
 
     for idx, raw_move in enumerate(moves_list):
         san_move = raw_move.get("san", "")
@@ -665,6 +689,7 @@ def _run_single_pass_review_sync(
                 or resulting_board.epd() in BOOK_POSITION_EPDS
             ):
                 is_book_move = True
+                book_end_ply = idx
             else:
                 is_in_book = False
 
@@ -724,7 +749,7 @@ def _run_single_pass_review_sync(
                         [1, 3, 3, 5, 9][p - 1] * len(tb.pieces(p, opp_color))
                         for p in range(1, 6)
                     )
-                    if cur_mat - init_mat >= 2:
+                    if cur_mat - init_mat >= 1:
                         best_wins_material_or_mate = True
                         break
 
@@ -829,6 +854,7 @@ def _run_single_pass_review_sync(
         updated_m["eval"] = {
             "eval": pos_after["eval"],
             "mate": pos_after["mate"],
+            "mateIn": pos_after["mate"],
             "bestMove": pos_before["best_move_san"],
             "winPct": played_win_pct,
             "why": played_move_why
@@ -836,6 +862,12 @@ def _run_single_pass_review_sync(
             else (engine_line_why if is_top else ""),
             "bestWhy": engine_line_why,
             "lines": pos_before["top_lines"],
+            "evalBefore": pos_before["eval"],
+            "evalAfter": pos_after["eval"],
+            "mateBefore": pos_before.get("mate"),
+            "mateAfter": pos_after.get("mate"),
+            "mateInBefore": pos_before.get("mate"),
+            "mateInAfter": pos_after.get("mate"),
         }
         # Metadata for post-engine turning-point LLM pass
         updated_m["_fen_before"] = board_before.fen()
@@ -865,6 +897,7 @@ def _run_single_pass_review_sync(
         "phaseGradesAll": phase_grades,
         "analysisLevel": level,
         "analysisDepth": real_depth,
+        "bookEnd": book_end_ply,
     }
 
 

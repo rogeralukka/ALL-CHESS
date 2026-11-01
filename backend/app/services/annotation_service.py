@@ -187,15 +187,15 @@ def compute_squares_annotation(
         )
         seen_squares.add(c["square"])
 
-    # 3. If miss, highlight the tactic target square if space permits
-    if is_miss and best_move_to_sq is not None and len(squares) < 4:
+    # 3. Destination of best move as target square (blunder, mistake, miss, inaccuracy)
+    if best_move_to_sq is not None and len(squares) < 4:
         target_name = chess.square_name(best_move_to_sq)
         if target_name not in seen_squares:
             squares.append(
                 {
                     "square": target_name,
                     "kind": "target",
-                    "reason": "target square of the missed tactic",
+                    "reason": "best move target",
                 }
             )
             seen_squares.add(target_name)
@@ -221,9 +221,12 @@ def compute_move_annotations(
     """
     tint = compute_tint(classification)
 
-    # Rule 7: If a move is a book move or is forced, emit only tint.
+    cls_lower = (classification or "").lower()
+
+    # Rule: book / best / excellent / good: no arrows, no squares (Chess.com shows only tints)
+    # Forced move (<= 1 legal move) also emits only tint.
     is_forced = num_legal_moves <= 1
-    if is_book or (classification and classification.lower() == "book") or is_forced:
+    if is_book or cls_lower in ("book", "best", "excellent", "good") or is_forced:
         return {
             "tint": tint,
             "arrows": [],
@@ -327,79 +330,24 @@ def compute_move_annotations(
             reply_san = reply_chess_move.uci()
 
     best_move_obj = None
-    refutation_obj = None
-    arrows: list[dict[str, str]] = []
-
-    # Rule 1: bestMove emitted for inaccuracy, mistake, miss, blunder only. Arrow kind 'best'.
-    if cls_lower in ("inaccuracy", "mistake", "miss", "blunder") and best_chess_move:
-        from_sq = chess.square_name(best_chess_move.from_square)
-        to_sq = chess.square_name(best_chess_move.to_square)
+    if best_chess_move and cls_lower in ("inaccuracy", "mistake", "miss", "blunder"):
         best_move_obj = {
             "san": best_san,
-            "from": from_sq,
-            "to": to_sq,
+            "from": chess.square_name(best_chess_move.from_square),
+            "to": chess.square_name(best_chess_move.to_square),
             "uci": best_chess_move.uci(),
         }
-        arrows.append({"from": from_sq, "to": to_sq, "kind": "best"})
 
-    # Rule 2: refutation for mistake, blunder (and miss when reply is capture or check)
-    should_emit_refutation = False
-    if reply_chess_move:
-        if cls_lower in ("mistake", "blunder"):
-            should_emit_refutation = True
-        elif cls_lower == "miss":
-            if board_after.is_capture(reply_chess_move) or board_after.gives_check(
-                reply_chess_move
-            ):
-                should_emit_refutation = True
-
-    if should_emit_refutation and reply_chess_move:
-        r_from = chess.square_name(reply_chess_move.from_square)
-        r_to = chess.square_name(reply_chess_move.to_square)
+    refutation_obj = None
+    if reply_chess_move and cls_lower in ("mistake", "blunder"):
         refutation_obj = {
             "san": reply_san,
-            "from": r_from,
-            "to": r_to,
+            "from": chess.square_name(reply_chess_move.from_square),
+            "to": chess.square_name(reply_chess_move.to_square),
             "uci": reply_chess_move.uci(),
         }
-        arrows.append({"from": r_from, "to": r_to, "kind": "refutation"})
 
-    # Rule 3: threat arrow for brilliant/great (strongest follow-up of played move, PV move 2)
-    if cls_lower in ("brilliant", "great"):
-        threat_move = None
-        if len(pv_moves_after) >= 2:
-            threat_move = pv_moves_after[1]
-        elif len(pv_moves_before) >= 3:
-            threat_move = pv_moves_before[2]
-
-        if threat_move:
-            t_from = chess.square_name(threat_move.from_square)
-            t_to = chess.square_name(threat_move.to_square)
-            arrows.append({"from": t_from, "to": t_to, "kind": "threat"})
-
-    # Rule 4: missed arrow for a miss (the tactic that was missed)
-    if cls_lower == "miss":
-        missed_move = None
-        if len(pv_moves_before) >= 2:
-            missed_move = pv_moves_before[1]
-        elif reply_chess_move and (
-            board_after.is_capture(reply_chess_move)
-            or board_after.gives_check(reply_chess_move)
-        ):
-            missed_move = reply_chess_move
-
-        if missed_move:
-            m_from = chess.square_name(missed_move.from_square)
-            m_to = chess.square_name(missed_move.to_square)
-            arrows.append({"from": m_from, "to": m_to, "kind": "missed"})
-
-    # Rule 5: squares (hanging, attacked, king-danger, target)
-    best_target_sq = best_chess_move.to_square if best_chess_move else None
-    squares = compute_squares_annotation(
-        board_after, best_move_to_sq=best_target_sq, is_miss=(cls_lower == "miss")
-    )
-
-    # Rule 6: pv (first up to 6 SAN moves of best line from position before)
+    # PV (first up to 6 SAN moves of best line from position before)
     pv_sans: list[str] = []
     tb = board_before.copy()
     for m in pv_moves_before[:6]:
@@ -409,10 +357,78 @@ def compute_move_annotations(
         except Exception:
             break
 
+    # Helper: check if arrow duplicates played move
+    def is_dup_played(m_obj: chess.Move) -> bool:
+        return bool(
+            played_move
+            and m_obj.from_square == played_move.from_square
+            and m_obj.to_square == played_move.to_square
+        )
+
+    arrows: list[dict[str, str]] = []
+    squares: list[dict[str, str]] = []
+
+    if cls_lower in ("brilliant", "great"):
+        # Section 3: great / brilliant: follow-up threat arrow only (kind: "threat"), max 1. No squares.
+        threat_move = None
+        if len(pv_moves_after) >= 2:
+            threat_move = pv_moves_after[1]
+        elif len(pv_moves_before) >= 3:
+            threat_move = pv_moves_before[2]
+
+        if threat_move and not is_dup_played(threat_move):
+            arrows.append({
+                "from": chess.square_name(threat_move.from_square),
+                "to": chess.square_name(threat_move.to_square),
+                "kind": "threat",
+            })
+        squares = []
+
+    elif cls_lower == "miss":
+        # Section 3: miss: exactly ONE arrow, the best move you missed (kind: "best"). No refutation arrow.
+        if best_chess_move and not is_dup_played(best_chess_move):
+            arrows.append({
+                "from": chess.square_name(best_chess_move.from_square),
+                "to": chess.square_name(best_chess_move.to_square),
+                "kind": "best",
+            })
+        best_target_sq = best_chess_move.to_square if best_chess_move else None
+        squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=True)
+
+    elif cls_lower in ("blunder", "mistake"):
+        # Section 3: blunder / mistake: refutation arrow first, best arrow second.
+        # Target square for best move destination.
+        if reply_chess_move and not is_dup_played(reply_chess_move):
+            arrows.append({
+                "from": chess.square_name(reply_chess_move.from_square),
+                "to": chess.square_name(reply_chess_move.to_square),
+                "kind": "refutation",
+            })
+        if best_chess_move and not is_dup_played(best_chess_move):
+            arrows.append({
+                "from": chess.square_name(best_chess_move.from_square),
+                "to": chess.square_name(best_chess_move.to_square),
+                "kind": "best",
+            })
+        best_target_sq = best_chess_move.to_square if best_chess_move else None
+        squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=False)
+
+    elif cls_lower == "inaccuracy":
+        # Inaccuracy: best arrow
+        if best_chess_move and not is_dup_played(best_chess_move):
+            arrows.append({
+                "from": chess.square_name(best_chess_move.from_square),
+                "to": chess.square_name(best_chess_move.to_square),
+                "kind": "best",
+            })
+        best_target_sq = best_chess_move.to_square if best_chess_move else None
+        squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=False)
+
+    # Section 3: Max 2 arrows and 4 squares per move
     return {
         "tint": tint,
-        "arrows": arrows,
-        "squares": squares,
+        "arrows": arrows[:2],
+        "squares": squares[:4],
         "bestMove": best_move_obj,
         "refutation": refutation_obj,
         "pv": pv_sans,
