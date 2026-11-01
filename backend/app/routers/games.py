@@ -1,29 +1,40 @@
 import json
+import logging
 import os
 import uuid
-import logging
-from typing import Any, Dict, List, Optional, Literal
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from typing import Any, Literal
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+
 import app.database
+from app.auth import get_current_user
 from app.config import BACKEND_DIR, settings
 from app.database import get_db
-from app.models.user import User
+from app.models.analysis import STALE_JOB_MINUTES, AnalysisJob, GameAnalysis
 from app.models.game import Game as GameModel
-from app.models.analysis import AnalysisJob, GameAnalysis, STALE_JOB_MINUTES
-from app.schemas.game import Game, AnalyzeGameRequest, BrowserEvaluationsRequest, CoachGameCreate, CoachGameCreated
+from app.models.user import User
+from app.schemas.game import (
+    AnalyzeGameRequest,
+    BrowserEvaluationsRequest,
+    CoachGameCreate,
+    CoachGameCreated,
+    Game,
+)
 from app.schemas.job import JobResponse
-from app.auth import get_current_user
-from app.services.engine_service import analyze_game_moves_full, LEVEL_ORDER
+from app.services.engine_service import LEVEL_ORDER, analyze_game_moves_full
 
 logger = logging.getLogger("all_chess.games_router")
 import re
+from datetime import UTC, datetime, timedelta
+
 import chess
 import chess.pgn
-from datetime import datetime, timedelta, timezone
+
 from app.services.pgn_parser import parse_pgn_game
 
-def extract_termination(dg: GameModel) -> Optional[str]:
+
+def extract_termination(dg: GameModel) -> str | None:
     if getattr(dg, "termination", None):
         return dg.termination
     if dg.pgn:
@@ -32,7 +43,8 @@ def extract_termination(dg: GameModel) -> Optional[str]:
             return m.group(1)
     return None
 
-def ensure_opening_name(op: Any) -> Dict[str, Any]:
+
+def ensure_opening_name(op: Any) -> dict[str, Any]:
     res = dict(op or {})
     name = res.get("name")
     if not name or str(name).strip() in ("", "Unknown", "Unknown Opening"):
@@ -40,9 +52,11 @@ def ensure_opening_name(op: Any) -> Dict[str, Any]:
         res["name"] = f"Opening ({eco})"
     return res
 
+
 router = APIRouter(prefix="/games", tags=["Games"])
 
 MOCK_GAMES_FILE = os.path.join(BACKEND_DIR, "app", "data", "mock_games.json")
+
 
 def maybe_seed_demo_data(db: Session, user: User) -> None:
     """Only seeds mock games if explicitly enabled by the dev flag SEED_DEMO_DATA=true."""
@@ -59,7 +73,7 @@ def maybe_seed_demo_data(db: Session, user: User) -> None:
     try:
         with open(MOCK_GAMES_FILE, "r", encoding="utf-8") as f:
             mock_games = json.load(f)
-            
+
         for g in mock_games:
             # Generate a fresh UUID per user per game so IDs never collide
             unique_id = f"game-{user.id[:8]}-{uuid.uuid4().hex[:8]}"
@@ -68,7 +82,9 @@ def maybe_seed_demo_data(db: Session, user: User) -> None:
                 id=unique_id,
                 user_id=user.id,
                 source=g.get("source", "online"),
-                platform=g.get("platform", "coach" if g.get("source") == "vs_coach" else "chesscom"),
+                platform=g.get(
+                    "platform", "coach" if g.get("source") == "vs_coach" else "chesscom"
+                ),
                 external_id=unique_id,
                 pgn=g.get("pgn", ""),
                 white=g.get("white", {}),
@@ -82,7 +98,7 @@ def maybe_seed_demo_data(db: Session, user: User) -> None:
                 is_user_white=is_white,
                 accuracy=g.get("accuracy"),
                 estimated_rating=g.get("estimatedRating"),
-                phase_grades=g.get("phaseGrades")
+                phase_grades=g.get("phaseGrades"),
             )
             db.add(db_game)
         db.commit()
@@ -91,43 +107,50 @@ def maybe_seed_demo_data(db: Session, user: User) -> None:
         # Non-fatal warning
         print(f"Warning: failed to seed demo games: {e}")
 
-@router.get("", response_model=List[Game], response_model_exclude_none=True)
+
+@router.get("", response_model=list[Game], response_model_exclude_none=True)
 def get_games(
-    opening: Optional[str] = Query(None),
-    color: Optional[Literal['white', 'black', 'all']] = Query('all'),
-    result: Optional[Literal['win', 'loss', 'draw', 'all']] = Query('all'),
-    source: Optional[Literal['online', 'vs_coach', 'all']] = Query('all'),
-    speed: Optional[Literal['bullet', 'blitz', 'rapid', 'all']] = Query('all'),
-    search_query: Optional[str] = Query(None, alias="searchQuery"),
+    opening: str | None = Query(None),
+    color: Literal["white", "black", "all"] | None = Query("all"),
+    result: Literal["win", "loss", "draw", "all"] | None = Query("all"),
+    source: Literal["online", "vs_coach", "all"] | None = Query("all"),
+    speed: Literal["bullet", "blitz", "rapid", "all"] | None = Query("all"),
+    search_query: str | None = Query(None, alias="searchQuery"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     maybe_seed_demo_data(db, current_user)
 
     query = db.query(GameModel).filter(GameModel.user_id == current_user.id)
 
-    if speed and speed != 'all':
+    if speed and speed != "all":
         query = query.filter(GameModel.speed == speed)
-    if source and source != 'all':
+    if source and source != "all":
         query = query.filter(GameModel.source == source)
-    if color and color != 'all':
-        query = query.filter(GameModel.is_user_white == (color == 'white'))
+    if color and color != "all":
+        query = query.filter(GameModel.is_user_white == (color == "white"))
 
     db_games = query.order_by(GameModel.date.desc()).all()
-    results: List[Game] = []
+    results: list[Game] = []
 
     for dg in db_games:
         # Check result filter
-        if result and result != 'all':
+        if result and result != "all":
             is_white = dg.is_user_white
-            if result == 'win':
-                if not ((is_white and dg.result == '1-0') or (not is_white and dg.result == '0-1')):
+            if result == "win":
+                if not (
+                    (is_white and dg.result == "1-0")
+                    or (not is_white and dg.result == "0-1")
+                ):
                     continue
-            elif result == 'loss':
-                if not ((is_white and dg.result == '0-1') or (not is_white and dg.result == '1-0')):
+            elif result == "loss":
+                if not (
+                    (is_white and dg.result == "0-1")
+                    or (not is_white and dg.result == "1-0")
+                ):
                     continue
-            elif result == 'draw':
-                if dg.result != '1/2-1/2':
+            elif result == "draw":
+                if dg.result != "1/2-1/2":
                     continue
 
         # Check opening filter
@@ -166,18 +189,20 @@ def get_games(
                 estimated_rating=dg.estimated_rating,
                 phase_grades=dg.phase_grades,
                 termination=extract_termination(dg),
-                analysis_level=dg.analysis_level or ("standard" if dg.accuracy else None),
-                analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None)
+                analysis_level=dg.analysis_level
+                or ("standard" if dg.accuracy else None),
+                analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
             )
         )
 
     return results
 
+
 @router.post("/coach", response_model=CoachGameCreated, status_code=201)
 def save_coach_game(
     body: CoachGameCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Save a finished Play Coach game so it can be opened in Review."""
     board = chess.Board()
@@ -186,7 +211,7 @@ def save_coach_game(
     user_name = current_user.username
     game.headers["Event"] = "Play Coach"
     game.headers["Site"] = "ALL-CHESS"
-    game.headers["Date"] = datetime.now(timezone.utc).strftime("%Y.%m.%d")
+    game.headers["Date"] = datetime.now(UTC).strftime("%Y.%m.%d")
     game.headers["White"] = user_name if user_is_white else body.opponent_name
     game.headers["Black"] = body.opponent_name if user_is_white else user_name
     user_elo = str(body.user_rating or 800)
@@ -201,7 +226,10 @@ def save_coach_game(
         try:
             move = board.parse_san(san)
         except ValueError:
-            raise HTTPException(status_code=422, detail=f"Illegal move '{san}' at ply {len(board.move_stack) + 1}.")
+            raise HTTPException(
+                status_code=422,
+                detail=f"Illegal move '{san}' at ply {len(board.move_stack) + 1}.",
+            )
         node = node.add_variation(move)
         board.push(move)
 
@@ -241,12 +269,13 @@ def save_coach_game(
 def get_game_by_id(
     game_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    dg = db.query(GameModel).filter(
-        GameModel.id == game_id,
-        GameModel.user_id == current_user.id
-    ).first()
+    dg = (
+        db.query(GameModel)
+        .filter(GameModel.id == game_id, GameModel.user_id == current_user.id)
+        .first()
+    )
 
     if not dg:
         raise HTTPException(status_code=404, detail=f"Game '{game_id}' not found.")
@@ -270,7 +299,7 @@ def get_game_by_id(
         phase_grades=dg.phase_grades,
         termination=extract_termination(dg),
         analysis_level=dg.analysis_level or ("standard" if dg.accuracy else None),
-        analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None)
+        analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
     )
 
 
@@ -279,15 +308,16 @@ async def run_game_analysis_task(
     game_id: str,
     user_id: str,
     level: str = "standard",
-    external_evals: Optional[List[Dict[str, Any]]] = None
+    external_evals: list[dict[str, Any]] | None = None,
 ) -> None:
     db = app.database.SessionLocal()
     try:
         job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
-        game = db.query(GameModel).filter(
-            GameModel.id == game_id,
-            GameModel.user_id == user_id
-        ).first()
+        game = (
+            db.query(GameModel)
+            .filter(GameModel.id == game_id, GameModel.user_id == user_id)
+            .first()
+        )
         if not job or not game:
             return
 
@@ -310,36 +340,39 @@ async def run_game_analysis_task(
             black_rating=black_r,
             on_progress=update_progress,
             db=db,
-            external_evals=external_evals
+            external_evals=external_evals,
         )
 
         real_depth = analysis_result.get("analysisDepth", 18)
 
         # Cache in game_analysis table
-        existing_analysis = db.query(GameAnalysis).filter(
-            GameAnalysis.game_id == game.id,
-            GameAnalysis.depth == real_depth
-        ).first()
+        existing_analysis = (
+            db.query(GameAnalysis)
+            .filter(GameAnalysis.game_id == game.id, GameAnalysis.depth == real_depth)
+            .first()
+        )
 
         if existing_analysis:
             existing_analysis.analysis_data = analysis_result
         else:
             new_analysis = GameAnalysis(
-                game_id=game.id,
-                depth=real_depth,
-                analysis_data=analysis_result
+                game_id=game.id, depth=real_depth, analysis_data=analysis_result
             )
             db.add(new_analysis)
 
         # Never silently overwrite a deep analysis with a shallower one
-        current_level_rank = LEVEL_ORDER.get(game.analysis_level, 0) if game.analysis_level else 0
+        current_level_rank = (
+            LEVEL_ORDER.get(game.analysis_level, 0) if game.analysis_level else 0
+        )
         new_level_rank = LEVEL_ORDER.get(level, 1)
 
         if new_level_rank >= current_level_rank:
             game.moves = analysis_result["moves"]
             game.accuracy = analysis_result["accuracy"]
             game.estimated_rating = analysis_result["estimatedRating"]
-            game.phase_grades = analysis_result.get("phaseGradesAll") or analysis_result.get("phaseGrades")
+            game.phase_grades = analysis_result.get(
+                "phaseGradesAll"
+            ) or analysis_result.get("phaseGrades")
             game.analysis_level = level
             game.analysis_depth = real_depth
 
@@ -350,7 +383,7 @@ async def run_game_analysis_task(
             "estimatedRating": analysis_result["estimatedRating"],
             "phaseGrades": game.phase_grades,
             "analysisLevel": game.analysis_level,
-            "analysisDepth": game.analysis_depth
+            "analysisDepth": game.analysis_depth,
         }
         db.commit()
 
@@ -372,14 +405,15 @@ async def run_game_analysis_task(
 def analyze_game(
     game_id: str,
     background_tasks: BackgroundTasks,
-    payload: Optional[AnalyzeGameRequest] = None,
+    payload: AnalyzeGameRequest | None = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    game = db.query(GameModel).filter(
-        GameModel.id == game_id,
-        GameModel.user_id == current_user.id
-    ).first()
+    game = (
+        db.query(GameModel)
+        .filter(GameModel.id == game_id, GameModel.user_id == current_user.id)
+        .first()
+    )
     if not game:
         raise HTTPException(status_code=404, detail=f"Game '{game_id}' not found.")
 
@@ -392,12 +426,16 @@ def analyze_game(
         current_lvl = game.analysis_level or "standard"
         current_rank = LEVEL_ORDER.get(current_lvl, 1)
         if current_rank >= req_rank:
-            existing_done_job = db.query(AnalysisJob).filter(
-                AnalysisJob.game_id == game_id,
-                AnalysisJob.user_id == current_user.id,
-                AnalysisJob.job_type == "analysis",
-                AnalysisJob.status == "done"
-            ).first()
+            existing_done_job = (
+                db.query(AnalysisJob)
+                .filter(
+                    AnalysisJob.game_id == game_id,
+                    AnalysisJob.user_id == current_user.id,
+                    AnalysisJob.job_type == "analysis",
+                    AnalysisJob.status == "done",
+                )
+                .first()
+            )
             if existing_done_job:
                 return JobResponse(job_id=existing_done_job.id)
 
@@ -412,8 +450,8 @@ def analyze_game(
                     "estimatedRating": game.estimated_rating,
                     "phaseGrades": game.phase_grades,
                     "analysisLevel": current_lvl,
-                    "analysisDepth": game.analysis_depth or 18
-                }
+                    "analysisDepth": game.analysis_depth or 18,
+                },
             )
             db.add(job)
             db.commit()
@@ -421,15 +459,21 @@ def analyze_game(
             return JobResponse(job_id=job.id)
 
     # 2. Check for active queued/processing job
-    active_job = db.query(AnalysisJob).filter(
-        AnalysisJob.game_id == game_id,
-        AnalysisJob.user_id == current_user.id,
-        AnalysisJob.job_type == "analysis",
-        AnalysisJob.status.in_(["queued", "processing"])
-    ).first()
+    active_job = (
+        db.query(AnalysisJob)
+        .filter(
+            AnalysisJob.game_id == game_id,
+            AnalysisJob.user_id == current_user.id,
+            AnalysisJob.job_type == "analysis",
+            AnalysisJob.status.in_(["queued", "processing"]),
+        )
+        .first()
+    )
 
     if active_job and not force:
-        age = datetime.now(timezone.utc) - active_job.updated_at.replace(tzinfo=timezone.utc)
+        age = datetime.now(UTC) - active_job.updated_at.replace(
+            tzinfo=UTC
+        )
         if age <= timedelta(minutes=STALE_JOB_MINUTES):
             return JobResponse(job_id=active_job.id)
         # No progress for a long time: its worker is gone. Fail it and start fresh.
@@ -443,13 +487,15 @@ def analyze_game(
         game_id=game.id,
         job_type="analysis",
         status="queued",
-        progress=0
+        progress=0,
     )
     db.add(job)
     db.commit()
     db.refresh(job)
 
-    background_tasks.add_task(run_game_analysis_task, job.id, game.id, current_user.id, req_level)
+    background_tasks.add_task(
+        run_game_analysis_task, job.id, game.id, current_user.id, req_level
+    )
     return JobResponse(job_id=job.id)
 
 
@@ -459,14 +505,15 @@ def submit_browser_evaluations(
     payload: BrowserEvaluationsRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Finish a review whose engine search ran in the user's browser. The server only grades the moves,
     computes accuracy and writes commentary, so no engine is needed here. Poll /jobs/{id} as usual."""
-    game = db.query(GameModel).filter(
-        GameModel.id == game_id,
-        GameModel.user_id == current_user.id
-    ).first()
+    game = (
+        db.query(GameModel)
+        .filter(GameModel.id == game_id, GameModel.user_id == current_user.id)
+        .first()
+    )
     if not game:
         raise HTTPException(status_code=404, detail=f"Game '{game_id}' not found.")
 
@@ -474,7 +521,7 @@ def submit_browser_evaluations(
     if len(payload.positions) != expected:
         raise HTTPException(
             status_code=422,
-            detail=f"Expected {expected} positions (moves + 1), got {len(payload.positions)}."
+            detail=f"Expected {expected} positions (moves + 1), got {len(payload.positions)}.",
         )
 
     job = AnalysisJob(
@@ -482,12 +529,27 @@ def submit_browser_evaluations(
         game_id=game.id,
         job_type="analysis",
         status="queued",
-        progress=0
+        progress=0,
     )
     db.add(job)
     db.commit()
     db.refresh(job)
 
-    external = [{"lines": [ln.model_dump() for ln in pos.lines]} for pos in payload.positions]
-    background_tasks.add_task(run_game_analysis_task, job.id, game.id, current_user.id, payload.level, external)
+    external = [
+        {
+            "lines": [ln.model_dump() for ln in pos.lines],
+            "best_uci": pos.best_uci,
+            "pv_uci": pos.pv_uci,
+            "reply_uci": pos.reply_uci,
+        }
+        for pos in payload.positions
+    ]
+    background_tasks.add_task(
+        run_game_analysis_task,
+        job.id,
+        game.id,
+        current_user.id,
+        payload.level,
+        external,
+    )
     return JobResponse(job_id=job.id)

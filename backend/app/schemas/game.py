@@ -1,137 +1,191 @@
-from typing import Optional, List, Literal, Dict, Union
-from pydantic import Field
+from typing import Literal
+
 from app.schemas.common import CamelModel
+from pydantic import Field
 
 MoveClassification = Literal[
-    'brilliant',
-    'great',
-    'book',
-    'best',
-    'excellent',
-    'good',
-    'inaccuracy',
-    'mistake',
-    'miss',
-    'blunder'
+    "brilliant",
+    "great",
+    "book",
+    "best",
+    "excellent",
+    "good",
+    "inaccuracy",
+    "mistake",
+    "miss",
+    "blunder",
 ]
+
 
 class TopEngineLine(CamelModel):
     move: str
     eval: float
-    mate: Optional[int] = None
+    mate: int | None = None
     depth: int
     why: str
-    pv: List[str]
+    pv: list[str]
+
 
 class MoveEval(CamelModel):
     eval: float
-    mate: Optional[int] = None
-    best_move: Optional[str] = None
-    win_pct: Optional[float] = None
-    why: Optional[str] = None
-    best_why: Optional[str] = None
-    lines: Optional[List[TopEngineLine]] = None
+    mate: int | None = None
+    best_move: str | None = None
+    win_pct: float | None = None
+    why: str | None = None
+    best_why: str | None = None
+    lines: list[TopEngineLine] | None = None
+
+
+MoveAnnotationTint = Literal[
+    "brilliant", "great", "best", "good", "inaccuracy", "mistake", "miss", "blunder"
+]
+
+
+class MoveAnnotationArrow(CamelModel):
+    from_square: str = Field(..., alias="from")
+    to: str
+    kind: Literal["best", "refutation", "threat", "played", "missed"]
+
+
+class MoveAnnotationSquare(CamelModel):
+    square: str
+    kind: Literal["attacked", "hanging", "target", "king-danger"]
+    reason: str
+
+
+class MoveRef(CamelModel):
+    san: str
+    from_square: str = Field(..., alias="from")
+    to: str
+    uci: str
+
+
+class MoveAnnotations(CamelModel):
+    tint: MoveAnnotationTint | None = None
+    arrows: list[MoveAnnotationArrow] = Field(default_factory=list)
+    squares: list[MoveAnnotationSquare] = Field(default_factory=list)
+    best_move: MoveRef | None = None
+    refutation: MoveRef | None = None
+    pv: list[str] | None = Field(default_factory=list)
+
 
 class Move(CamelModel):
     san: str
     from_square: str = Field(..., alias="from")
     to: str
-    promotion: Optional[str] = None
-    color: Literal['w', 'b']
+    promotion: str | None = None
+    color: Literal["w", "b"]
     fen: str
     move_number: int
-    classification: Optional[MoveClassification] = None
-    eval: Optional[MoveEval] = None
-    coach_comment: Optional[str] = None
-    variation: Optional[List[str]] = None
-    time_spent: Optional[float] = None
+    classification: MoveClassification | None = None
+    eval: MoveEval | None = None
+    coach_comment: str | None = None
+    variation: list[str] | None = None
+    time_spent: float | None = None
+    annotations: MoveAnnotations | None = None
+
 
 class Player(CamelModel):
     username: str
     rating: int
-    title: Optional[str] = None
-    avatar_url: Optional[str] = None
+    title: str | None = None
+    avatar_url: str | None = None
+
 
 class Opening(CamelModel):
     eco: str
     name: str
 
+
 class PhaseGrade(CamelModel):
-    opening: Literal['A', 'B', 'C', 'D', 'N/A']
-    middlegame: Literal['A', 'B', 'C', 'D', 'N/A']
-    tactics: Literal['A', 'B', 'C', 'D', 'N/A']
-    endgame: Literal['A', 'B', 'C', 'D', 'N/A']
+    opening: Literal["A", "B", "C", "D", "N/A"]
+    middlegame: Literal["A", "B", "C", "D", "N/A"]
+    tactics: Literal["A", "B", "C", "D", "N/A"]
+    endgame: Literal["A", "B", "C", "D", "N/A"]
+
 
 class Accuracy(CamelModel):
     white: float
     black: float
 
+
 class EstimatedRating(CamelModel):
     white: int
     black: int
+
 
 class Game(CamelModel):
     id: str
     pgn: str
     white: Player
     black: Player
-    result: Literal['1-0', '0-1', '1/2-1/2', '*']
+    result: Literal["1-0", "0-1", "1/2-1/2", "*"]
     date: str
     time_control: str
-    speed: Literal['bullet', 'blitz', 'rapid', 'daily']
-    source: Literal['online', 'vs_coach']
-    platform: Optional[Literal['chesscom', 'lichess', 'coach']] = None
+    speed: Literal["bullet", "blitz", "rapid", "daily"]
+    source: Literal["online", "vs_coach"]
+    platform: Literal["chesscom", "lichess", "coach"] | None = None
     opening: Opening
-    moves: List[Move]
-    is_user_white: Optional[bool] = None
-    accuracy: Optional[Accuracy] = None
-    estimated_rating: Optional[EstimatedRating] = None
-    phase_grades: Optional[Union[PhaseGrade, Dict[str, PhaseGrade]]] = None
-    termination: Optional[str] = None
-    analysis_depth: Optional[int] = None
-    analysis_level: Optional[str] = None
+    moves: list[Move]
+    is_user_white: bool | None = None
+    accuracy: Accuracy | None = None
+    estimated_rating: EstimatedRating | None = None
+    phase_grades: PhaseGrade | dict[str, PhaseGrade] | None = None
+    termination: str | None = None
+    analysis_depth: int | None = None
+    analysis_level: str | None = None
+
 
 class CoachGameCreate(CamelModel):
     """A finished Play Coach game, saved so it can be reviewed like any other game."""
-    moves: List[str] = Field(..., min_length=1, max_length=600)  # SAN, in play order
-    user_color: Literal['white', 'black']
-    result: Literal['1-0', '0-1', '1/2-1/2']
+
+    moves: list[str] = Field(..., min_length=1, max_length=600)  # SAN, in play order
+    user_color: Literal["white", "black"]
+    result: Literal["1-0", "0-1", "1/2-1/2"]
     opponent_name: str = Field(default="Coach All-Chess", max_length=64)
     opponent_rating: int = Field(default=800, ge=100, le=3500)
-    user_rating: Optional[int] = Field(default=None, ge=100, le=3500)
-    termination: Optional[str] = Field(default=None, max_length=128)
+    user_rating: int | None = Field(default=None, ge=100, le=3500)
+    termination: str | None = Field(default=None, max_length=128)
+
 
 class CoachGameCreated(CamelModel):
     id: str
 
+
 class AnalyzeGameRequest(CamelModel):
-    level: Optional[Literal['standard', 'deep', 'deeper', 'max']] = 'standard'
-    force: Optional[bool] = False
+    level: Literal["standard", "deep", "deeper", "max"] | None = "standard"
+    force: bool | None = False
+
 
 class BrowserEngineLine(CamelModel):
     """One engine line as reported by the browser's Stockfish: UCI moves and the raw UCI score
     from the point of view of the side to move."""
-    pv: List[str] = Field(..., min_length=1, max_length=24)
-    cp: Optional[int] = Field(default=None, ge=-100000, le=100000)
-    mate: Optional[int] = Field(default=None, ge=-1000, le=1000)
+
+    pv: list[str] = Field(..., min_length=1, max_length=24)
+    cp: int | None = Field(default=None, ge=-100000, le=100000)
+    mate: int | None = Field(default=None, ge=-1000, le=1000)
     depth: int = Field(default=1, ge=0, le=128)
 
 
 class BrowserPosition(CamelModel):
-    lines: List[BrowserEngineLine] = Field(default_factory=list, max_length=5)
+    lines: list[BrowserEngineLine] = Field(default_factory=list, max_length=5)
+    best_uci: str | None = None
+    pv_uci: list[str] | None = None
+    reply_uci: str | None = None
 
 
 class BrowserEvaluationsRequest(CamelModel):
     """Per-position engine results computed on the user's own device. positions[i] is the position before
     move i, and the last entry is the final position, so there are len(moves) + 1 of them."""
-    level: Literal['standard', 'deep', 'deeper', 'max'] = 'standard'
-    positions: List[BrowserPosition] = Field(..., min_length=1, max_length=1201)
+
+    level: Literal["standard", "deep", "deeper", "max"] = "standard"
+    positions: list[BrowserPosition] = Field(..., min_length=1, max_length=1201)
 
 
 class GameFilterParams(CamelModel):
-    opening: Optional[str] = None
-    color: Optional[Literal['white', 'black', 'all']] = 'all'
-    result: Optional[Literal['win', 'loss', 'draw', 'all']] = 'all'
-    source: Optional[Literal['online', 'vs_coach', 'all']] = 'all'
-    speed: Optional[Literal['bullet', 'blitz', 'rapid', 'all']] = 'all'
-    search_query: Optional[str] = None
+    opening: str | None = None
+    color: Literal["white", "black", "all"] | None = "all"
+    result: Literal["win", "loss", "draw", "all"] | None = "all"
+    source: Literal["online", "vs_coach", "all"] | None = "all"
+    speed: Literal["bullet", "blitz", "rapid", "all"] | None = "all"
+    search_query: str | None = None
