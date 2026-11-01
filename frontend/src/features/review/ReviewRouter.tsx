@@ -10,6 +10,7 @@ import { ReviewBoard } from './ReviewBoard';
 import { PieceHopper } from '@/components/LoadingScreen';
 import { AnalysisLevel, loadLevel, saveLevel } from './analysisLevels';
 import { BROWSER_LIMITS, START_FEN, searchPositions } from '@/services/browserReviewService';
+import { needsAnnotationRefresh } from '@/lib/annotations';
 
 export const ReviewRouter: React.FC = () => {
   const params = useParams();
@@ -149,9 +150,19 @@ export const ReviewRouter: React.FC = () => {
           game.moves.length > 0 &&
           game.moves[0].eval !== undefined;
 
-        if (!isAnalyzed && import.meta.env.VITE_USE_MOCKS !== 'true') {
+        // Reviews saved before annotations existed are re-run once per session so the board can draw arrows and squares
+        const refreshKey = `all-chess:annotations-refresh:${gameId}`;
+        let stale = false;
+        try {
+          stale = isAnalyzed && needsAnnotationRefresh(game.moves) && !sessionStorage.getItem(refreshKey);
+          if (stale) sessionStorage.setItem(refreshKey, '1');
+        } catch {
+          stale = false;
+        }
+
+        if ((!isAnalyzed || stale) && import.meta.env.VITE_USE_MOCKS !== 'true') {
           try {
-            const analyzed = await analyzeGame(gameId, loadLevel(), false, () => active, game);
+            const analyzed = await analyzeGame(gameId, loadLevel(), stale, () => active, game);
             if (active && analyzed) game = analyzed;
           } catch (analyzeErr) {
             console.error('Failed to analyze game:', analyzeErr);

@@ -28,3 +28,19 @@ describe('annotation helpers', () => {
     expect(annotationSquares({})).toEqual([]);
   });
 });
+
+import { needsAnnotationRefresh } from '@/lib/annotations';
+import type { Move } from '@/data/types';
+
+describe('needsAnnotationRefresh', () => {
+  const mv = (extra: Partial<Move>): Move => ({ san: 'e4', from: 'e2', to: 'e4', color: 'w', fen: 'x', moveNumber: 1, ...extra });
+  it('flags a graded review that has no annotations', () => {
+    expect(needsAnnotationRefresh([mv({ eval: { eval: 0.2 } })])).toBe(true);
+  });
+  it('leaves new reviews, unanalysed games and empty games alone', () => {
+    expect(needsAnnotationRefresh([mv({ eval: { eval: 0.2 }, annotations: { tint: 'best' } })])).toBe(false);
+    expect(needsAnnotationRefresh([mv({})])).toBe(false);
+    expect(needsAnnotationRefresh([])).toBe(false);
+    expect(needsAnnotationRefresh(undefined)).toBe(false);
+  });
+});
