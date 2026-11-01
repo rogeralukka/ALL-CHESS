@@ -23,6 +23,7 @@ from app.schemas.game import (
 )
 from app.schemas.job import JobResponse
 from app.services.engine_service import LEVEL_ORDER, analyze_game_moves_full
+from app.services.accuracy import last_book_index
 
 logger = logging.getLogger("all_chess.games_router")
 import re
@@ -192,6 +193,7 @@ def get_games(
                 analysis_level=dg.analysis_level
                 or ("standard" if dg.accuracy else None),
                 analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
+                book_end=getattr(dg, "book_end", None) if getattr(dg, "book_end", None) is not None else (last_book_index(dg.moves) if getattr(dg, "moves", None) and last_book_index(dg.moves) >= 0 else None),
             )
         )
 
@@ -300,6 +302,7 @@ def get_game_by_id(
         termination=extract_termination(dg),
         analysis_level=dg.analysis_level or ("standard" if dg.accuracy else None),
         analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
+        book_end=getattr(dg, "book_end", None) if getattr(dg, "book_end", None) is not None else (last_book_index(dg.moves) if getattr(dg, "moves", None) and last_book_index(dg.moves) >= 0 else None),
     )
 
 
@@ -375,6 +378,7 @@ async def run_game_analysis_task(
             ) or analysis_result.get("phaseGrades")
             game.analysis_level = level
             game.analysis_depth = real_depth
+            game.book_end = analysis_result.get("bookEnd")
 
         job.status = "done"
         job.progress = 100
@@ -384,6 +388,7 @@ async def run_game_analysis_task(
             "phaseGrades": game.phase_grades,
             "analysisLevel": game.analysis_level,
             "analysisDepth": game.analysis_depth,
+            "bookEnd": game.book_end,
         }
         db.commit()
 

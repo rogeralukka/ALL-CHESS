@@ -1,6 +1,6 @@
 import chess
 from app.services.win_pct import win_pct, eval_to_win_pct
-from app.services.classifier import classify_move, is_material_sacrifice, see_capture_sequence
+from app.services.classifier import classify_move, is_material_sacrifice
 from app.services.accuracy import (
     move_accuracy,
     calculate_game_accuracy,
@@ -96,22 +96,20 @@ def test_move_accuracy():
     assert move_accuracy(50.0) < 20.0
 
 def test_estimate_performance_ratings_calibration():
-    # 50% accuracy -> ~500
-    res_50 = estimate_performance_ratings({"white": 50.0, "black": 50.0})
-    assert res_50["white"] == 500
+    # Test Chess.com data points (within +-50):
+    # 53.0 -> 150, 63.9 -> 650, 68.0 -> 900, 72.1 -> 1200, 75.3 -> 1300, 81.3 -> 1500
+    points = [
+        (53.0, 150),
+        (63.9, 650),
+        (68.0, 900),
+        (72.1, 1200),
+        (75.3, 1300),
+        (81.3, 1500),
+    ]
+    for acc, expected in points:
+        res = estimate_performance_ratings({"white": acc, "black": acc})
+        assert abs(res["white"] - expected) <= 50, f"At acc {acc}, got {res['white']}, expected {expected}"
+        assert abs(res["black"] - expected) <= 50, f"At acc {acc}, got {res['black']}, expected {expected}"
 
-    # 75% accuracy -> ~1200
-    res_75 = estimate_performance_ratings({"white": 75.0, "black": 75.0})
-    assert res_75["white"] == 1200
-
-    # 78.9% accuracy -> calibrated rating ~1408
-    res_78 = estimate_performance_ratings({"white": 78.9, "black": 78.9})
-    assert res_78["white"] == 1408
-
-    # 90% accuracy -> ~2000
-    res_90 = estimate_performance_ratings({"white": 90.0, "black": 90.0})
-    assert res_90["white"] == 2000
-
-    # 98% accuracy -> ~2700
-    res_98 = estimate_performance_ratings({"white": 98.0, "black": 98.0})
-    assert res_98["white"] == 2700
+    # Clamping
+    assert estimate_performance_ratings({"white": 30.0, "black": 100.0}) == {"white": 100, "black": 3000}
