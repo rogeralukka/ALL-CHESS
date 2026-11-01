@@ -17,7 +17,7 @@ interface LearnMapProps {
 }
 
 const DECOR = ['bishop', 'rook', 'knight', 'pawn', 'queen', 'bishop', 'king', 'pawn', 'rook', 'knight'] as const;
-const PIECE_H: Record<string, number> = { pawn: 15.5, rook: 19, bishop: 21.5, knight: 20, queen: 22.5, king: 23.5 };
+const PIECE_H: Record<string, number> = { pawn: 20, rook: 24, bishop: 28, knight: 26, queen: 29.5, king: 31 };
 
 const cq = (n: number) => `${n}cqw`;
 
@@ -25,7 +25,7 @@ const cq = (n: number) => `${n}cqw`;
 const GlossyPiece: React.FC<{ piece: string }> = ({ piece }) => (
   <div className="relative flex flex-col items-center" aria-hidden="true">
     <img src={`/assets/learn/piece_${piece}.webp`} alt="" draggable={false} style={{ height: cq(PIECE_H[piece] ?? 20), width: 'auto', position: 'relative', zIndex: 1 }} />
-    <span className="rounded-[50%]" style={{ width: cq(13), height: cq(3.6), marginTop: cq(-2.4), background: 'radial-gradient(closest-side, rgba(0,0,0,0.55), rgba(0,0,0,0))' }} />
+    <span className="rounded-[50%]" style={{ width: cq(18), height: cq(4.4), marginTop: cq(-3), background: 'radial-gradient(closest-side, rgba(0,0,0,0.55), rgba(0,0,0,0))' }} />
   </div>
 );
 
@@ -56,10 +56,10 @@ const Slab: React.FC<{ top: string; side: string; outline?: boolean; sheen?: num
         <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
       </linearGradient>
     </defs>
-    <polygon points="50,11 95,47 50,83 5,47" fill={side} stroke={side} strokeWidth="9" strokeLinejoin="round" />
-    <polygon points="50,5 95,41 50,77 5,41" fill={top} stroke={top} strokeWidth="9" strokeLinejoin="round" />
-    <polygon points="50,5 95,41 50,77 5,41" fill="url(#slab-sheen)" stroke="none" />
-    {outline && <polygon points="50,5 95,41 50,77 5,41" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.6" strokeLinejoin="round" />}
+    <polygon points="50,17 89,47 50,77 11,47" fill={side} stroke={side} strokeWidth="18" strokeLinejoin="round" />
+    <polygon points="50,11 89,41 50,71 11,41" fill={top} stroke={top} strokeWidth="18" strokeLinejoin="round" />
+    <polygon points="50,11 89,41 50,71 11,41" fill="url(#slab-sheen)" stroke="url(#slab-sheen)" strokeWidth="18" strokeLinejoin="round" />
+    {outline && <polygon points="50,2.5 98.5,41 50,79.5 1.5,41" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.6" strokeLinejoin="round" />}
   </svg>
 );
 
@@ -118,8 +118,8 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
   // background diamonds: even rows at 27% and 73%, odd rows at 4%, 50% and 96%
   const cells: { row: number; x: number; col: number }[] = [];
   for (let r = -1; r <= layout.rows; r++) {
-    if (r % 2 === 0) [-65, -19, 27, 73, 119, 165].forEach((x, i) => cells.push({ row: r, x, col: i }));
-    else [-88, -42, 4, 50, 96, 142, 188].forEach((x, i) => cells.push({ row: r, x, col: i }));
+    if (r % 2 === 0) [27, 73].forEach((x, i) => cells.push({ row: r, x, col: i }));
+    else [50].forEach((x, i) => cells.push({ row: r, x, col: i }));
   }
 
   return (
@@ -154,7 +154,7 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
               const x = it.slot === 'l' ? SLOT_X.r : SLOT_X.l;
               const piece = DECOR[(idx * 3 + it.row) % DECOR.length];
               return (
-                <div key={`d-${it.stage.id}`} className="absolute flex items-end justify-center pointer-events-none" style={{ left: `calc(${x}% - ${cq(10)})`, width: cq(20), bottom: `calc(100% - ${cq(rowCenter(it.row) + 5.5)})` }}>
+                <div key={`d-${it.stage.id}`} className="absolute flex items-end justify-center pointer-events-none" style={{ left: `calc(${x}% - ${cq(14)})`, width: cq(28), bottom: `calc(100% - ${cq(rowCenter(it.row) + 9)})` }}>
                   <GlossyPiece piece={piece} />
                 </div>
               );
@@ -198,14 +198,14 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
                   aria-current={sel ? 'true' : undefined}
                   data-testid={`learn-tile-${s.id}`}
                   className="absolute block group focus:outline-none"
-                  style={{ left: `calc(${x}% - ${cq(15.5)})`, width: cq(31), height: cq(27.9), top: cq(rowCenter(it.row) - 13.2), zIndex: hot ? 3 : 2 }}
+                  style={{ left: `calc(${x}% - ${cq(17)})`, width: cq(34), height: cq(30.6), top: cq(rowCenter(it.row) - 13.9), zIndex: hot ? 3 : 2 }}
                 >
                   {hot && <span aria-hidden="true" className="absolute inset-[8%] rounded-[50%] blur-[3cqw]" style={{ background: th.glow }} />}
                   <span className="absolute inset-0 transition-transform duration-150 group-hover:-translate-y-[0.5cqw] group-active:translate-y-[0.6cqw]">
-                    <Slab top={top} side={side} outline={sel && !hot} sheen={hot ? 0.28 : 0.1} />
+                    <Slab top={top} side={side} outline={sel && !hot} sheen={hot ? 0.18 : 0} />
                     <span className="absolute flex items-center justify-center" style={{ left: '50%', top: '45.5%', transform: 'translate(-50%,-50%) scaleY(0.92)' }}>
                       <Icon
-                        style={{ width: cq(hot ? 9 : 8), height: cq(hot ? 9 : 8), color: hot || done ? '#ffffff' : th.icon, opacity: done ? 0.92 : 1 }}
+                        style={{ width: cq(hot ? 11 : 10), height: cq(hot ? 11 : 10), color: hot || done ? '#ffffff' : th.icon, opacity: done ? 0.92 : 1 }}
                         strokeWidth={hot ? 2.6 : 2.2}
                       />
                     </span>
@@ -213,7 +213,7 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
                   {hot && (
                     <span
                       className="absolute left-1/2 -translate-x-1/2 bg-white text-[#2b2926] font-display font-extrabold rounded-[1.2cqw] pointer-events-none whitespace-nowrap"
-                      style={{ top: cq(-7.2), padding: `${cq(1)} ${cq(3.2)}`, fontSize: cq(4.8), boxShadow: `0 0 0 ${cq(0.5)} rgba(255,255,255,.25), 0 ${cq(1)} ${cq(3)} rgba(0,0,0,.35)` }}
+                      style={{ top: cq(-6), padding: `${cq(1)} ${cq(3.2)}`, fontSize: cq(4.8), boxShadow: `0 0 0 ${cq(0.5)} rgba(255,255,255,.25), 0 ${cq(1)} ${cq(3)} rgba(0,0,0,.35)` }}
                     >
                       Next
                       <span className="absolute left-1/2 -translate-x-1/2 bg-white rotate-45" style={{ bottom: cq(-1), width: cq(2.4), height: cq(2.4) }} />
