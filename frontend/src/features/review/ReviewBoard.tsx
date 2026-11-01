@@ -156,7 +156,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   }, [game.id, isUserWhite]);
 
   // Mode states
-  const [showingBest, setShowingBest] = useState<boolean>(false);
+  // "Best" is a mode: once switched on it stays on while you step through the game (until you switch it off)
+  const [bestLock, setBestLock] = useState<boolean>(false);
   const [explaining, setExplaining] = useState<boolean>(false);
   const [variationStep, setVariationStep] = useState<number>(0);
   const [retryMode, setRetryMode] = useState<boolean>(false);
@@ -184,7 +185,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   // Reset secondary modes when navigating moves
   const resetModes = useCallback(() => {
     setShowMove(false);
-    setShowingBest(false);
     setExplaining(false);
     setVariationStep(0);
     setRetryMode(false);
@@ -275,6 +275,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   // "Best" is available whenever the engine prefers a different move than the one played (not only after mistakes)
   const stripSan = (m: string) => m.replace(/[+#?!]/g, '');
   const canBest = !isBookMove && !!targetBestMove && !!currentMove && stripSan(targetBestMove) !== stripSan(currentMove.san || '');
+  // on the best move itself (or a book move) there is nothing better to show, so the normal view is used there
+  const showingBest = bestLock && canBest && !explaining && !retryMode;
 
   // Determine active board FEN, arrows, badges, and lastMove (memoized)
   const { displayFen, arrows, badges, boardLastMove, threats, targets } = useMemo(() => {
@@ -665,10 +667,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 Got it!
               </Button>
             </>
-          ) : showingBest ? (
-            <Button variant="primary" size="md" className="!h-14 flex-1 !text-[20px]" onClick={resetModes}>
-              Resume
-            </Button>
           ) : (
             <>
               <button
@@ -679,7 +677,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 onClick={() => {
                   if (isMistakeOrBlunder || isBookMove) {
                     setExplaining(true);
-                    setShowingBest(false);
                     setRetryMode(false);
                     setVariationStep(0);
                   } else {
@@ -692,16 +689,17 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
               </button>
               <button
                 type="button"
-                className={barBtn(canBest)}
+                className={barBtn(canBest || bestLock)}
+                aria-pressed={bestLock}
                 data-testid="mobile-best"
                 onClick={() => {
-                  setShowingBest(true);
+                  setBestLock((v) => !v);
                   setExplaining(false);
                   setRetryMode(false);
                 }}
               >
-                <Sparkles size={22} />
-                Best
+                <Sparkles size={22} className={bestLock ? 'text-amber-400' : ''} />
+                {bestLock ? 'Best: on' : 'Best'}
               </button>
               {isMistakeOrBlunder ? (
                 <button
@@ -710,7 +708,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                   data-testid="mobile-retry"
                   onClick={() => {
                     setRetryMode(true);
-                    setShowingBest(false);
                     setExplaining(false);
                     setRetrySuccess(null);
                     setRetryFen(null);
@@ -939,15 +936,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                   >
                     Got it!
                   </Button>
-                ) : showingBest ? (
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    className="!h-12 flex-1"
-                    onClick={resetModes}
-                  >
-                    Resume
-                  </Button>
                 ) : (
                   <>
                     {/* 1. EXPLAIN BUTTON (Shown for Mistake/Blunder and Book; replaced by Retry on Miss; hidden on Best/Excellent) */}
@@ -959,7 +947,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                         icon={<HelpCircle size={18} />}
                         onClick={() => {
                           setExplaining(true);
-                          setShowingBest(false);
                           setRetryMode(false);
                           setVariationStep(0);
                         }}
@@ -969,19 +956,21 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                     )}
 
                     {/* 2. BEST BUTTON (shown whenever the engine has a different, better move; hidden on the best move and book moves) */}
-                    {canBest && (
+                    {(canBest || bestLock) && (
                       <Button
-                        variant="secondary"
+                        variant={bestLock ? 'primary' : 'secondary'}
+                        aria-pressed={bestLock}
+                        title="Show the best move on every move until you switch this off"
                         size="md"
                         className="!h-12 flex-1"
                         icon={<Sparkles size={18} />}
                         onClick={() => {
-                          setShowingBest(true);
+                          setBestLock((v) => !v);
                           setExplaining(false);
                           setRetryMode(false);
                         }}
                       >
-                        Best
+                        {bestLock ? 'Best: on' : 'Best'}
                       </Button>
                     )}
 
@@ -994,7 +983,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                         icon={<RotateCcw size={18} />}
                         onClick={() => {
                           setRetryMode(true);
-                          setShowingBest(false);
                           setExplaining(false);
                           setRetrySuccess(null);
                           setRetryFen(null);
