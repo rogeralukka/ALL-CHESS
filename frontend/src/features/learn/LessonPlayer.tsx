@@ -4,11 +4,11 @@ import { LessonStage, LessonStep, CoachExpression } from '@/data/types';
 import { Board } from '@/features/board/Board';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
-import { ArrowLeft, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
-import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
+import { ChevronLeft } from 'lucide-react';
+import { usePhoneLayout } from '@/lib/useMediaQuery';
+import { SECTION_THEMES } from './learnLayout';
 
 const EMPTY_ARROWS: never[] = [];
 const EMPTY_HIGHLIGHTS: never[] = [];
@@ -20,7 +20,9 @@ interface LessonPlayerProps {
 }
 
 export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, onExit }) => {
-  const { boardThemeId, pieceSetId, animationSpeed } = useSettingsStore();
+  const phone = usePhoneLayout();
+  const { boardThemeId, pieceSetId, animationSpeed, coordinates } = useSettingsStore();
+  const theme = SECTION_THEMES[stage.category];
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
   const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
 
@@ -118,104 +120,79 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ stage, onComplete, o
     [currentStep.id, currentStep.explanation, currentStep.instruction, stepSolved, attemptError]
   );
 
-  return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
-      {/* Board Zone */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 min-w-0 lg:!p-0 lg:h-full">
-        <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-3">
-          <div className="flex items-center justify-between text-xs font-semibold text-theme-muted">
-            <button
-              type="button"
-              onClick={onExit}
-              className="h-9 px-3 rounded-lg btn-secondary text-[13px] font-bold flex items-center gap-1.5"
-            >
-              <ArrowLeft size={16} />
-              <span>Exit Lesson</span>
-            </button>
-            <span className="font-bold text-amber-500 uppercase">
-              Step {currentStepIndex + 1} of {steps.length}
-            </span>
-          </div>
+  const board = (
+    <div className="aspect-square w-full" data-testid="lesson-board">
+      <Board
+        fen={currentFen}
+        boardTheme={currentBoardTheme}
+        pieceSet={currentPieceSet}
+        animationSpeed={animationSpeed}
+        coordinates={coordinates}
+        arrows={currentStep.arrows || EMPTY_ARROWS}
+        highlights={stepSolved ? EMPTY_HIGHLIGHTS : currentStep.highlightSquares || EMPTY_HIGHLIGHTS}
+        successSquares={solvedSquare ? [solvedSquare] : EMPTY_HIGHLIGHTS}
+        interactive={isInteractive && !stepSolved}
+        onMove={handleMove}
+      />
+    </div>
+  );
 
-          <div className="aspect-square w-full">
-            <Board
-              fen={currentFen}
-              boardTheme={currentBoardTheme}
-              pieceSet={currentPieceSet}
-              animationSpeed={animationSpeed}
-              arrows={currentStep.arrows || EMPTY_ARROWS}
-              highlights={stepSolved ? EMPTY_HIGHLIGHTS : (currentStep.highlightSquares || EMPTY_HIGHLIGHTS)}
-              successSquares={solvedSquare ? [solvedSquare] : EMPTY_HIGHLIGHTS}
-              interactive={isInteractive && !stepSolved}
-              onMove={handleMove}
-            />
-          </div>
-        </div>
+  const header = (
+    <div className="relative flex items-center justify-center h-[60px] lg:h-[72px] px-3 flex-shrink-0" style={{ background: 'var(--side-header-bg)' }}>
+      <button type="button" onClick={onExit} aria-label="Back to lessons" data-testid="lesson-exit" className="absolute left-2 w-10 h-10 flex items-center justify-center rounded-[4px] text-theme-muted hover:text-theme-text hover:bg-white/[0.06]">
+        <ChevronLeft size={28} />
+      </button>
+      <h1 className="font-display font-extrabold text-[22px] lg:text-[26px] leading-none truncate max-w-[70%]" style={{ color: 'var(--color-text-strong)' }}>
+        {stage.title}
+      </h1>
+    </div>
+  );
+
+  // one pip per step, filled as you go (like the lesson progress on Chess.com)
+  const pips = (
+    <div className="flex gap-1.5 px-4 pt-3" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={currentStepIndex + 1} aria-label={`Step ${currentStepIndex + 1} of ${steps.length}`}>
+      {steps.map((st, i) => (
+        <span key={st.id} className="flex-1 h-2 rounded-full" style={{ background: i < currentStepIndex || (i === currentStepIndex && stepSolved) ? '#81b64c' : i === currentStepIndex ? theme.hotTop : 'rgba(255,255,255,0.14)' }} />
+      ))}
+    </div>
+  );
+
+  const coach = (
+    <div className="px-3 pt-3">
+      <CoachSpeech expression={stepSolved ? 'brilliant' : coachExp !== 'neutral' ? coachExp : 'thinking'} messages={lessonMessages} size={phone ? 64 : 80} />
+    </div>
+  );
+
+  const cta = (
+    <div className="flex-shrink-0 p-3 lg:p-4" style={{ background: 'var(--side-header-bg)' }}>
+      <Button variant="primary" size="lg" className="!h-14 w-full !text-[22px] !font-extrabold font-display" disabled={!isAdvanceAllowed} onClick={handleNextStep} data-testid="lesson-cta">
+        {!isAdvanceAllowed ? 'Make your move' : currentStepIndex < steps.length - 1 ? currentStep.buttonText || 'Continue' : 'Finish Lesson'}
+      </Button>
+    </div>
+  );
+
+  if (phone) {
+    return (
+      <div className="flex flex-col h-full w-full overflow-hidden" data-testid="lesson-mobile" style={{ background: 'var(--side-panel-bg)' }}>
+        {header}
+        {pips}
+        {coach}
+        <div className="flex-1 min-h-0 flex items-center px-0 py-2">{board}</div>
+        {cta}
       </div>
+    );
+  }
 
-      {/* Mode Panel */}
-      <SidebarPanel className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20" testId="lesson-panel">
-        <SidebarHeader title="Lesson" icon={<img src="/assets/ui/icon_learn.webp" alt="" className="w-9 h-9 object-contain" />} />
-        <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col justify-between gap-5">
-        <div className="space-y-5">
-          <CoachSpeech
-            expression={stepSolved ? 'brilliant' : coachExp !== 'neutral' ? coachExp : 'thinking'}
-            messages={lessonMessages}
-            size={80}
-          />
-
-          <Card className="p-4 space-y-2 bg-theme-raised/40">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-500 uppercase tracking-wide">
-                {stage.category} Mastery
-              </span>
-              <span className="text-xs font-mono font-bold text-theme-muted">
-                {isInteractive ? 'Interactive Step' : 'Demonstration'}
-              </span>
-            </div>
-            <h3 className="font-bold text-lg text-theme-text font-display">
-              {currentStep.title}
-            </h3>
-            <p className="text-sm text-theme-muted leading-relaxed">
-              {currentStep.instruction}
-            </p>
-          </Card>
-
-          {stepSolved && (
-            <div className="flex items-center gap-2 p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-lg text-emerald-500 font-semibold text-sm animate-in fade-in">
-              <CheckCircle2 size={18} />
-              <span>Step objective solved!</span>
-            </div>
-          )}
-
-          {attemptError && !stepSolved && (
-            <div className="flex items-center gap-2 p-3 bg-rose-500/15 border border-rose-500/30 rounded-lg text-rose-400 font-semibold text-xs animate-in fade-in">
-              <AlertCircle size={16} />
-              <span>{attemptError}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Primary Bottom Button - 48px tall */}
-        <div className="pt-4">
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
-            className="!h-12 w-full"
-            disabled={!isAdvanceAllowed}
-            icon={<ArrowRight size={18} />}
-            onClick={handleNextStep}
-          >
-            {!isAdvanceAllowed
-              ? 'Make move on board to continue'
-              : currentStepIndex < steps.length - 1
-              ? currentStep.buttonText || 'Next Step'
-              : 'Complete Lesson (+XP)'}
-          </Button>
-        </div>
-        </div>
-      </SidebarPanel>
+  return (
+    <div className="flex h-full w-full overflow-hidden items-center justify-center gap-6 px-6 py-4">
+      <div className="flex-1 min-w-0 max-w-[calc(100vh-32px)]">{board}</div>
+      <aside className="w-[420px] xl:w-[450px] flex-shrink-0 h-[calc(100vh-32px)] rounded-[5px] overflow-hidden flex flex-col" style={{ background: 'var(--side-panel-bg)' }} data-testid="lesson-panel">
+        {header}
+        {pips}
+        {coach}
+        <div className="flex-1" />
+        {cta}
+      </aside>
     </div>
   );
 };
