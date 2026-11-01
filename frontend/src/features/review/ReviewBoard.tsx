@@ -273,8 +273,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const targetBestMove = currentMove?.eval?.bestMove || currentMove?.eval?.lines?.[0]?.move || currentMove?.annotations?.bestMove?.san || '';
 
   // Determine active board FEN, arrows, badges, and lastMove (memoized)
-  const { displayFen, arrows, badges, boardLastMove, threats } = useMemo(() => {
+  const { displayFen, arrows, badges, boardLastMove, threats, targets } = useMemo(() => {
     let thr: string[] = [];
+    let tgt: string[] = [];
     let fen = currentMove?.fen || START_FEN;
     let arrs: Arrow[] = [];
     let bdgs: BoardBadge[] = currentMove?.classification
@@ -339,21 +340,19 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
     // 4. NORMAL VIEW
     else {
-      // Chess.com rules: green = the move that was better (inaccuracy, mistake, miss);
-      // red = the opponent's punishing reply (mistake, blunder); blue = the tactic a miss let slip by.
+      // Chess.com rules: miss = green arrow to the move that was missed; inaccuracy = green better move;
+      // mistake / blunder = red arrow for the reply that punishes it, plus the better move's square in green.
       if (hasAnnotations(currentMove)) {
         // the backend decided which arrows belong to this move
         arrs = annotationArrows(currentMove.annotations, classification);
       } else {
-        if (['inaccuracy', 'mistake', 'miss'].includes(classification) && targetBestMove) {
+        if (['inaccuracy', 'miss'].includes(classification) && targetBestMove) {
           const bestSq = getMoveSquares(fenBeforeMove, targetBestMove);
           if (bestSq) arrs = [{ from: bestSq.from, to: bestSq.to, color: 'green' }];
         }
-        if (['mistake', 'blunder', 'miss'].includes(classification) && currentMove?.variation?.[0]) {
+        if (['mistake', 'blunder'].includes(classification) && currentMove?.variation?.[0]) {
           const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
-          if (refutSq) {
-            arrs = [...arrs, { from: refutSq.from, to: refutSq.to, color: classification === 'miss' ? 'blue' : 'red' }];
-          }
+          if (refutSq) arrs = [{ from: refutSq.from, to: refutSq.to, color: 'red' }];
         }
       }
       // The played move is drawn in orange on good moves (always) and on errors when Show is on; knights bend in an L
@@ -363,9 +362,22 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
 
     // Red squares: enemy pieces the move attacks (normal view only)
-    if (!showingBest && !explaining && !retryMode && currentMove) thr = hasAnnotations(currentMove) ? annotationSquares(currentMove.annotations) : threatenedSquares(currentMove.fen, currentMove.to);
+    if (!showingBest && !explaining && !retryMode && currentMove) {
+      if (hasAnnotations(currentMove)) {
+        const sq = annotationSquares(currentMove.annotations, classification);
+        thr = sq.threats;
+        tgt = sq.targets;
+      } else {
+        thr = threatenedSquares(currentMove.fen, currentMove.to);
+        if ((classification === 'mistake' || classification === 'blunder') && targetBestMove) {
+          const b = getMoveSquares(fenBeforeMove, targetBestMove);
+          if (b) tgt = [b.to];
+        }
+      }
+    }
     return {
       threats: thr,
+      targets: tgt,
       displayFen: fen,
       arrows: arrs,
       badges: bdgs,
@@ -434,11 +446,13 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
       coachText = currentMove?.classification === 'book' ? book : `${book} ${coachText}`;
     }
     if (currentMove?.san && currentMove?.classification && !book) {
-      const prefixRegex = new RegExp(`^${currentMove.san}\\s+(is\\s+(a\\s+)?${currentMove.classification}[.:!\\s]*)+`, 'i');
-      coachText = coachText.replace(prefixRegex, '').trim();
-      if (coachText.length > 0) {
-        coachText = coachText[0].toUpperCase() + coachText.slice(1);
-      }
+      const san = currentMove.san.replace(/[+#]/g, '\\$&');
+      const label = `(?:slightly\\s+)?(?:${currentMove.classification}|inaccura\\w*)`;
+      const prefixRegex = new RegExp(`^${san}\\s+(is\\s+(a\\s+|an\\s+)?${label}[.:!\\s]*)+`, 'i');
+      const stripped = coachText.replace(prefixRegex, '').trim();
+      // a body that still starts with a move ("f6 ...") keeps its case; sentences start with a capital
+      const startsWithMove = /^(?:[a-h][1-8x]|O-O|[KQRBN][a-hx1-8])/.test(stripped);
+      coachText = stripped.length > 0 && !startsWithMove ? stripped[0].toUpperCase() + stripped.slice(1) : stripped;
     }
   }
 
@@ -587,6 +601,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             badges={badges}
             arrows={arrows}
             threats={threats}
+            targets={targets}
             interactive={retryMode}
             onMove={handleRetryMove}
           />
@@ -800,6 +815,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 badges={badges}
                 arrows={arrows}
                 threats={threats}
+            targets={targets}
                 interactive={retryMode}
                 onMove={handleRetryMove}
               />
