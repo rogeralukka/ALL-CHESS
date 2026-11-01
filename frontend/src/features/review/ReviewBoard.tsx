@@ -336,15 +336,15 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
     // 4. NORMAL VIEW
     else {
-      if (classification === 'inaccuracy' && targetBestMove) {
-        // Inaccuracy: point at the move that was better (green), like the Chess.com app
+      if ((classification === 'inaccuracy' || classification === 'miss') && targetBestMove) {
+        // Inaccuracy / miss: point at the move that was better (green), like the Chess.com app
         const bestSq = getMoveSquares(fenBeforeMove, targetBestMove);
         if (bestSq) arrs = [{ from: bestSq.from, to: bestSq.to, color: 'green' }];
       } else if (isMistakeOrBlunder && currentMove?.variation?.[0]) {
-        // Red refutation arrow on mistakes/blunders pointing out opponent's tactical strike
+        // Blue arrow on mistakes/blunders: the opponent's strike that the move allowed (blue, as in the app)
         const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
         if (refutSq) {
-          arrs = [{ from: refutSq.from, to: refutSq.to, color: 'red' }];
+          arrs = [{ from: refutSq.from, to: refutSq.to, color: 'blue' }];
         }
       }
       // "Show": draw the move that was played (orange; knights bend in an L)

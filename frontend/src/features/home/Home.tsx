@@ -185,7 +185,7 @@ export const Home: React.FC = () => {
               size={80}
               text={`Welcome back! Today's focus is ${currentStage?.title?.toLowerCase() || 'king and pawn endgames'}. Five focused minutes now will show up in your next game.`}
             />
-            <div className="flex flex-wrap gap-2 pl-[90px]">
+            <div className="flex flex-wrap gap-2 sm:pl-[90px]">
               <Button variant="primary" size="lg" icon={<Sparkles size={18} />} onClick={() => navigate('/learn')}>
                 Start today's lesson
               </Button>
@@ -330,6 +330,13 @@ export const Home: React.FC = () => {
         </div>
         <GameHistoryTable games={recentGames} analyzingId={recentGames[2]?.id} />
       </Card>
+
+      {/* Phones: the big green Play button that floats above the bottom bar, as in the Chess.com app */}
+      <div className="sm:hidden sticky bottom-[calc(64px+12px+env(safe-area-inset-bottom))] z-30 pt-1" data-testid="home-play">
+        <Button variant="primary" size="lg" fullWidth className="!h-14 !text-[22px] !font-extrabold font-display shadow-lg" onClick={() => navigate('/play')}>
+          Play
+        </Button>
+      </div>
     </PageContainer>
   );
 };

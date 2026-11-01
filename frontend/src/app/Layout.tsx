@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronsLeft, ChevronsRight, RefreshCw, Sun, Moon, Settings as SettingsIcon } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, RefreshCw, Sun, Moon, Settings as SettingsIcon, Menu, X } from 'lucide-react';
 import { useSettingsStore } from '@/data/settingsStore';
 import { useAuthStore } from '@/data/authStore';
 import { LoginGate } from '@/components/LoginGate';
@@ -39,6 +39,22 @@ const NAV = [
   { to: '/profile', label: 'Profile', icon: 'profile' },
 ];
 
+/** Phone bottom bar (as in the Chess.com app); Play Coach, Profile, Scout, Leaderboard and Settings live under "More". */
+const PHONE_TABS: Array<{ to: string; label: string; short?: string; icon: string }> = [
+  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/puzzles', label: 'Puzzles', icon: 'puzzles' },
+  { to: '/learn', label: 'Learn', icon: 'learn' },
+  { to: '/review', label: 'Review', icon: 'review' },
+];
+const MORE_ITEMS = [
+  { to: '/play', label: 'Play Coach', icon: 'play' },
+  { to: '/profile', label: 'Profile & Stats', icon: 'profile' },
+  { to: '/scout', label: 'Scout', icon: 'scout' },
+  { to: '/leaderboard', label: 'Leaderboard', icon: 'leaderboard' },
+  { to: '/settings', label: 'Settings', icon: 'settings' },
+];
+const MORE_PATHS = MORE_ITEMS.map((i) => i.to);
+
 const isActivePath = (path: string, to: string) => path === to || (to !== '/' && path.startsWith(to));
 
 const NavIcon: React.FC<{ name: string; size?: number; active?: boolean }> = ({ name, size = 28, active }) => (
@@ -60,6 +76,12 @@ export const Layout: React.FC = () => {
   const [collapsed, setCollapsed] = useState<boolean>(() => storage.get('all_chess_sidebar_collapsed', false));
   const autoSyncedRef = useRef(false);
   const location = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // close the "More" sheet whenever the screen changes
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     storage.set('all_chess_sidebar_collapsed', collapsed);
@@ -287,13 +309,13 @@ export const Layout: React.FC = () => {
         </motion.div>
       </main>
 
-      {/* --- PHONE BOTTOM NAVIGATION (< 640px) --- */}
+      {/* --- PHONE BOTTOM NAVIGATION (< 640px): Home / Puzzles / Learn / Review / More, as in the Chess.com app --- */}
       <nav
         className="sm:hidden fixed bottom-0 left-0 right-0 h-16 backdrop-blur-md flex items-center justify-around px-1 z-40 pb-[env(safe-area-inset-bottom)]"
         style={{ background: 'color-mix(in srgb, var(--color-sidebar) 94%, transparent)', boxShadow: '0 -1px 0 rgba(255,255,255,0.06)' }}
         aria-label="Mobile Navigation"
       >
-        {NAV.filter((n) => n.icon !== 'scout' && n.icon !== 'leaderboard').map((item) => {
+        {PHONE_TABS.map((item) => {
           const active = isActivePath(location.pathname, item.to);
           return (
             <NavLink
@@ -306,7 +328,64 @@ export const Layout: React.FC = () => {
             </NavLink>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setMoreOpen((o) => !o)}
+          aria-expanded={moreOpen}
+          data-testid="phone-more"
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 select-none transition-colors ${
+            moreOpen || MORE_PATHS.some((p) => isActivePath(location.pathname, p)) ? 'text-amber-500' : 'text-theme-muted'
+          }`}
+        >
+          <Menu size={26} />
+          <span className="text-[12px] leading-tight font-bold">More</span>
+        </button>
       </nav>
+
+      {moreOpen && (
+        <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/50" onClick={() => setMoreOpen(false)} data-testid="phone-more-sheet">
+          <div
+            className="rounded-t-2xl px-3 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]"
+            style={{ background: 'var(--side-panel-bg)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-2 pb-2">
+              <span className="font-display font-extrabold text-[20px]">More</span>
+              <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close" className="w-9 h-9 flex items-center justify-center text-theme-muted">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex flex-col">
+              {MORE_ITEMS.map((item) => (
+                <NavLink key={item.to} to={item.to} className="flex items-center gap-3 px-2 h-14 rounded-lg font-display font-bold text-[17px] text-theme-text active:bg-white/10">
+                  <NavIcon name={item.icon} size={30} />
+                  {item.label}
+                </NavLink>
+              ))}
+              <button
+                type="button"
+                onClick={() => setAppTheme(appTheme === 'dusk' ? 'dawn' : 'dusk')}
+                className="flex items-center gap-3 px-2 h-14 rounded-lg font-display font-bold text-[17px] text-theme-text active:bg-white/10 text-left"
+              >
+                <span className="w-[30px] flex justify-center">{appTheme === 'dusk' ? <Sun size={22} /> : <Moon size={22} />}</span>
+                {appTheme === 'dusk' ? 'Day mode' : 'Night mode'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  handleSync();
+                }}
+                disabled={isSyncing}
+                className="flex items-center gap-3 px-2 h-14 rounded-lg font-display font-bold text-[17px] text-theme-text active:bg-white/10 text-left disabled:opacity-60"
+              >
+                <span className="w-[30px] flex justify-center">{isSyncing ? <PieceHopper size={26} /> : <RefreshCw size={22} />}</span>
+                {isSyncing ? 'Syncing…' : 'Sync games'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ToastContainer />
     </div>
