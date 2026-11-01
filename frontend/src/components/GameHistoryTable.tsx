@@ -5,7 +5,7 @@ import { Game } from '@/data/types';
 import { PlayerAvatar } from './Bits';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { ModeIcon, GameMode } from './ModeIcon';
-import { openingNameFor, terminationFor } from '@/lib/gameMeta';
+import { openingNameFor, plyCount, terminationFor } from '@/lib/gameMeta';
 import { BookOpen } from 'lucide-react';
 
 const accTone = (v?: number) => (v === undefined ? 'text-theme-muted' : v >= 85 ? 'text-[var(--color-win)]' : v >= 70 ? 'text-theme-text' : 'text-[#e6912c]');
@@ -60,11 +60,11 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
             </tr>
           ) : (
             games.map((g) => {
-              const youWhite = g.white.username === 'You';
+              const youWhite = g.isUserWhite ?? g.white.username === 'You';
               const won = (youWhite && g.result === '1-0') || (!youWhite && g.result === '0-1');
               const lost = (youWhite && g.result === '0-1') || (!youWhite && g.result === '1-0');
               const kind = won ? 'win' : lost ? 'loss' : 'draw';
-              const moves = Math.ceil(g.moves.length / 2);
+              const moves = Math.ceil(plyCount(g) / 2);
               const date = new Date(g.date);
               const mode: GameMode = g.source === 'vs_coach' ? 'coach' : (g.speed as GameMode);
               const [ws, bs] = g.result === '1/2-1/2' ? ['½', '½'] : g.result.split('-');

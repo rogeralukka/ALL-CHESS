@@ -22,6 +22,13 @@ body {
 @tailwind utilities;
 
 @layer base {
+  /* The app scrolls inside <main>, never the page itself: on phones a page that is 100vh tall is taller than
+     the visible screen (address bar), so it used to slide up and down under the fixed bars. */
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   html, body {
     margin: 0;
     padding: 0;

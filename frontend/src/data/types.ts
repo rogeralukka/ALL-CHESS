@@ -103,6 +103,10 @@ export interface Game {
   isUserWhite?: boolean;
   opening: Opening;
   moves: Move[];
+  /** Half-moves in the game; sent by the light games list, which leaves out `moves` */
+  moveCount?: number;
+  /** True when the last move was mate (light list only) */
+  endsInMate?: boolean;
   accuracy?: {
     white: number; // MOCK
     black: number; // MOCK

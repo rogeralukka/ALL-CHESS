@@ -81,6 +81,12 @@ export async function apiRequest<T = unknown>(
     throw new ApiError(response.status, errorStr, detail);
   }
 
+  // anything that writes to games (save, analyse, sync, delete) makes cached game lists stale
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET' && typeof window !== 'undefined' && /\/(games|sync)\b/.test(url)) {
+    window.dispatchEvent(new CustomEvent('all-chess:games-changed'));
+  }
+
   return data as T;
 }
 

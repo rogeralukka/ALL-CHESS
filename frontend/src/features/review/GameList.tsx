@@ -7,6 +7,8 @@ import { Segmented } from '@/components/Segmented';
 import { PageContainer } from '@/components/PageHeader';
 import { PageTitle, StatTile } from '@/components/ListUI';
 import { GameHistoryTable } from '@/components/GameHistoryTable';
+import { PhoneGameRows } from '@/components/PhoneGameRows';
+import { useMediaQuery } from '@/lib/useMediaQuery';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { Search, Swords, Trophy, Percent, Target } from 'lucide-react';
 
@@ -15,6 +17,7 @@ interface GameListProps {
 }
 
 export const GameList: React.FC<GameListProps> = () => {
+  const isPhone = useMediaQuery('(max-width: 639px)');
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,7 +40,7 @@ export const GameList: React.FC<GameListProps> = () => {
     };
   }, [searchQuery, speedFilter, colorFilter, resultFilter]);
 
-  const you = (g: Game) => (g.white.username === 'You' ? 'w' : 'b');
+  const you = (g: Game) => ((g.isUserWhite ?? g.white.username === 'You') ? 'w' : 'b');
   const wins = games.filter((g) => (you(g) === 'w' && g.result === '1-0') || (you(g) === 'b' && g.result === '0-1')).length;
   const accs = games.map((g) => (you(g) === 'w' ? g.accuracy?.white : g.accuracy?.black)).filter((v): v is number => typeof v === 'number');
   const avgAcc = accs.length ? accs.reduce((a, b) => a + b, 0) / accs.length : 0;
@@ -57,12 +60,28 @@ export const GameList: React.FC<GameListProps> = () => {
         subtitle="Pick a game and the coach walks you through every move and shows you the better line."
       />
 
+      {isPhone ? (
+        <div className="grid grid-cols-4 rounded-xl overflow-hidden divide-x divide-white/[0.06]" style={{ background: 'var(--color-card)' }} data-testid="review-stats">
+          {[
+            [loading ? '–' : String(games.length), 'Games'],
+            [loading ? '–' : String(wins), 'Wins'],
+            [loading || !games.length ? '–' : `${Math.round((wins / games.length) * 100)}%`, 'Win rate'],
+            [loading || !accs.length ? '–' : avgAcc.toFixed(1), 'Accuracy'],
+          ].map(([v, l]) => (
+            <div key={l} className="py-3 flex flex-col items-center">
+              <span className="font-display font-black text-[20px] text-theme-text tabular-nums leading-tight">{v}</span>
+              <span className="text-[12px] font-semibold text-theme-muted">{l}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatTile icon={<Swords size={22} className="text-[#5ec1e6]" />} value={loading ? '–' : games.length} label="Games" />
         <StatTile icon={<Trophy size={22} className="text-[#81b64c]" />} value={loading ? '–' : wins} label="Wins" />
         <StatTile icon={<Percent size={22} className="text-[#f7c631]" />} value={loading || !games.length ? '–' : `${Math.round((wins / games.length) * 100)}%`} label="Win rate" />
         <StatTile icon={<Target size={22} className="text-[#f7a531]" />} value={loading || !accs.length ? '–' : `${avgAcc.toFixed(1)}%`} label="Avg accuracy" />
       </div>
+      )}
 
       <section className="cc-card overflow-hidden">
         <div className="p-3 md:p-4 flex flex-col xl:flex-row xl:items-center gap-3 border-b border-theme-border">
@@ -77,7 +96,7 @@ export const GameList: React.FC<GameListProps> = () => {
               className="w-full h-11 pl-10 pr-3 rounded-[5px] bg-[var(--input-bg)] border border-transparent text-[14px] font-semibold text-theme-text placeholder:text-theme-muted focus:outline-none focus-visible:!outline-none focus:border-[#81b64c] transition-colors"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
             <Segmented<'all' | 'rapid' | 'blitz' | 'bullet'>
               size="sm"
               value={speedFilter}
@@ -130,7 +149,7 @@ export const GameList: React.FC<GameListProps> = () => {
           </div>
         )}
 
-        {!loading && games.length > 0 && <GameHistoryTable games={games} />}
+        {!loading && games.length > 0 && (isPhone ? <PhoneGameRows games={games} className="!rounded-none" /> : <GameHistoryTable games={games} />)}
       </section>
     </PageContainer>
   );

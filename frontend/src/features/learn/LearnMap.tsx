@@ -104,7 +104,7 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
 
   return (
     <div className="relative h-full w-full isolate" data-testid="learn-map">
-      <div ref={scroller} onScroll={measure} className="absolute inset-0 overflow-y-auto overflow-x-hidden no-scrollbar" style={{ background: '#242320' }}>
+      <div ref={scroller} onScroll={measure} className="absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain no-scrollbar" style={{ background: '#242320' }}>
         <div className={`mx-auto w-full ${compact ? 'max-w-[300px]' : 'max-w-[560px]'}`} style={{ containerType: 'inline-size' }}>
           <div className="relative w-full" style={{ height: cq(totalCqw) }}>
             {cells.map((c) => {

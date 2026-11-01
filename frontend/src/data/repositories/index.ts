@@ -73,6 +73,21 @@ export interface ICoachNarrator {
 
 const isMockMode = () => import.meta.env.VITE_USE_MOCKS === 'true';
 
+/**
+ * The games list is large (every move of every game), and several screens ask for it at once
+ * (the shell's auto-sync check, Home, Profile). Share one request per filter and keep it briefly,
+ * dropping it as soon as anything changes a game.
+ */
+const GAMES_TTL_MS = 30_000;
+const gamesCache = new Map<string, { at: number; promise: Promise<Game[]> }>();
+export function invalidateGamesCache() {
+  gamesCache.clear();
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('chess-data-refresh', invalidateGamesCache);
+  window.addEventListener('all-chess:games-changed', invalidateGamesCache);
+}
+
 // --- GAME REPOSITORY ---
 export const gameRepository: IGameRepository = {
   async getGames(filter) {
@@ -118,15 +133,21 @@ export const gameRepository: IGameRepository = {
     if (filter?.opening) params.set('opening', filter.opening);
     if (filter?.searchQuery) params.set('search_query', filter.searchQuery);
 
+    // lists never need every move: ask for the light shape (moveCount instead of moves) where the backend has it
+    params.set('lite', 'true');
     const qs = params.toString();
-    try {
-      return await api.get<Game[]>(`/games${qs ? `?${qs}` : ''}`);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        return [];
+    const hit = gamesCache.get(qs);
+    if (hit && Date.now() - hit.at < GAMES_TTL_MS) return hit.promise;
+    const promise = api.get<Game[]>(`/games?${qs}`).then(
+      (games) => games.map((g) => ({ ...g, moves: g.moves ?? [] })),
+      (err) => {
+        gamesCache.delete(qs);
+        if (err instanceof ApiError && err.status === 401) return [];
+        throw err;
       }
-      throw err;
-    }
+    );
+    gamesCache.set(qs, { at: Date.now(), promise });
+    return promise;
   },
 
   async getGameById(id: string) {

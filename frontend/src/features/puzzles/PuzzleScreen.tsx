@@ -535,7 +535,7 @@ export const PuzzleScreen: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: isOff ? 0 : 0.2 }}
-              className="flex-1 min-h-[560px] lg:min-h-0 relative overflow-hidden"
+              className="flex-1 min-h-0 relative overflow-hidden"
               data-testid="puzzle-home"
             >
               <IsoLevelMap

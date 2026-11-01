@@ -850,6 +850,8 @@ export const PlayGame: React.FC = () => {
 
       {/* Right Zone: Lobby or In-Game Panel (460px to 500px, clamp 380-500) */}
       <SidebarPanel className={`w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20 ${activeConfig ? '' : 'flex-1 min-h-0 lg:flex-none'}`} testId="play-panel">
+        {/* during a game on a phone the board is the screen: no section title between it and the controls */}
+        {!(isPhone && activeConfig) && (
         <SidebarHeader
           title="Play Coach"
           icon={<img src="/assets/ui/icon_play.webp" alt="" className="w-9 h-9 object-contain" />}
@@ -865,6 +867,7 @@ export const PlayGame: React.FC = () => {
             </span>
           }
         />
+        )}
         {/* Panel Content (Scrollable with fixed container for 200ms cross-fade) */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <AnimatePresence mode="wait">

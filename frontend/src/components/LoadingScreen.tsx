@@ -51,7 +51,7 @@ export const PieceHopper: React.FC<{ size?: number }> = ({ size = 120 }) => {
  */
 export const InlineLoader: React.FC<{ label?: string; size?: number; className?: string; page?: boolean }> = ({ label = 'Loading…', size, className = '', page = false }) => (
   <div
-    className={`flex flex-col items-center justify-center gap-2 select-none ${page ? 'flex-1 min-h-[calc(100vh-150px)] py-8' : 'py-8'} ${className}`}
+    className={`flex flex-col items-center justify-center gap-2 select-none ${page ? 'flex-1 min-h-[calc(100dvh-150px)] py-8' : 'py-8'} ${className}`}
     role="status"
     aria-live="polite"
     data-testid="inline-loader"
