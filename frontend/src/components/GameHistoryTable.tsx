@@ -81,7 +81,7 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
                       <span className="text-[12px] text-theme-muted whitespace-nowrap">{g.source === 'vs_coach' ? 'Coach' : g.timeControl}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-2 min-w-[200px]">
+                  <td className="py-3 px-2 w-full max-w-0 sm:w-auto sm:max-w-none sm:min-w-[200px]">
                     {[g.white, g.black].map((p, i) => (
                       <div key={i} className="flex items-center gap-2 leading-6">
                         <span className="rounded-[3px] overflow-hidden flex-shrink-0">
@@ -129,8 +129,8 @@ export const GameHistoryTable: React.FC<{ games: Game[]; compact?: boolean; anal
                   <td className="py-3 px-2 text-center text-[14px] text-theme-text tabular-nums whitespace-nowrap hidden sm:table-cell">
                     {isNaN(date.getTime()) ? g.date : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
-                  <td className="py-3 pr-4 pl-2 text-right">
-                    <span className="btn-secondary inline-flex items-center h-8 px-4 rounded-[3px] text-[14px] font-semibold text-theme-text">Review</span>
+                  <td className="py-3 pr-3 sm:pr-4 pl-1 sm:pl-2 text-right">
+                    <span className="btn-secondary inline-flex items-center h-8 px-3 sm:px-4 rounded-[3px] text-[14px] font-semibold text-theme-text">Review</span>
                   </td>
                 </tr>
               );

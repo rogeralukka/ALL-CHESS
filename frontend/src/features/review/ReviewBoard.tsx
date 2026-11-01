@@ -338,15 +338,16 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
     // 4. NORMAL VIEW
     else {
-      if ((classification === 'inaccuracy' || classification === 'miss') && targetBestMove) {
-        // Inaccuracy / miss: point at the move that was better (green), like the Chess.com app
+      // Chess.com rules: green = the move that was better (inaccuracy, mistake, miss);
+      // red = the opponent's punishing reply (mistake, blunder); blue = the tactic a miss let slip by.
+      if (['inaccuracy', 'mistake', 'miss'].includes(classification) && targetBestMove) {
         const bestSq = getMoveSquares(fenBeforeMove, targetBestMove);
         if (bestSq) arrs = [{ from: bestSq.from, to: bestSq.to, color: 'green' }];
-      } else if (isMistakeOrBlunder && currentMove?.variation?.[0]) {
-        // Blue arrow on mistakes/blunders: the opponent's strike that the move allowed (blue, as in the app)
+      }
+      if (['mistake', 'blunder', 'miss'].includes(classification) && currentMove?.variation?.[0]) {
         const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
         if (refutSq) {
-          arrs = [{ from: refutSq.from, to: refutSq.to, color: 'blue' }];
+          arrs = [...arrs, { from: refutSq.from, to: refutSq.to, color: classification === 'miss' ? 'blue' : 'red' }];
         }
       }
       // The played move is drawn in orange on good moves (always) and on errors when Show is on; knights bend in an L
