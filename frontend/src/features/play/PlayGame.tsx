@@ -28,6 +28,7 @@ import { useCurrentUser } from '@/lib/useCurrentUser';
 import { saveCoachGame } from '@/services/coachGameService';
 import { useToastStore } from '@/components/Toast';
 import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
+import { usePhoneLayout } from '@/lib/useMediaQuery';
 
 const PIECE_FIGURINES: Record<string, string> = {
   p: '♟',
@@ -101,6 +102,7 @@ function findKingSquares(chess: Chess) {
 
 export const PlayGame: React.FC = () => {
   const navigate = useNavigate();
+  const isPhone = usePhoneLayout();
   const me = useCurrentUser();
   const { boardThemeId, pieceSetId, animationSpeed, coordinates, coachVoiceEnabled } = useSettingsStore();
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
@@ -718,10 +720,16 @@ export const PlayGame: React.FC = () => {
   const bottomPlayerInfo = isUserBottom ? userInfo : coachInfo;
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
-      {/* Center Zone: Board & Eval Bar */}
-      <div className="flex-1 flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 min-w-0 lg:!p-0 lg:h-full relative">
+    <div className={`flex-1 flex flex-col lg:flex-row h-full w-full ${activeConfig ? 'overflow-y-auto pb-4' : 'overflow-hidden'} lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 lg:pb-4`}>
+      {/* Center Zone: Board & Eval Bar (phones show only the setup panel until a game starts) */}
+      <div className={`${activeConfig ? 'flex' : 'hidden lg:flex'} flex-1 flex-col items-center justify-center p-2 sm:p-3 md:p-6 min-w-0 lg:!p-0 lg:h-full relative`}>
         <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
+          {/* Phones: the coach talks above the board, as in the app */}
+          {isPhone && activeConfig && (
+            <div className="h-[132px] flex items-end overflow-hidden" data-testid="play-coach-mobile">
+              <CoachSpeech expression={coachExpression} messages={stackedMessages} voiceEnabled={coachVoiceEnabled} size={72} className="w-full !items-end" />
+            </div>
+          )}
           {/* Top Player */}
           <PlayerBar
             testId="player-top"
@@ -841,7 +849,7 @@ export const PlayGame: React.FC = () => {
       </div>
 
       {/* Right Zone: Lobby or In-Game Panel (460px to 500px, clamp 380-500) */}
-      <SidebarPanel className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20" testId="play-panel">
+      <SidebarPanel className={`w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20 ${activeConfig ? '' : 'flex-1 min-h-0 lg:flex-none'}`} testId="play-panel">
         <SidebarHeader
           title="Play Coach"
           icon={<img src="/assets/ui/icon_play.webp" alt="" className="w-9 h-9 object-contain" />}
@@ -885,12 +893,14 @@ export const PlayGame: React.FC = () => {
                 className="space-y-4"
               >
                 {/* Coach Portrait + Stacked Speech Bubbles (Max 2 bubbles, newest next to portrait) */}
-                <CoachSpeech
-                  expression={coachExpression}
-                  messages={stackedMessages}
-                  voiceEnabled={coachVoiceEnabled}
-                  size={80}
-                />
+                {!isPhone && (
+                  <CoachSpeech
+                    expression={coachExpression}
+                    messages={stackedMessages}
+                    voiceEnabled={coachVoiceEnabled}
+                    size={80}
+                  />
+                )}
 
                 {/* Live Action Controls: Resign, Hint, Takeback (Equal width 48px buttons) */}
                 <div className="relative pt-1 w-full space-y-2">

@@ -7,6 +7,7 @@ import { Segmented } from '@/components/Segmented';
 import { CoachSpeech } from '@/features/coach/CoachSpeech';
 import { Swords, ChevronDown, ChevronUp, CheckCircle2, SlidersHorizontal } from 'lucide-react';
 import { MAX_LEVEL } from '@/services/stockfishPlayService';
+import { usePhoneLayout } from '@/lib/useMediaQuery';
 
 const LEVELS: Array<{ rating: number; name: string; desc: string }> = [
   { rating: 400, name: 'Beginner', desc: 'Learning how the pieces move; leaves pieces hanging.' },
@@ -59,6 +60,7 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
 
   const [userColor, setUserColor] = useState<'white' | 'random' | 'black'>('white');
   const [showOptions, setShowOptions] = useState(false);
+  const phone = usePhoneLayout();
 
   // Coaching Assistance Toggles
   const [coachComments, setCoachComments] = useState(true);
@@ -101,6 +103,27 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
         <h2 className="text-xs font-bold font-display uppercase tracking-wider text-theme-muted">
           Difficulty Level
         </h2>
+        {phone ? (
+          <div className="rounded-[8px] overflow-hidden divide-y divide-white/5 bg-black/[0.06] dark:bg-white/[0.06]" role="radiogroup" aria-label="Difficulty level" data-testid="level-list">
+            {LEVELS.map((lvl) => {
+              const isSelected = lvl.rating === selectedLevel;
+              return (
+                <button
+                  key={lvl.rating}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setSelectedLevel(lvl.rating)}
+                  className={`w-full flex items-center gap-3 px-4 h-14 text-left ${isSelected ? 'bg-[var(--color-win)]/20 ring-2 ring-inset ring-[var(--color-win)]' : 'active:bg-white/10'}`}
+                >
+                  <img src={rankFor(lvl.rating).tier.icon} alt="" className="w-8 h-8 object-contain" />
+                  <span className="flex-1 font-display font-extrabold text-[17px] text-theme-text">{lvl.name}</span>
+                  <span className="font-display font-bold text-[16px] tabular-nums text-theme-muted">({lvl.rating >= MAX_LEVEL ? 'Max' : lvl.rating})</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" role="radiogroup" aria-label="Difficulty level">
           {LEVELS.map((lvl) => {
             const isSelected = lvl.rating === selectedLevel;
@@ -130,6 +153,7 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
             );
           })}
         </div>
+        )}
         <div className="well flex items-center gap-3 px-3 py-2.5 !rounded-[10px]">
           <CheckCircle2 size={16} className="text-amber-500 flex-shrink-0" />
           <div className="min-w-0">
@@ -235,11 +259,11 @@ export const PlayLobby: React.FC<PlayLobbyProps> = ({
           variant="primary"
           size="lg"
           fullWidth
-          className="!h-12 text-sm font-bold shadow-lg"
-          icon={<Swords size={20} />}
+          className={phone ? '!h-14 !text-[22px] !font-extrabold font-display shadow-lg' : '!h-12 text-sm font-bold shadow-lg'}
+          icon={phone ? undefined : <Swords size={20} />}
           onClick={handleStart}
         >
-          Start Coaching Match
+          {phone ? 'Play' : 'Start Coaching Match'}
         </Button>
       </div>
     </div>

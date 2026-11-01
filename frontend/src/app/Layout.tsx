@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronsLeft, ChevronsRight, RefreshCw, Sun, Moon, Settings as SettingsIcon, Menu, X } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, RefreshCw, Sun, Moon, Settings as SettingsIcon, Menu, X, BarChart3 } from 'lucide-react';
 import { useSettingsStore } from '@/data/settingsStore';
 import { useAuthStore } from '@/data/authStore';
 import { LoginGate } from '@/components/LoginGate';
@@ -37,6 +37,7 @@ const NAV = [
   { to: '/scout', label: 'Scout', icon: 'scout' },
   { to: '/leaderboard', label: 'Leaderboard', short: 'Ranks', icon: 'leaderboard' },
   { to: '/profile', label: 'Profile', icon: 'profile' },
+  { to: '/stats', label: 'Advanced Stats', short: 'Stats', icon: 'stats' },
 ];
 
 /** Phone bottom bar (as in the Chess.com app); Play Coach, Profile, Scout, Leaderboard and Settings live under "More". */
@@ -49,7 +50,7 @@ const PHONE_TABS: Array<{ to: string; label: string; short?: string; icon: strin
 const MORE_ITEMS = [
   { to: '/play', label: 'Play Coach', icon: 'play' },
   { to: '/profile', label: 'Profile', icon: 'profile' },
-  { to: '/stats', label: 'Advanced Stats', icon: 'leaderboard' },
+  { to: '/stats', label: 'Advanced Stats', icon: 'stats' },
   { to: '/scout', label: 'Scout', icon: 'scout' },
   { to: '/leaderboard', label: 'Leaderboard', icon: 'leaderboard' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
@@ -58,7 +59,12 @@ const MORE_PATHS = MORE_ITEMS.map((i) => i.to);
 
 const isActivePath = (path: string, to: string) => path === to || (to !== '/' && path.startsWith(to));
 
-const NavIcon: React.FC<{ name: string; size?: number; active?: boolean }> = ({ name, size = 28, active }) => (
+const NavIcon: React.FC<{ name: string; size?: number; active?: boolean }> = ({ name, size = 28, active }) =>
+  name === 'stats' ? (
+    <span className="flex-shrink-0 flex items-center justify-center text-[#81b64c]" style={{ width: size, height: size }} aria-hidden="true">
+      <BarChart3 size={Math.round(size * 0.85)} strokeWidth={2.6} />
+    </span>
+  ) : (
   <img
     src={SECTION_ICON[name]}
     alt=""
@@ -67,7 +73,7 @@ const NavIcon: React.FC<{ name: string; size?: number; active?: boolean }> = ({ 
     className={`flex-shrink-0 object-contain transition-transform duration-150 group-hover:scale-110 group-hover:-rotate-3 ${active ? 'scale-110' : ''}`}
     style={{ width: size, height: size, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.35))' }}
   />
-);
+  );
 
 export const Layout: React.FC = () => {
   const { appTheme, setAppTheme } = useSettingsStore();

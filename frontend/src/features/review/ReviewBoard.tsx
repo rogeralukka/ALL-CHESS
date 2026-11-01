@@ -21,6 +21,7 @@ import { sound } from '@/lib/sound';
 import { usePhoneLayout, useMediaQuery } from '@/lib/useMediaQuery';
 import { createPortal } from 'react-dom';
 import { MobileMoveStrip } from './MobileMoveStrip';
+import { threatenedSquares } from '@/lib/threats';
 import {
   SkipBack,
   SkipForward,
@@ -271,7 +272,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const targetBestMove = currentMove?.eval?.bestMove || currentMove?.eval?.lines?.[0]?.move || '';
 
   // Determine active board FEN, arrows, badges, and lastMove (memoized)
-  const { displayFen, arrows, badges, boardLastMove } = useMemo(() => {
+  const { displayFen, arrows, badges, boardLastMove, threats } = useMemo(() => {
+    let thr: string[] = [];
     let fen = currentMove?.fen || START_FEN;
     let arrs: Arrow[] = [];
     let bdgs: BoardBadge[] = currentMove?.classification
@@ -347,13 +349,16 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           arrs = [{ from: refutSq.from, to: refutSq.to, color: 'blue' }];
         }
       }
-      // "Show": draw the move that was played (orange; knights bend in an L)
-      if (showMove && currentMove) {
+      // The played move is drawn in orange on good moves (always) and on errors when Show is on; knights bend in an L
+      if (currentMove && (showMove || !isMistakeOrBlunder)) {
         arrs = [...arrs, { from: currentMove.from, to: currentMove.to, color: 'orange' }];
       }
     }
 
+    // Red squares: enemy pieces the move attacks (normal view only)
+    if (!showingBest && !explaining && !retryMode && currentMove) thr = threatenedSquares(currentMove.fen, currentMove.to);
     return {
+      threats: thr,
       displayFen: fen,
       arrows: arrs,
       badges: bdgs,
@@ -574,6 +579,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             lastMove={boardLastMove}
             badges={badges}
             arrows={arrows}
+            threats={threats}
             interactive={retryMode}
             onMove={handleRetryMove}
           />
@@ -786,6 +792,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 lastMove={boardLastMove}
                 badges={badges}
                 arrows={arrows}
+                threats={threats}
                 interactive={retryMode}
                 onMove={handleRetryMove}
               />
