@@ -22,6 +22,7 @@ import { usePhoneLayout, useMediaQuery } from '@/lib/useMediaQuery';
 import { createPortal } from 'react-dom';
 import { MobileMoveStrip } from './MobileMoveStrip';
 import { threatenedSquares } from '@/lib/threats';
+import { annotationArrows, annotationSquares, hasAnnotations } from '@/lib/annotations';
 import {
   SkipBack,
   SkipForward,
@@ -176,7 +177,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   // Refutation moves for explain
   const refutationMoves = useMemo(() => {
-    return currentMove?.variation || currentMove?.eval?.lines?.[0]?.pv || [];
+    return currentMove?.variation || currentMove?.eval?.lines?.[0]?.pv || currentMove?.annotations?.pv || [];
   }, [currentMove]);
 
   // Reset secondary modes when navigating moves
@@ -269,7 +270,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const isBestMove = classification === 'best';
   const isBookMove = classification === 'book';
   const isMistakeOrBlunder = ['inaccuracy', 'mistake', 'miss', 'blunder'].includes(classification);
-  const targetBestMove = currentMove?.eval?.bestMove || currentMove?.eval?.lines?.[0]?.move || '';
+  const targetBestMove = currentMove?.eval?.bestMove || currentMove?.eval?.lines?.[0]?.move || currentMove?.annotations?.bestMove?.san || '';
 
   // Determine active board FEN, arrows, badges, and lastMove (memoized)
   const { displayFen, arrows, badges, boardLastMove, threats } = useMemo(() => {
@@ -340,14 +341,19 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     else {
       // Chess.com rules: green = the move that was better (inaccuracy, mistake, miss);
       // red = the opponent's punishing reply (mistake, blunder); blue = the tactic a miss let slip by.
-      if (['inaccuracy', 'mistake', 'miss'].includes(classification) && targetBestMove) {
-        const bestSq = getMoveSquares(fenBeforeMove, targetBestMove);
-        if (bestSq) arrs = [{ from: bestSq.from, to: bestSq.to, color: 'green' }];
-      }
-      if (['mistake', 'blunder', 'miss'].includes(classification) && currentMove?.variation?.[0]) {
-        const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
-        if (refutSq) {
-          arrs = [...arrs, { from: refutSq.from, to: refutSq.to, color: classification === 'miss' ? 'blue' : 'red' }];
+      if (hasAnnotations(currentMove)) {
+        // the backend decided which arrows belong to this move
+        arrs = annotationArrows(currentMove.annotations, classification);
+      } else {
+        if (['inaccuracy', 'mistake', 'miss'].includes(classification) && targetBestMove) {
+          const bestSq = getMoveSquares(fenBeforeMove, targetBestMove);
+          if (bestSq) arrs = [{ from: bestSq.from, to: bestSq.to, color: 'green' }];
+        }
+        if (['mistake', 'blunder', 'miss'].includes(classification) && currentMove?.variation?.[0]) {
+          const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
+          if (refutSq) {
+            arrs = [...arrs, { from: refutSq.from, to: refutSq.to, color: classification === 'miss' ? 'blue' : 'red' }];
+          }
         }
       }
       // The played move is drawn in orange on good moves (always) and on errors when Show is on; knights bend in an L
@@ -357,7 +363,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
 
     // Red squares: enemy pieces the move attacks (normal view only)
-    if (!showingBest && !explaining && !retryMode && currentMove) thr = threatenedSquares(currentMove.fen, currentMove.to);
+    if (!showingBest && !explaining && !retryMode && currentMove) thr = hasAnnotations(currentMove) ? annotationSquares(currentMove.annotations) : threatenedSquares(currentMove.fen, currentMove.to);
     return {
       threats: thr,
       displayFen: fen,
