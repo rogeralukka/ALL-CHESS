@@ -23,6 +23,8 @@ export interface BoardProps {
   arrows?: Arrow[];
   badges?: BoardBadge[];
   highlights?: string[];
+  /** Squares painted red (pieces under threat / pressure) */
+  threats?: string[];
   successSquares?: string[];
   legalTargets?: string[];
   interactive?: boolean;
@@ -101,6 +103,7 @@ export const Board: React.FC<BoardProps> = ({
   arrows = EMPTY_ARRAY,
   badges = EMPTY_ARRAY,
   highlights = EMPTY_ARRAY,
+  threats = EMPTY_ARRAY,
   successSquares = EMPTY_ARRAY,
   legalTargets = EMPTY_ARRAY,
   interactive = true,
@@ -699,6 +702,9 @@ export const Board: React.FC<BoardProps> = ({
 
     if (successSquares.includes(sq)) {
       return 'bg-emerald-500/40 ring-2 ring-emerald-500';
+    }
+    if (threats.includes(sq)) {
+      return 'bg-[rgba(232,72,59,0.55)]';
     }
     if (highlights.includes(sq)) {
       return 'bg-amber-400/35 ring-2 ring-amber-400/60';

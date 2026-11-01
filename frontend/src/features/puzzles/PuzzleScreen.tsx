@@ -9,6 +9,7 @@ import { BubbleMessage } from '@/features/coach/CoachBubble';
 import { Button } from '@/components/Button';
 import { RewardCascade } from './RewardCascade';
 import { IsoLevelMap } from '@/features/map/IsoLevelMap';
+import { usePhoneLayout } from '@/lib/useMediaQuery';
 import { useSettingsStore } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { storage } from '@/lib/storage';
@@ -95,6 +96,7 @@ export const PuzzleScreen: React.FC = () => {
   // The panel opens on the level map with a "Solve puzzles" button, like the reference's puzzle home.
   // Making a move on the board also starts.
   const [started, setStarted] = useState<boolean>(false);
+  const isPhone = usePhoneLayout();
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
   const [puzzleRating, setPuzzleRating] = useState<number>(() => storage.get('all_chess_puzzle_rating', 1200));
@@ -402,10 +404,86 @@ export const PuzzleScreen: React.FC = () => {
     </div>
   );
 
-  return (
-    <div className="flex flex-col lg:flex-row h-full w-full bg-theme-bg select-none overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
-      {/* Board: as large as the viewport allows, like the reference (about 96% of the height) */}
-      <div className="flex-none lg:h-full flex items-center justify-center p-2 sm:p-4 lg:p-0 min-w-0 lg:flex-1 lg:max-w-[calc(100vh-32px)]">
+  const actionBar = (
+              <div className="flex-shrink-0 px-4 py-3 bg-black/[0.03] dark:bg-black/15 border-t border-theme-border/60 space-y-2">
+                {status === 'solving' && (
+                  <Button variant="secondary" size="lg" fullWidth className="!h-14 !text-[20px] !font-extrabold font-display" icon={<Lightbulb size={22} className="text-amber-400 fill-amber-400/30" />} onClick={handleHint} disabled={!!hintArrow} data-testid="hint-button">
+                    {hintSquare ? 'Show move' : 'Hint'}
+                  </Button>
+                )}
+                {status === 'failed' && (
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="lg" className="flex-1" icon={<RotateCcw size={18} />} onClick={handleRetry}>
+                      Retry
+                    </Button>
+                    <Button variant="secondary" size="lg" className="!px-4" icon={<Eye size={18} />} onClick={handleShowSolution} aria-label="Show the solution" title="Show the solution" />
+                    <Button variant="primary" size="lg" className="!px-5" icon={<NextIcon size={20} />} onClick={handleNext} aria-label="Next puzzle" title="Next puzzle" />
+                  </div>
+                )}
+                {status === 'solved' && (
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="lg" className="!px-4" icon={<RotateCcw size={18} />} onClick={handleRetry} aria-label="Try this puzzle again" title="Try again" />
+                    <Button variant="primary" size="lg" className="flex-1" onClick={handleNext} data-testid="next-puzzle">
+                      Next puzzle <NextIcon size={20} />
+                    </Button>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-theme-muted">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings')}
+                    className="p-2 -ml-2 rounded hover:text-theme-text hover:bg-theme-raised"
+                    aria-label="Board settings"
+                    title="Board settings"
+                  >
+                    <SettingsIcon size={16} />
+                  </button>
+                  <div className="flex items-center">
+                    <button type="button" onClick={handlePrev} className="p-2 rounded hover:text-theme-text hover:bg-theme-raised" title="Previous puzzle" aria-label="Previous puzzle">
+                      <ChevronLeft size={18} />
+                    </button>
+                    <span className="text-xs font-semibold tabular-nums px-1">
+                      {puzzleIndex + 1} / {MOCK_PUZZLES.length}
+                    </span>
+                    <button type="button" onClick={handleNext} className="p-2 -mr-2 rounded hover:text-theme-text hover:bg-theme-raised" title="Next puzzle" aria-label="Next puzzle">
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+  );
+
+  const headerEl = (
+        <SidebarHeader
+          title="Puzzles"
+          icon={<PuzzlePieceBadge n={level} size={46} />}
+          left={
+            showLevelMap ? (
+              <HeaderIconButton onClick={() => setShowLevelMap(false)} aria-label="Back to the puzzle">
+                <ChevronLeft size={22} />
+              </HeaderIconButton>
+            ) : undefined
+          }
+          right={
+            <>
+              <HeaderIconButton
+                onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
+                aria-label={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
+                title={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
+              >
+                {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              </HeaderIconButton>
+              {showLevelMap && (
+                <HeaderIconButton onClick={() => setShowLevelMap(false)} aria-label="Close the level map">
+                  <X size={20} />
+                </HeaderIconButton>
+              )}
+            </>
+          }
+        />
+  );
+
+  const boardEl = (
         <div className="relative w-full aspect-square" style={{ maxWidth: 'calc(100vh - 32px)' }}>
           <Board
             fen={fen}
@@ -439,41 +517,15 @@ export const PuzzleScreen: React.FC = () => {
 
           <RewardCascade isOpen={showRewardCascade} levelNumber={level} pointsEarned={15} onNextPuzzle={handleNext} />
         </div>
-      </div>
+  );
 
-      {/* Side panel: a rounded card the height of the board */}
+  const panel = (
       <aside
-        className="w-full lg:w-[400px] xl:w-[420px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] lg:max-h-[calc(100vh-32px)] rounded-none lg:rounded-[5px] overflow-hidden"
+        className="w-full flex-1 min-h-0 lg:flex-none lg:w-[400px] xl:w-[420px] flex-shrink-0 flex flex-col lg:h-[calc(100vh-32px)] lg:max-h-[calc(100vh-32px)] rounded-none lg:rounded-[5px] overflow-hidden"
         style={{ background: 'var(--side-panel-bg)' }}
         data-testid="puzzle-panel"
       >
-        <SidebarHeader
-          title="Puzzles"
-          icon={<PuzzlePieceBadge n={level} size={46} />}
-          left={
-            showLevelMap ? (
-              <HeaderIconButton onClick={() => setShowLevelMap(false)} aria-label="Back to the puzzle">
-                <ChevronLeft size={22} />
-              </HeaderIconButton>
-            ) : undefined
-          }
-          right={
-            <>
-              <HeaderIconButton
-                onClick={() => updateSettings({ soundEnabled: !soundEnabled })}
-                aria-label={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
-                title={soundEnabled ? 'Mute sounds' : 'Turn sounds on'}
-              >
-                {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-              </HeaderIconButton>
-              {showLevelMap && (
-                <HeaderIconButton onClick={() => setShowLevelMap(false)} aria-label="Close the level map">
-                  <X size={20} />
-                </HeaderIconButton>
-              )}
-            </>
-          }
-        />
+        {headerEl}
 
         <AnimatePresence mode="wait" initial={false}>
           {!showLevelMap && !started ? (
@@ -512,7 +564,7 @@ export const PuzzleScreen: React.FC = () => {
               </div>
               <div className="absolute bottom-0 inset-x-0 px-4 pb-4 pt-16 bg-gradient-to-t from-black/75 via-black/45 to-transparent space-y-3">
                 {ratingBlock(true)}
-                <Button variant="primary" size="lg" fullWidth onClick={() => setStarted(true)} data-testid="solve-puzzles">
+                <Button variant="primary" size="lg" fullWidth className="!h-14 !text-[22px] !font-extrabold font-display" onClick={() => setStarted(true)} data-testid="solve-puzzles">
                   Solve puzzles
                 </Button>
               </div>
@@ -573,57 +625,47 @@ export const PuzzleScreen: React.FC = () => {
                 {formatTime(timerSeconds)}
               </div>
 
-              {/* Action bar */}
-              <div className="flex-shrink-0 px-4 py-3 bg-black/[0.03] dark:bg-black/15 border-t border-theme-border/60 space-y-2">
-                {status === 'solving' && (
-                  <Button variant="secondary" size="lg" fullWidth className="!h-14 !text-[20px] !font-extrabold font-display" icon={<Lightbulb size={22} className="text-amber-400 fill-amber-400/30" />} onClick={handleHint} disabled={!!hintArrow} data-testid="hint-button">
-                    {hintSquare ? 'Show move' : 'Hint'}
-                  </Button>
-                )}
-                {status === 'failed' && (
-                  <div className="flex gap-2">
-                    <Button variant="secondary" size="lg" className="flex-1" icon={<RotateCcw size={18} />} onClick={handleRetry}>
-                      Retry
-                    </Button>
-                    <Button variant="secondary" size="lg" className="!px-4" icon={<Eye size={18} />} onClick={handleShowSolution} aria-label="Show the solution" title="Show the solution" />
-                    <Button variant="primary" size="lg" className="!px-5" icon={<NextIcon size={20} />} onClick={handleNext} aria-label="Next puzzle" title="Next puzzle" />
-                  </div>
-                )}
-                {status === 'solved' && (
-                  <div className="flex gap-2">
-                    <Button variant="secondary" size="lg" className="!px-4" icon={<RotateCcw size={18} />} onClick={handleRetry} aria-label="Try this puzzle again" title="Try again" />
-                    <Button variant="primary" size="lg" className="flex-1" onClick={handleNext} data-testid="next-puzzle">
-                      Next puzzle <NextIcon size={20} />
-                    </Button>
-                  </div>
-                )}
-                <div className="flex items-center justify-between text-theme-muted">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/settings')}
-                    className="p-2 -ml-2 rounded hover:text-theme-text hover:bg-theme-raised"
-                    aria-label="Board settings"
-                    title="Board settings"
-                  >
-                    <SettingsIcon size={16} />
-                  </button>
-                  <div className="flex items-center">
-                    <button type="button" onClick={handlePrev} className="p-2 rounded hover:text-theme-text hover:bg-theme-raised" title="Previous puzzle" aria-label="Previous puzzle">
-                      <ChevronLeft size={18} />
-                    </button>
-                    <span className="text-xs font-semibold tabular-nums px-1">
-                      {puzzleIndex + 1} / {MOCK_PUZZLES.length}
-                    </span>
-                    <button type="button" onClick={handleNext} className="p-2 -mr-2 rounded hover:text-theme-text hover:bg-theme-raised" title="Next puzzle" aria-label="Next puzzle">
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              {actionBar}
             </motion.div>
           )}
         </AnimatePresence>
       </aside>
+  );
+
+  // --- PHONE: the puzzle home is just the map panel; solving is coach above a full-width board, as in the app ---
+  if (isPhone) {
+    if (started && !showLevelMap) {
+      return (
+        <div className="flex flex-col h-full w-full bg-theme-bg select-none overflow-hidden" data-testid="puzzle-mobile">
+          {headerEl}
+          <div className="flex-shrink-0 px-2 pt-2 pb-1 h-[150px] flex items-end overflow-hidden">
+            <CoachSpeech expression={coachExp} messages={bubbleMessages} size={72} className="w-full !items-end" />
+          </div>
+          <div className="w-full flex-shrink-0">{boardEl}</div>
+          <div className="px-4 pt-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">{ratingBlock(false)}</div>
+            <span className="flex items-center gap-1 text-[16px] text-theme-muted tabular-nums"><Clock3 size={16} />{formatTime(timerSeconds)}</span>
+          </div>
+          <div className="flex-1 min-h-0" />
+          {actionBar}
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col h-full w-full bg-theme-bg select-none overflow-hidden" data-testid="puzzle-mobile-home">
+        {panel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col lg:flex-row h-full w-full bg-theme-bg select-none overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
+      {/* Board: as large as the viewport allows, like the reference (about 96% of the height) */}
+      <div className="flex-none lg:h-full flex items-center justify-center p-2 sm:p-4 lg:p-0 min-w-0 lg:flex-1 lg:max-w-[calc(100vh-32px)]">
+        {boardEl}
+      </div>
+
+      {panel}
     </div>
   );
 };
