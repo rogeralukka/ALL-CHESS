@@ -22,13 +22,16 @@ import { ILLEGAL_MOVE_TEACHING_LINES } from '@/features/coach/coachLines';
 import { sound } from '@/lib/sound';
 import { EngineService } from '@/services/engineService';
 import { OpeningService, OpeningMatch } from '@/services/openingService';
-import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft, BookOpen } from 'lucide-react';
+import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft, BookOpen, ArrowUpDown, MoreHorizontal, Undo2, Search, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { saveCoachGame } from '@/services/coachGameService';
 import { useToastStore } from '@/components/Toast';
 import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
 import { usePhoneLayout } from '@/lib/useMediaQuery';
+import { LeaveGuard } from '@/components/LeaveGuard';
+import { Modal } from '@/components/Modal';
+import { useHideTabBar } from '@/lib/focusMode';
 
 const PIECE_FIGURINES: Record<string, string> = {
   p: '♟',
@@ -650,6 +653,12 @@ export const PlayGame: React.FC = () => {
   };
 
   const [lobbyLevel, setLobbyLevel] = useState<number>(800);
+  const [showMoreSheet, setShowMoreSheet] = useState(false);
+  const moveStripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = moveStripRef.current;
+    if (el) el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+  }, [moves.length]);
 
   const lastMoveObj = moves[moves.length - 1];
   const lastMoveFrom = lastMoveObj?.from;
@@ -691,7 +700,7 @@ export const PlayGame: React.FC = () => {
     avatar: <PlayerAvatar name="You" size={40} className="!rounded-none" />,
     right: (
       <>
-        {activeConfig && (
+        {activeConfig && !isPhone && (
           <button
             type="button"
             onClick={() => {
@@ -719,19 +728,25 @@ export const PlayGame: React.FC = () => {
   const topPlayerInfo = isUserBottom ? coachInfo : userInfo;
   const bottomPlayerInfo = isUserBottom ? userInfo : coachInfo;
 
-  return (
-    <div className={`flex-1 flex flex-col lg:flex-row h-full w-full ${activeConfig ? 'overflow-y-auto pb-4' : 'overflow-hidden'} lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 lg:pb-4`}>
-      {/* Center Zone: Board & Eval Bar (phones show only the setup panel until a game starts) */}
-      <div className={`${activeConfig ? 'flex' : 'hidden lg:flex'} flex-1 flex-col items-center justify-center p-2 sm:p-3 md:p-6 min-w-0 lg:!p-0 lg:h-full relative`}>
-        <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
-          {/* Phones: the coach talks above the board, as in the app */}
-          {isPhone && activeConfig && (
-            <div className="h-[132px] flex items-end overflow-hidden" data-testid="play-coach-mobile">
-              <CoachSpeech expression={coachExpression} messages={stackedMessages} voiceEnabled={coachVoiceEnabled} size={72} className="w-full !items-end" />
-            </div>
-          )}
-          {/* Top Player */}
-          <PlayerBar
+  const resetToLobby = () => {
+    setActiveConfig(null);
+    chess.reset();
+    setFen(chess.fen());
+    setMoves([]);
+    setArrows([]);
+    setHighlights([]);
+    setGameOver(null);
+    setTippingSquare(null);
+    setKingBadges([]);
+    setShowGameOverModal(false);
+    setShowMoreSheet(false);
+  };
+
+  const phoneGame = isPhone && Boolean(activeConfig);
+  useHideTabBar(phoneGame);
+
+  const topBar = (
+    <PlayerBar
             testId="player-top"
             name={topPlayerInfo.name}
             rating={topPlayerInfo.rating}
@@ -743,9 +758,9 @@ export const PlayGame: React.FC = () => {
             active={isTopActive}
             right={topPlayerInfo.right}
           />
-
-          {/* Board + Eval Bar */}
-          <div className="flex items-stretch justify-center gap-1.5 sm:gap-2.5 w-full">
+  );
+  const boardBlock = (
+    <div className="flex items-stretch justify-center gap-1.5 sm:gap-2.5 w-full">
             {activeConfig?.evalBar && (
               <EvalBar
                 evalScore={lastMoveObj?.eval?.eval || 0}
@@ -831,9 +846,9 @@ export const PlayGame: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Bottom Player */}
-          <PlayerBar
+  );
+  const bottomBar = (
+    <PlayerBar
             testId="player-bottom"
             name={bottomPlayerInfo.name}
             rating={bottomPlayerInfo.rating}
@@ -845,6 +860,154 @@ export const PlayGame: React.FC = () => {
             active={isBottomActive}
             right={bottomPlayerInfo.right}
           />
+  );
+
+  // --- PHONE, game running: the Chess.com app's bot screen. Moves strip on top, the coach talking, the board
+  // between the two players, and a fixed action bar at the bottom (the tab bar is hidden meanwhile). ---
+  const leaveGuard = (
+    <LeaveGuard
+      when={Boolean(activeConfig) && !gameOver}
+      onlyBack={false}
+      title="Leave this game?"
+      message="Your game against the coach is still going. If you leave now, it is lost."
+      leaveLabel="Leave game"
+      stayLabel="Keep playing"
+    />
+  );
+  const resignDialog = (
+    <Modal isOpen={isPhone && showResignPopover} onClose={() => setShowResignPopover(false)} title="Resign this game?" maxWidth="sm">
+      <p className="text-[15px] text-theme-muted leading-snug">The coach wins and the game ends.</p>
+      <div className="mt-5 flex flex-col gap-2.5" data-testid="resign-dialog">
+        <Button variant="danger" size="lg" fullWidth onClick={handleResign} data-testid="resign-confirm">
+          Resign
+        </Button>
+        <Button variant="secondary" size="lg" fullWidth onClick={() => setShowResignPopover(false)}>
+          Cancel
+        </Button>
+      </div>
+    </Modal>
+  );
+
+  if (phoneGame && activeConfig) {
+    const pairs: Array<{ n: number; w?: Move; b?: Move; wi: number }> = [];
+    for (let i = 0; i < moves.length; i += 2) pairs.push({ n: i / 2 + 1, w: moves[i], b: moves[i + 1], wi: i });
+    const last = moves.length - 1;
+    const ActionBtn: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean; testId: string; tone?: 'green' }> = ({
+      icon,
+      label,
+      onClick,
+      disabled,
+      testId,
+      tone,
+    }) => (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        data-testid={testId}
+        className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 select-none active:bg-white/5 disabled:opacity-35 ${
+          tone === 'green' ? 'text-[#81b64c]' : 'text-theme-text/85'
+        }`}
+      >
+        {icon}
+        <span className="text-[12px] font-bold leading-tight">{label}</span>
+      </button>
+    );
+
+    return (
+      <div className="flex-1 flex flex-col h-full w-full overflow-hidden" data-testid="play-phone-game">
+        {leaveGuard}
+        {resignDialog}
+
+        {/* moves strip */}
+        <div className="flex-shrink-0 h-9 flex items-center border-b border-white/[0.06]" style={{ background: 'var(--color-sidebar)' }}>
+          <div ref={moveStripRef} className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar px-2 text-[14px] font-semibold whitespace-nowrap" data-testid="move-strip">
+            {pairs.length === 0 ? (
+              <span className="text-theme-muted text-[13px] flex items-center gap-1.5">
+                <BookOpen size={14} className="text-amber-500" />
+                {currentOpening ? currentOpening.name : 'Starting position. Your move.'}
+              </span>
+            ) : (
+              pairs.map((p) => (
+                <span key={p.n} className="flex items-center gap-0.5">
+                  <span className="text-theme-muted tabular-nums">{p.n}.</span>
+                  <span className={`px-1.5 py-0.5 rounded ${p.wi === last ? 'bg-white/15 text-theme-text' : 'text-theme-text/85'}`}>{p.w?.san}</span>
+                  {p.b && <span className={`px-1.5 py-0.5 rounded ${p.wi + 1 === last ? 'bg-white/15 text-theme-text' : 'text-theme-text/85'}`}>{p.b.san}</span>}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* coach: takes whatever height is left, speaks from the bottom up so the newest line sits by the board */}
+        <div className="flex-1 min-h-[92px] flex items-end px-2 pt-2 pb-1.5 overflow-hidden" data-testid="play-coach-mobile">
+          <CoachSpeech expression={coachExpression} messages={stackedMessages} voiceEnabled={coachVoiceEnabled} size={64} className="w-full !items-end" />
+        </div>
+
+        <div className="flex-shrink-0 w-full mx-auto max-w-[min(100%,calc(100dvh-290px))] flex flex-col gap-1">
+          <div className="px-1">{topBar}</div>
+          {boardBlock}
+          <div className="px-1">{bottomBar}</div>
+        </div>
+        {currentOpening && pairs.length > 0 && (
+          <div className="flex-shrink-0 px-3 pt-1 text-[12px] text-theme-muted truncate">
+            <span className="font-mono font-bold text-amber-500 mr-1.5">{currentOpening.eco}</span>
+            {currentOpening.name}
+          </div>
+        )}
+
+        {/* fixed action bar, where the tab bar usually is */}
+        <div className="flex-shrink-0 mt-auto pb-[env(safe-area-inset-bottom)] border-t border-white/[0.06]" style={{ background: 'var(--color-sidebar)' }}>
+          <div className="h-16 flex items-stretch" data-testid="play-action-bar">
+            {gameOver ? (
+              <>
+                <ActionBtn icon={<Search size={24} />} label={savingReview ? 'Saving…' : 'Game Review'} onClick={openReview} disabled={savingReview} testId="act-review" tone="green" />
+                <ActionBtn icon={<Plus size={24} />} label="New Game" onClick={resetToLobby} testId="act-new" />
+                <ActionBtn icon={<ArrowUpDown size={24} />} label="Flip" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))} testId="act-flip" />
+                <ActionBtn icon={<MoreHorizontal size={24} />} label="More" onClick={() => setShowMoreSheet(true)} testId="act-more" />
+              </>
+            ) : (
+              <>
+                <ActionBtn icon={<Flag size={23} />} label="Resign" onClick={() => setShowResignPopover(true)} testId="act-resign" />
+                {activeConfig.showHints && <ActionBtn icon={<Lightbulb size={24} />} label="Hint" onClick={handleHint} testId="act-hint" tone="green" />}
+                {activeConfig.allowTakebacks && <ActionBtn icon={<Undo2 size={24} />} label="Undo" onClick={handleTakeback} disabled={moves.length < 2} testId="act-undo" />}
+                <ActionBtn icon={<ArrowUpDown size={24} />} label="Flip" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))} testId="act-flip" />
+                <ActionBtn icon={<MoreHorizontal size={24} />} label="More" onClick={() => setShowMoreSheet(true)} testId="act-more" />
+              </>
+            )}
+          </div>
+        </div>
+
+        <Modal isOpen={showMoreSheet} onClose={() => setShowMoreSheet(false)} title="Game options" maxWidth="sm">
+          <div className="flex flex-col gap-2.5" data-testid="more-sheet">
+            <Button variant="secondary" size="lg" fullWidth icon={<Download size={18} />} onClick={() => { handleDownloadPgn(); setShowMoreSheet(false); }}>
+              Download PGN
+            </Button>
+            <Button variant={gameOver ? 'secondary' : 'danger'} size="lg" fullWidth icon={<ArrowLeft size={18} />} onClick={resetToLobby} data-testid="more-leave">
+              {gameOver ? 'Back to setup' : 'Abandon game'}
+            </Button>
+          </div>
+        </Modal>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex-1 flex flex-col lg:flex-row h-full w-full ${activeConfig ? 'overflow-y-auto pb-4' : 'overflow-hidden'} lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 lg:pb-4`}>
+      {leaveGuard}
+      {resignDialog}
+      {/* Center Zone: Board & Eval Bar (phones show only the setup panel until a game starts) */}
+      <div className={`${activeConfig ? 'flex' : 'hidden lg:flex'} flex-1 flex-col items-center justify-center p-2 sm:p-3 md:p-6 min-w-0 lg:!p-0 lg:h-full relative`}>
+        <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
+          {/* Phones: the coach talks above the board, as in the app */}
+          {isPhone && activeConfig && (
+            <div className="h-[132px] flex items-end overflow-hidden" data-testid="play-coach-mobile">
+              <CoachSpeech expression={coachExpression} messages={stackedMessages} voiceEnabled={coachVoiceEnabled} size={72} className="w-full !items-end" />
+            </div>
+          )}
+          {topBar}
+          {boardBlock}
+          {bottomBar}
         </div>
       </div>
 
@@ -908,7 +1071,7 @@ export const PlayGame: React.FC = () => {
                 {/* Live Action Controls: Resign, Hint, Takeback (Equal width 48px buttons) */}
                 <div className="relative pt-1 w-full space-y-2">
                   {/* Resign Popover: Anchored directly above flag button with arrow, never covering bubbles */}
-                  {showResignPopover && (
+                  {showResignPopover && !isPhone && (
                     <div
                       ref={resignPopoverRef}
                       className="absolute left-0 bottom-full mb-2 w-56 p-3 rounded-lg bg-theme-raised border border-theme-border shadow-2xl z-40 flex flex-col gap-2 after:content-[''] after:absolute after:top-full after:left-8 after:border-[6px] after:border-transparent after:border-t-theme-border after:-mb-1.5"
