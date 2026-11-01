@@ -17,7 +17,7 @@ from app.config import settings
 from app.database import engine as db_engine, Base
 from app import models as _models
 _ = _models  # registers models with Base
-from app.routers import auth, games, sync, stats, jobs, engine as engine_router, puzzles, learn, friends, coach, scout
+from app.routers import auth, games, sync, stats, jobs, engine as engine_router, puzzles, learn, friends, coach, scout, advanced_stats
 from app.services.seeder import seed_puzzles
 from app.database import SessionLocal
 
@@ -123,3 +123,4 @@ app.include_router(learn.router, prefix="/api/v1")
 app.include_router(friends.router, prefix="/api/v1")
 app.include_router(coach.router, prefix="/api/v1")
 app.include_router(scout.router, prefix="/api/v1")
+app.include_router(advanced_stats.router, prefix="/api/v1")
