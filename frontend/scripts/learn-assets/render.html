@@ -3,10 +3,10 @@
 <script type="module">
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 const P = new URLSearchParams(location.search);
 const kind = P.get('p') || 'pawn';
-const W = 480, H = 640;
+const W = 600, H = 750;
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1); renderer.setSize(W, H);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = parseFloat(P.get('exp')||'1.05');
@@ -79,10 +79,28 @@ if (kind === 'pawn') {
   const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1.0, 16), gold); cord.position.set(0.62, 0.93, 0.3); cord.rotation.z = Math.PI / 2; cord.rotation.y = -0.45; g.add(cord);
   const hang = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.55, 16), gold); hang.position.set(1.1, 0.64, 0.52); g.add(hang);
   const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 24), gold); tassel.position.set(1.1, 0.32, 0.52); g.add(tassel);
-  g.scale.setScalar(0.55); g.position.y = 0.45; g.rotation.y = -0.25;
+  g.scale.setScalar(0.2); g.position.y = 0.06; g.rotation.y = 0.5;
+  const dm = new THREE.MeshStandardMaterial({ color: new THREE.Color(P.get('top') || '#45408f'), roughness: 0.8, envMapIntensity: 0.25 });
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.1, 96), dm); disc.position.y = 0.05; scene.add(disc);
+} else if (kind === 'tile') {
+  const top = new THREE.Color(P.get('top') || '#45408f');
+  const m = new THREE.MeshStandardMaterial({ color: top, emissive: top, emissiveIntensity: parseFloat(P.get('em')||'0.25'), roughness: 0.85, metalness: 0, envMapIntensity: 0.3 });
+  const slab = new THREE.Mesh(new RoundedBoxGeometry(0.8, 0.15, 0.8, 8, 0.12), m);
+  slab.position.y = 0.075; g.add(slab);
 }
-const cam = new THREE.PerspectiveCamera(20, W / H, 0.1, 50);
-cam.position.set(0, 2.4, 7.2); cam.lookAt(0, 0.88, 0);
+if (kind === 'disc') {
+  const top = new THREE.Color(P.get('top') || '#45408f');
+  const m = new THREE.MeshStandardMaterial({ color: top, roughness: 0.8, envMapIntensity: 0.25 });
+  const d = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 96), m); d.position.y = 0.05; g.add(d);
+}
+// one camera for every asset: orthographic, looking down 53 deg along the grid diagonal,
+// so a 1x1 floor square projects to the same diamond the CSS grid draws (width sqrt2, height sqrt2*sin53)
+const SC = parseFloat(P.get('s') || '0.45');
+if (['pawn','rook','bishop','knight','queen','king'].includes(kind)) g.scale.multiplyScalar(SC);
+const el = parseFloat(P.get('el') || '53') * Math.PI / 180, az = Math.PI / 4, dist = 20;
+const cam = new THREE.OrthographicCamera(-1, 1, 2.0, -0.5, 0.1, 60);
+cam.position.set(dist * Math.cos(el) * Math.sin(az), dist * Math.sin(el), dist * Math.cos(el) * Math.cos(az));
+cam.lookAt(0, 0, 0);
 renderer.render(scene, cam);
 window.__png = renderer.domElement.toDataURL('image/png');
 </script></body></html>

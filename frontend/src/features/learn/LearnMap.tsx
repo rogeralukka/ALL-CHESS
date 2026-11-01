@@ -17,50 +17,30 @@ interface LearnMapProps {
 }
 
 const DECOR = ['bishop', 'rook', 'knight', 'pawn', 'queen', 'bishop', 'king', 'pawn', 'rook', 'knight'] as const;
-const PIECE_H: Record<string, number> = { pawn: 20, rook: 24, bishop: 28, knight: 26, queen: 29.5, king: 31 };
 
 const cq = (n: number) => `${n}cqw`;
 
-/** A glossy 3D piece (rendered offline into /assets/learn), standing in an empty diamond with a soft contact shadow. */
-const GlossyPiece: React.FC<{ piece: string }> = ({ piece }) => (
-  <div className="relative flex flex-col items-center" aria-hidden="true">
-    <img src={`/assets/learn/piece_${piece}.webp`} alt="" draggable={false} style={{ height: cq(PIECE_H[piece] ?? 20), width: 'auto', position: 'relative', zIndex: 1 }} />
-    <span className="rounded-[50%]" style={{ width: cq(18), height: cq(4.4), marginTop: cq(-3), background: 'radial-gradient(closest-side, rgba(0,0,0,0.55), rgba(0,0,0,0))' }} />
-  </div>
-);
+/*
+ * Every 3D asset in /assets/learn (slabs, medallions, pieces) is rendered by scripts/learn-assets with one
+ * orthographic camera, looking down the grid diagonal. A 1x1 floor square projects to exactly the diamond
+ * the CSS grid draws, and the floor point under each asset sits at 50% across / 80% down its image.
+ * So an asset is placed by putting that anchor on its cell's centre, at a width of cell / 0.7071.
+ */
+const CELL_W = 44.4;
+const SPRITE_W = CELL_W / 0.7071; // 62.8cqw
+const SPRITE_H = SPRITE_W * 1.25;
+/** how far the top face of a slab sits above the floor, on screen */
+const SLAB_LIFT = 2.6;
 
-/** Graduation-cap medallion that closes a section: a disc in the section colour with a rendered cap on it. */
-const CapMedal: React.FC<{ top: string; side: string }> = ({ top, side }) => (
-  <div className="relative w-full h-full" aria-hidden="true">
-    <svg viewBox="0 0 100 90" width="100%" height="100%" className="absolute inset-0">
-      <ellipse cx="50" cy="50" rx="45" ry="36" fill={side} />
-      <ellipse cx="50" cy="43" rx="45" ry="36" fill={top} />
-      <ellipse cx="50" cy="43" rx="45" ry="36" fill="url(#medal-sheen)" />
-      <defs>
-        <linearGradient id="medal-sheen" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.12" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-    </svg>
-    <img src="/assets/learn/cap.webp" alt="" draggable={false} className="absolute left-1/2 -translate-x-1/2" style={{ width: '74%', top: '16%' }} />
-  </div>
-);
-
-/** One lesson: a thin bevelled slab whose face has the same proportions as the grid diamonds. */
-const Slab: React.FC<{ top: string; side: string; outline?: boolean; sheen?: number }> = ({ top, side, outline, sheen = 0.14 }) => (
-  <svg viewBox="0 0 100 90" width="100%" height="100%" aria-hidden="true" className="absolute inset-0">
-    <defs>
-      <linearGradient id="slab-sheen" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor="#fff" stopOpacity={sheen} />
-        <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
-      </linearGradient>
-    </defs>
-    <polygon points="50,17 89,47 50,77 11,47" fill={side} stroke={side} strokeWidth="18" strokeLinejoin="round" />
-    <polygon points="50,11 89,41 50,71 11,41" fill={top} stroke={top} strokeWidth="18" strokeLinejoin="round" />
-    <polygon points="50,11 89,41 50,71 11,41" fill="url(#slab-sheen)" stroke="url(#slab-sheen)" strokeWidth="18" strokeLinejoin="round" />
-    {outline && <polygon points="50,2.5 98.5,41 50,79.5 1.5,41" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.6" strokeLinejoin="round" />}
-  </svg>
+const Sprite: React.FC<{ src: string; x: number; cy: number; z: number; className?: string; style?: React.CSSProperties }> = ({ src, x, cy, z, className = '', style }) => (
+  <img
+    src={src}
+    alt=""
+    aria-hidden="true"
+    draggable={false}
+    className={`absolute pointer-events-none select-none ${className}`}
+    style={{ left: `calc(${x}% - ${cq(SPRITE_W / 2)})`, top: cq(cy - SPRITE_H * 0.8), width: cq(SPRITE_W), height: cq(SPRITE_H), zIndex: z, ...style }}
+  />
 );
 
 export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect, onSectionChange, currentId, compact }) => {
@@ -130,7 +110,7 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
             {cells.map((c) => {
               const sec = layout.rowSection[Math.max(0, Math.min(layout.rows - 1, c.row))] ?? 'openings';
               const rgb = SECTION_THEMES[sec].cell;
-              const alpha = (c.row + c.col) % 2 === 0 ? 0.17 : 0.11;
+              const alpha = 0.16;
               return (
                 <div
                   key={`${c.row}-${c.x}`}
@@ -153,21 +133,12 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
               if (it.kind !== 'node' || it.slot === 'c') return null;
               const x = it.slot === 'l' ? SLOT_X.r : SLOT_X.l;
               const piece = DECOR[(idx * 3 + it.row) % DECOR.length];
-              return (
-                <div key={`d-${it.stage.id}`} className="absolute flex items-end justify-center pointer-events-none" style={{ left: `calc(${x}% - ${cq(14)})`, width: cq(28), bottom: `calc(100% - ${cq(rowCenter(it.row) + 9)})` }}>
-                  <GlossyPiece piece={piece} />
-                </div>
-              );
+              return <Sprite key={`d-${it.stage.id}`} src={`/assets/learn/piece_${piece}.webp`} x={x} cy={rowCenter(it.row)} z={500 - it.row * 2} />;
             })}
 
             {layout.items.map((it) => {
               if (it.kind === 'medal') {
-                const th = SECTION_THEMES[it.section];
-                return (
-                  <div key={`m-${it.row}`} className="absolute pointer-events-none" style={{ left: `calc(50% - ${cq(13)})`, width: cq(26), top: cq(rowCenter(it.row) - 11.7), height: cq(23.4) }}>
-                    <CapMedal top={th.tileTop} side={th.tileSide} />
-                  </div>
-                );
+                return <Sprite key={`m-${it.row}`} src={`/assets/learn/medal_${it.section}.webp`} x={50} cy={rowCenter(it.row)} z={500 - it.row * 2} />;
               }
               if (it.kind === 'label') {
                 const th = SECTION_THEMES[it.section];
@@ -185,41 +156,43 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
               const sel = s.id === selectedId;
               const done = s.status === 'done';
               const locked = s.status === 'locked';
-              const top = hot ? th.hotTop : done ? th.doneTop : th.tileTop;
-              const side = hot ? th.hotSide : done ? th.doneSide : th.tileSide;
+              const state = hot ? 'hot' : done ? 'done' : 'dim';
               const x = SLOT_X[it.slot];
+              const cy = rowCenter(it.row);
+              const z = 500 - it.row * 2;
               const Icon = hot ? Target : iconForStage(s);
               return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => onSelect(s)}
-                  aria-label={`${s.title}${done ? ', completed' : locked ? ', locked' : ''}`}
-                  aria-current={sel ? 'true' : undefined}
-                  data-testid={`learn-tile-${s.id}`}
-                  className="absolute block group focus:outline-none"
-                  style={{ left: `calc(${x}% - ${cq(17)})`, width: cq(34), height: cq(30.6), top: cq(rowCenter(it.row) - 13.9), zIndex: hot ? 3 : 2 }}
-                >
-                  {hot && <span aria-hidden="true" className="absolute inset-[8%] rounded-[50%] blur-[3cqw]" style={{ background: th.glow }} />}
-                  <span className="absolute inset-0 transition-transform duration-150 group-hover:-translate-y-[0.5cqw] group-active:translate-y-[0.6cqw]">
-                    <Slab top={top} side={side} outline={sel && !hot} sheen={hot ? 0.18 : 0} />
-                    <span className="absolute flex items-center justify-center" style={{ left: '50%', top: '45.5%', transform: 'translate(-50%,-50%) scaleY(0.92)' }}>
-                      <Icon
-                        style={{ width: cq(hot ? 11 : 10), height: cq(hot ? 11 : 10), color: hot || done ? '#ffffff' : th.icon, opacity: done ? 0.92 : 1 }}
-                        strokeWidth={hot ? 2.6 : 2.2}
-                      />
+                <React.Fragment key={s.id}>
+                  {hot && <span aria-hidden="true" className="absolute rounded-[50%] pointer-events-none" style={{ left: `calc(${x}% - ${cq(19)})`, top: cq(cy - 13), width: cq(38), height: cq(26), background: th.glow, filter: 'blur(4cqw)', zIndex: z - 1 }} />}
+                  <button
+                    type="button"
+                    onClick={() => onSelect(s)}
+                    aria-label={`${s.title}${done ? ', completed' : locked ? ', locked' : ''}`}
+                    aria-current={sel ? 'true' : undefined}
+                    data-testid={`learn-tile-${s.id}`}
+                    className="absolute group focus:outline-none"
+                    style={{ left: `calc(${x}% - ${cq(CELL_W * 0.4)})`, top: cq(cy - CELL_W * 0.32 - SLAB_LIFT), width: cq(CELL_W * 0.8), height: cq(CELL_W * 0.64), zIndex: z, clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' }}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute pointer-events-none transition-transform duration-150"
+                    style={{ left: 0, top: 0, width: '100%', height: '100%', zIndex: z, filter: sel && !hot ? `drop-shadow(0 0 ${cq(0.5)} #fff) drop-shadow(0 0 ${cq(0.5)} #fff)` : undefined }}
+                  >
+                    <Sprite src={`/assets/learn/tile_${it.section}_${state}.webp`} x={x} cy={cy} z={z} />
+                    <span className="absolute flex items-center justify-center" style={{ left: `${x}%`, top: cq(cy - SLAB_LIFT), transform: 'translate(-50%,-50%) scaleY(0.86)', zIndex: z }}>
+                      <Icon style={{ width: cq(hot ? 11 : 10), height: cq(hot ? 11 : 10), color: hot || done ? '#ffffff' : th.icon }} strokeWidth={hot ? 2.6 : 2.2} />
                     </span>
                   </span>
                   {hot && (
                     <span
-                      className="absolute left-1/2 -translate-x-1/2 bg-white text-[#2b2926] font-display font-extrabold rounded-[1.2cqw] pointer-events-none whitespace-nowrap"
-                      style={{ top: cq(-6), padding: `${cq(1)} ${cq(3.2)}`, fontSize: cq(4.8), boxShadow: `0 0 0 ${cq(0.5)} rgba(255,255,255,.25), 0 ${cq(1)} ${cq(3)} rgba(0,0,0,.35)` }}
+                      className="absolute -translate-x-1/2 bg-white text-[#2b2926] font-display font-extrabold rounded-[1.2cqw] pointer-events-none whitespace-nowrap"
+                      style={{ left: `${x}%`, top: cq(cy - 24), padding: `${cq(1)} ${cq(3.2)}`, fontSize: cq(4.8), zIndex: 900, boxShadow: `0 0 0 ${cq(0.5)} rgba(255,255,255,.25), 0 ${cq(1)} ${cq(3)} rgba(0,0,0,.35)` }}
                     >
                       Next
                       <span className="absolute left-1/2 -translate-x-1/2 bg-white rotate-45" style={{ bottom: cq(-1), width: cq(2.4), height: cq(2.4) }} />
                     </span>
                   )}
-                </button>
+                </React.Fragment>
               );
             })}
           </div>
@@ -227,7 +200,7 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
       </div>
 
       {/* the section you are looking at, over a fade in its colour */}
-      <div className="absolute inset-x-0 bottom-0 z-[5] pointer-events-none" style={{ height: '17%', background: `linear-gradient(to bottom, transparent, ${theme.fade})` }}>
+      <div className="absolute inset-x-0 bottom-0 z-[950] pointer-events-none" style={{ height: '17%', background: `linear-gradient(to bottom, transparent, ${theme.fade})` }}>
         <span data-testid="learn-section-name" style={{ opacity: hideName ? 0 : 1, transition: 'opacity .2s' }} className="absolute left-4 bottom-3 font-display font-extrabold text-white text-[34px] leading-none drop-shadow">
           {theme.name}
         </span>
@@ -239,7 +212,7 @@ export const LearnMap: React.FC<LearnMapProps> = ({ stages, selectedId, onSelect
           onClick={() => scrollToCurrent(true)}
           aria-label="Go to your next lesson"
           data-testid="learn-jump"
-          className="absolute z-[6] right-4 bottom-4 w-14 h-14 rounded-[10px] flex items-center justify-center text-white shadow-lg active:opacity-80"
+          className="absolute z-[951] right-4 bottom-4 w-14 h-14 rounded-[10px] flex items-center justify-center text-white shadow-lg active:opacity-80"
           style={{ background: 'rgba(0,0,0,0.45)' }}
         >
           {currentVisible === 'above' ? <ArrowUp size={30} strokeWidth={2.6} /> : <ArrowDown size={30} strokeWidth={2.6} />}
