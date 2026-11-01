@@ -18,6 +18,9 @@ import { BOARD_THEMES, PIECE_SETS } from '@/data/boardThemes';
 import { getExpressionForEvent } from '@/features/coach/expressionMap';
 import { formatEval } from '@/lib/formatters';
 import { sound } from '@/lib/sound';
+import { usePhoneLayout, useMediaQuery } from '@/lib/useMediaQuery';
+import { createPortal } from 'react-dom';
+import { MobileMoveStrip } from './MobileMoveStrip';
 import {
   SkipBack,
   SkipForward,
@@ -35,6 +38,9 @@ import {
   VolumeX,
   ArrowLeft,
   SlidersHorizontal,
+  Eye,
+  ListTree,
+  X,
 } from 'lucide-react';
 import { SidebarPanel, SidebarHeader, HeaderIconButton } from '@/components/SidebarPanel';
 import { useNavigate } from 'react-router-dom';
@@ -154,6 +160,10 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const [retrySuccess, setRetrySuccess] = useState<boolean | null>(null);
   const [retryFen, setRetryFen] = useState<string | null>(null);
   const [topLinesOpen, setTopLinesOpen] = useState<boolean>(false);
+  const [showMove, setShowMove] = useState<boolean>(false);
+  const [linesSheetOpen, setLinesSheetOpen] = useState<boolean>(false);
+  const isPhone = usePhoneLayout();
+  const isXs = useMediaQuery('(max-width: 639px)');
 
   const currentMove: Move | undefined = game.moves[currentMoveIndex];
 
@@ -170,6 +180,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   // Reset secondary modes when navigating moves
   const resetModes = useCallback(() => {
+    setShowMove(false);
     setShowingBest(false);
     setExplaining(false);
     setVariationStep(0);
@@ -325,12 +336,20 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     }
     // 4. NORMAL VIEW
     else {
-      // Red refutation arrow on mistakes/blunders pointing out opponent's tactical strike
-      if (isMistakeOrBlunder && currentMove?.variation?.[0]) {
+      if (classification === 'inaccuracy' && targetBestMove) {
+        // Inaccuracy: point at the move that was better (green), like the Chess.com app
+        const bestSq = getMoveSquares(fenBeforeMove, targetBestMove);
+        if (bestSq) arrs = [{ from: bestSq.from, to: bestSq.to, color: 'green' }];
+      } else if (isMistakeOrBlunder && currentMove?.variation?.[0]) {
+        // Red refutation arrow on mistakes/blunders pointing out opponent's tactical strike
         const refutSq = getMoveSquares(currentMove.fen, currentMove.variation[0]);
         if (refutSq) {
           arrs = [{ from: refutSq.from, to: refutSq.to, color: 'red' }];
         }
+      }
+      // "Show": draw the move that was played (orange; knights bend in an L)
+      if (showMove && currentMove) {
+        arrs = [...arrs, { from: currentMove.from, to: currentMove.to, color: 'orange' }];
       }
     }
 
@@ -352,6 +371,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     retryFen,
     retrySuccess,
     isMistakeOrBlunder,
+    classification,
+    showMove,
   ]);
 
   // Compute Material Difference and Captured Pieces
@@ -493,6 +514,237 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const topDiff = orientation === 'white' ? materialState.blackDiff : materialState.whiteDiff;
   const bottomCaptured = orientation === 'white' ? materialState.whiteCaptured : materialState.blackCaptured;
   const bottomDiff = orientation === 'white' ? materialState.whiteDiff : materialState.blackDiff;
+
+  // --- PHONE LAYOUT (as in the Chess.com app): coach above a full-width board, move strip, bottom action bar ---
+  if (isPhone) {
+    const canBest = isMistakeOrBlunder && !isBestMove && !!targetBestMove;
+    const stepCount = refutationMoves.length;
+    const barBtn = (enabled: boolean) =>
+      `flex flex-col items-center justify-center gap-0.5 h-14 w-16 flex-shrink-0 rounded-lg text-[13px] font-bold select-none transition-colors ${
+        enabled ? 'text-theme-text active:bg-white/10' : 'text-theme-muted/40 pointer-events-none'
+      }`;
+    const screen = (
+      <div
+        className={`flex flex-col w-full bg-theme-page overflow-hidden ${isXs ? 'fixed inset-0 z-50' : 'h-full'}`}
+        data-testid="review-mobile"
+      >
+        <SidebarHeader
+          title="Game Review"
+          left={
+            <HeaderIconButton onClick={onBackToSummary} title="Return to Summary" aria-label="Return to Summary">
+              <ArrowLeft size={22} />
+            </HeaderIconButton>
+          }
+          right={
+            <>
+              <HeaderIconButton
+                onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
+                title="Flip board"
+                aria-label="Flip board"
+              >
+                <RotateCcw size={20} />
+              </HeaderIconButton>
+              <HeaderIconButton onClick={() => navigate('/settings')} title="Settings" aria-label="Settings">
+                <SlidersHorizontal size={20} />
+              </HeaderIconButton>
+            </>
+          }
+        />
+
+        {/* Coach + bubble (fixed band so the board never jumps between moves) */}
+        <div className="flex-shrink-0 px-2 pt-2 pb-1 h-[172px] flex items-end overflow-hidden">
+          <CoachSpeech
+            expression={coachExpression}
+            messages={bubbleMessages}
+            voiceEnabled={coachVoiceEnabled}
+            size={72}
+            className="w-full !items-end"
+          />
+        </div>
+
+        {/* Board, full width, no eval bar or player rows */}
+        <div className="w-full aspect-square flex-shrink-0" data-testid="review-board-mobile">
+          <Board
+            fen={displayFen}
+            orientation={orientation}
+            boardTheme={currentBoardTheme}
+            pieceSet={currentPieceSet}
+            animationSpeed={animationSpeed}
+            coordinates={coordinates}
+            lastMove={boardLastMove}
+            badges={badges}
+            arrows={arrows}
+            interactive={retryMode}
+            onMove={handleRetryMove}
+          />
+        </div>
+
+        <MobileMoveStrip
+          moves={game.moves}
+          currentMoveIndex={currentMoveIndex}
+          onSelectMove={(idx) => {
+            resetModes();
+            setCurrentMoveIndex(idx);
+          }}
+          onPrev={handlePrev}
+          onNext={handleNext}
+        />
+
+        <div className="flex-1 min-h-0" />
+
+        {/* Bottom action bar */}
+        <div
+          className="flex-shrink-0 flex items-center gap-2 px-3 pt-2 pb-[max(12px,env(safe-area-inset-bottom))]"
+          style={{ background: 'var(--side-panel-bg)' }}
+          data-testid="review-actions"
+        >
+          {retryMode ? (
+            <>
+              <button type="button" className={barBtn(true)} onClick={() => setRetryFen(null)}>
+                <RotateCcw size={22} />
+                Again
+              </button>
+              <button type="button" className={barBtn(true)} onClick={handleShowAnswer}>
+                <Sparkles size={22} />
+                Answer
+              </button>
+              <Button variant="primary" size="md" className="!h-14 flex-1 !text-[20px]" onClick={resetModes}>
+                Resume
+              </Button>
+            </>
+          ) : explaining ? (
+            <>
+              <button
+                type="button"
+                className={barBtn(!isBookMove && variationStep > 0)}
+                onClick={() => setVariationStep((n) => Math.max(0, n - 1))}
+              >
+                <ChevronLeft size={22} />
+                Back
+              </button>
+              <button
+                type="button"
+                className={barBtn(!isBookMove && variationStep < stepCount - 1)}
+                onClick={() => setVariationStep((n) => Math.min(stepCount - 1, n + 1))}
+              >
+                <ChevronRight size={22} />
+                Step
+              </button>
+              <Button variant="primary" size="md" className="!h-14 flex-1 !text-[20px]" onClick={resetModes}>
+                Got it!
+              </Button>
+            </>
+          ) : showingBest ? (
+            <Button variant="primary" size="md" className="!h-14 flex-1 !text-[20px]" onClick={resetModes}>
+              Resume
+            </Button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={barBtn(true)}
+                aria-pressed={showMove}
+                data-testid="mobile-show"
+                onClick={() => {
+                  if (isMistakeOrBlunder || isBookMove) {
+                    setExplaining(true);
+                    setShowingBest(false);
+                    setRetryMode(false);
+                    setVariationStep(0);
+                  } else {
+                    setShowMove((v) => !v);
+                  }
+                }}
+              >
+                <Eye size={22} className={showMove ? 'text-amber-400' : ''} />
+                Show
+              </button>
+              <button
+                type="button"
+                className={barBtn(canBest)}
+                data-testid="mobile-best"
+                onClick={() => {
+                  setShowingBest(true);
+                  setExplaining(false);
+                  setRetryMode(false);
+                }}
+              >
+                <Sparkles size={22} />
+                Best
+              </button>
+              {isMistakeOrBlunder ? (
+                <button
+                  type="button"
+                  className={barBtn(true)}
+                  data-testid="mobile-retry"
+                  onClick={() => {
+                    setRetryMode(true);
+                    setShowingBest(false);
+                    setExplaining(false);
+                    setRetrySuccess(null);
+                    setRetryFen(null);
+                  }}
+                >
+                  <RotateCcw size={22} />
+                  Retry
+                </button>
+              ) : (
+                <button type="button" className={barBtn(true)} data-testid="mobile-lines" onClick={() => setLinesSheetOpen(true)}>
+                  <ListTree size={22} />
+                  Lines
+                </button>
+              )}
+              <Button
+                variant="primary"
+                size="md"
+                className="!h-14 flex-1 !text-[20px]"
+                onClick={handleNext}
+                disabled={currentMoveIndex >= game.moves.length - 1}
+                data-testid="mobile-next"
+              >
+                Next
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Engine lines sheet */}
+        {linesSheetOpen && (
+          <div className="absolute inset-0 z-50 flex flex-col justify-end bg-black/50" onClick={() => setLinesSheetOpen(false)} data-testid="lines-sheet">
+            <div
+              className="rounded-t-2xl p-4 pb-[max(16px,env(safe-area-inset-bottom))] max-h-[70%] overflow-y-auto space-y-2"
+              style={{ background: 'var(--side-panel-bg)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="font-display font-extrabold text-[20px]">Engine lines</h2>
+                <HeaderIconButton onClick={() => setLinesSheetOpen(false)} aria-label="Close">
+                  <X size={20} />
+                </HeaderIconButton>
+              </div>
+              {currentMove?.eval?.lines?.length ? (
+                currentMove.eval.lines.map((line, lIdx) => (
+                  <div key={`ml-${lIdx}`} className="p-3 rounded-lg bg-theme-raised/60 border border-theme-border/40 flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-[16px]">
+                        {lIdx + 1}. {line.move}
+                      </span>
+                      <span className="font-mono font-bold px-2 py-0.5 rounded bg-theme-raised text-amber-500">{formatEval(line.eval)}</span>
+                    </div>
+                    {line.why && <p className="text-[14px] text-theme-muted">{line.why}</p>}
+                  </div>
+                ))
+              ) : (
+                <p className="text-theme-muted text-[14px]">No engine lines for this move.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+    // On phones the screen covers the bottom nav (a portal escapes the page's stacking context)
+    return isXs && typeof document !== 'undefined' ? createPortal(screen, document.body) : screen;
+  }
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
