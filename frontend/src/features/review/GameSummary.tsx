@@ -163,9 +163,9 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview, l
   const bottomPlayer = orientation === 'white' ? game.white : game.black;
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
-      {/* --- LEFT ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile, desktop flex-1) --- */}
-      <div className="sticky top-0 z-20 w-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page border-b lg:border-b-0 border-theme-border/60 flex-shrink-0 lg:flex-1 min-w-0">
+    <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-0 lg:pb-4">
+      {/* --- LEFT ZONE: CHESS BOARD & EVAL BAR (desktop only: on phones the summary is just the coach, graph and table, as in the app) --- */}
+      <div className="hidden lg:flex z-20 w-full flex-col items-center justify-center p-6 bg-theme-page flex-shrink-0 lg:flex-1 min-w-0">
         <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">
           {/* Top Player Row */}
           <PlayerBar
@@ -229,7 +229,7 @@ export const GameSummary: React.FC<GameSummaryProps> = ({ game, onStartReview, l
       </div>
 
       {/* --- RIGHT ZONE: one flat panel, as on the reference --- */}
-      <SidebarPanel className="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20" testId="summary-panel">
+      <SidebarPanel className="w-full flex-1 min-h-0 lg:flex-none lg:w-[400px] xl:w-[440px] flex-shrink-0 lg:h-[calc(100vh-32px)] z-20" testId="summary-panel">
         <SidebarHeader
           title="Game Review"
           icon={<img src="/assets/ui/icon_review.webp" alt="" className="w-9 h-9 object-contain" />}
