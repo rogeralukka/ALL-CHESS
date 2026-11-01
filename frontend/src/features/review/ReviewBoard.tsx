@@ -407,7 +407,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   let coachText = currentMove?.coachComment || currentMove?.eval?.why || 'Solid positional continuation.';
   let bubbleClassification = classification;
   let bubbleMoveSan = currentMove?.san;
-  let bubbleEvalText = formatEval(currentMove?.eval?.eval);
+  let bubbleEvalText = formatEval(currentMove?.eval?.eval, currentMove?.eval?.mateIn);
   const bubbleEvalScore = currentMove?.eval?.eval;
 
   if (showingBest) {
