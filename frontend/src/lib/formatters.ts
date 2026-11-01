@@ -8,6 +8,8 @@ export function formatEval(evalScore?: number, mate?: number | null): string {
   }
   if (evalScore === undefined || isNaN(evalScore)) return '0.0';
   if (evalScore === 0) return '0.0';
+  // the backend reports a forced mate as a huge score when it has no mate distance
+  if (Math.abs(evalScore) >= 90) return evalScore > 0 ? 'M' : '-M';
   return evalScore > 0 ? `+${evalScore.toFixed(1)}` : evalScore.toFixed(1);
 }
 

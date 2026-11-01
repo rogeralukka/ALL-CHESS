@@ -31,6 +31,8 @@ export interface MoveEval {
   eval: number; // MOCK
   mate?: number | null;
   bestMove?: string;
+  /** Signed mate distance (5 = mate in 5 for White, -5 = for Black); null when not a mate */
+  mateIn?: number | null;
   winPct?: number;
   why?: string;
   lines?: TopEngineLine[];

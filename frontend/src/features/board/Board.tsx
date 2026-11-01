@@ -25,6 +25,8 @@ export interface BoardProps {
   highlights?: string[];
   /** Squares painted red (pieces under threat / pressure) */
   threats?: string[];
+  /** Squares painted green: where the better move would land (Chess.com style) */
+  targets?: string[];
   successSquares?: string[];
   legalTargets?: string[];
   interactive?: boolean;
@@ -104,6 +106,7 @@ export const Board: React.FC<BoardProps> = ({
   badges = EMPTY_ARRAY,
   highlights = EMPTY_ARRAY,
   threats = EMPTY_ARRAY,
+  targets = EMPTY_ARRAY,
   successSquares = EMPTY_ARRAY,
   legalTargets = EMPTY_ARRAY,
   interactive = true,
@@ -684,27 +687,15 @@ export const Board: React.FC<BoardProps> = ({
 
       if (isFrom || isTo) {
         // Chess.com's palette: the tint tells how good the move was
-        if (lastMove.classification === 'blunder' || lastMove.classification === 'miss') {
-          return 'bg-[rgba(232,72,59,0.55)]';
-        }
-        if (lastMove.classification === 'mistake') {
-          return 'bg-[rgba(246,150,60,0.55)]';
-        }
-        if (lastMove.classification === 'inaccuracy') {
-          return 'bg-[rgba(246,200,60,0.5)]';
-        }
-        if (lastMove.classification === 'great') {
-          return 'bg-[rgba(94,134,176,0.6)]';
-        }
-        if (lastMove.classification === 'best') {
-          return 'bg-[rgba(150,200,80,0.55)]';
-        }
-        if (lastMove.classification === 'brilliant') {
-          return 'bg-[rgba(38,194,164,0.55)]';
-        }
-        if (lastMove.classification === 'book') {
-          return 'bg-amber-600/35';
-        }
+        if (lastMove.classification === 'blunder') return 'bg-[rgba(250,65,45,0.7)]';
+        if (lastMove.classification === 'miss') return 'bg-[rgba(255,119,105,0.7)]';
+        if (lastMove.classification === 'mistake') return 'bg-[rgba(255,164,89,0.7)]';
+        if (lastMove.classification === 'inaccuracy') return 'bg-[rgba(247,198,49,0.7)]';
+        if (lastMove.classification === 'great') return 'bg-[rgba(116,155,191,0.75)]';
+        if (lastMove.classification === 'best' || lastMove.classification === 'excellent') return 'bg-[rgba(129,182,76,0.7)]';
+        if (lastMove.classification === 'good') return 'bg-[rgba(149,183,118,0.7)]';
+        if (lastMove.classification === 'brilliant') return 'bg-[rgba(38,194,163,0.7)]';
+        if (lastMove.classification === 'book') return 'bg-[rgba(213,164,125,0.7)]';
         const isDusk = appTheme === 'dusk';
         return isDusk ? 'bg-[rgba(255,214,79,0.42)]' : 'bg-[rgba(255,214,79,0.38)]';
       }
@@ -714,7 +705,10 @@ export const Board: React.FC<BoardProps> = ({
       return 'bg-emerald-500/40 ring-2 ring-emerald-500';
     }
     if (threats.includes(sq)) {
-      return 'bg-[rgba(232,72,59,0.55)]';
+      return 'bg-[rgba(248,85,63,0.7)]';
+    }
+    if (targets.includes(sq)) {
+      return 'bg-[rgba(159,207,63,0.7)]';
     }
     if (highlights.includes(sq)) {
       return 'bg-amber-400/35 ring-2 ring-amber-400/60';
