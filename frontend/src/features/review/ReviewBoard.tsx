@@ -268,10 +268,13 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   // Classification info
   const classification = currentMove?.classification || 'book';
-  const isBestMove = classification === 'best';
   const isBookMove = classification === 'book';
   const isMistakeOrBlunder = ['inaccuracy', 'mistake', 'miss', 'blunder'].includes(classification);
   const targetBestMove = currentMove?.eval?.bestMove || currentMove?.eval?.lines?.[0]?.move || currentMove?.annotations?.bestMove?.san || '';
+
+  // "Best" is available whenever the engine prefers a different move than the one played (not only after mistakes)
+  const stripSan = (m: string) => m.replace(/[+#?!]/g, '');
+  const canBest = !isBookMove && !!targetBestMove && !!currentMove && stripSan(targetBestMove) !== stripSan(currentMove.san || '');
 
   // Determine active board FEN, arrows, badges, and lastMove (memoized)
   const { displayFen, arrows, badges, boardLastMove, threats, targets } = useMemo(() => {
@@ -544,7 +547,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   // --- PHONE LAYOUT (as in the Chess.com app): coach above a full-width board, move strip, bottom action bar ---
   if (isPhone) {
-    const canBest = isMistakeOrBlunder && !isBestMove && !!targetBestMove;
     const stepCount = refutationMoves.length;
     const barBtn = (enabled: boolean) =>
       `flex flex-col items-center justify-center gap-0.5 h-14 w-16 flex-shrink-0 rounded-lg text-[13px] font-bold select-none transition-colors ${
@@ -966,8 +968,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                       </Button>
                     )}
 
-                    {/* 2. BEST BUTTON (Shown for Mistake/Blunder/Inaccuracy/Miss; hidden on Best/Excellent/Book) */}
-                    {isMistakeOrBlunder && !isBestMove && !isBookMove && (
+                    {/* 2. BEST BUTTON (shown whenever the engine has a different, better move; hidden on the best move and book moves) */}
+                    {canBest && (
                       <Button
                         variant="secondary"
                         size="md"
