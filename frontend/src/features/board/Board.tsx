@@ -683,14 +683,24 @@ export const Board: React.FC<BoardProps> = ({
       const isTo = lastMove.to === sq;
 
       if (isFrom || isTo) {
-        if (lastMove.classification === 'blunder') {
-          return 'bg-red-400/35 ring-1 ring-red-500/50';
+        // Chess.com's palette: the tint tells how good the move was
+        if (lastMove.classification === 'blunder' || lastMove.classification === 'miss') {
+          return 'bg-[rgba(232,72,59,0.55)]';
+        }
+        if (lastMove.classification === 'mistake') {
+          return 'bg-[rgba(246,150,60,0.55)]';
+        }
+        if (lastMove.classification === 'inaccuracy') {
+          return 'bg-[rgba(246,200,60,0.5)]';
+        }
+        if (lastMove.classification === 'great') {
+          return 'bg-[rgba(94,134,176,0.6)]';
         }
         if (lastMove.classification === 'best') {
-          return 'bg-emerald-500/40';
+          return 'bg-[rgba(150,200,80,0.55)]';
         }
         if (lastMove.classification === 'brilliant') {
-          return 'bg-cyan-400/40';
+          return 'bg-[rgba(38,194,164,0.55)]';
         }
         if (lastMove.classification === 'book') {
           return 'bg-amber-600/35';
