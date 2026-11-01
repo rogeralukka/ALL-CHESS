@@ -36,6 +36,23 @@ export interface MoveEval {
   lines?: TopEngineLine[];
 }
 
+/** Review annotations computed by the backend (arrows, highlighted squares, best move and refutation) */
+export interface MoveRef {
+  san: string;
+  from: string;
+  to: string;
+  uci: string;
+}
+
+export interface MoveAnnotations {
+  tint?: MoveClassification | null;
+  arrows?: { from: string; to: string; kind: 'best' | 'refutation' | 'threat' | 'played' | 'missed' }[];
+  squares?: { square: string; kind: 'attacked' | 'hanging' | 'target' | 'king-danger'; reason: string }[];
+  bestMove?: MoveRef | null;
+  refutation?: MoveRef | null;
+  pv?: string[] | null;
+}
+
 export interface Move {
   san: string;
   from: string;
@@ -49,6 +66,7 @@ export interface Move {
   coachComment?: string;
   variation?: string[]; // Alternate lines for Explain/Best
   timeSpent?: number;
+  annotations?: MoveAnnotations;
 }
 
 export interface Player {
