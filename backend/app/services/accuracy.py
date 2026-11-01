@@ -114,50 +114,67 @@ def calculate_game_accuracy(
     }
 
 
+# Chess.com calibrated accuracy-to-rating monotone anchors:
+# Data points: 53.0 -> 150, 63.9 -> 650, 68.0 -> 900, 72.1 -> 1200, 75.3 -> 1300, 81.3 -> 1500
+RATING_ACCURACY_ANCHORS: list[tuple[float, int]] = [
+    (0.0, 100),
+    (52.0, 100),
+    (53.0, 150),
+    (63.9, 650),
+    (68.0, 900),
+    (72.1, 1200),
+    (75.3, 1300),
+    (81.3, 1500),
+    (88.0, 2000),
+    (94.0, 2500),
+    (98.0, 2800),
+    (100.0, 3000),
+]
+
+
+def estimate_game_rating(accuracy: Optional[float]) -> Optional[int]:
+    """
+    Monotone interpolation of game accuracy to estimated performance rating,
+    matching Chess.com calibration data points:
+      53.0 -> 150
+      63.9 -> 650
+      68.0 -> 900
+      72.1 -> 1200
+      75.3 -> 1300
+      81.3 -> 1500
+    Clamped to [100, 3000]. Extrapolates gently above 81.3.
+    """
+    if accuracy is None:
+        return None
+    acc = max(0.0, min(100.0, float(accuracy)))
+
+    if acc <= RATING_ACCURACY_ANCHORS[0][0]:
+        return RATING_ACCURACY_ANCHORS[0][1]
+    if acc >= RATING_ACCURACY_ANCHORS[-1][0]:
+        return RATING_ACCURACY_ANCHORS[-1][1]
+
+    for i in range(len(RATING_ACCURACY_ANCHORS) - 1):
+        a0, r0 = RATING_ACCURACY_ANCHORS[i]
+        a1, r1 = RATING_ACCURACY_ANCHORS[i + 1]
+        if a0 <= acc <= a1:
+            t = (acc - a0) / (a1 - a0)
+            rating = r0 + t * (r1 - r0)
+            return max(100, min(3000, int(round(rating))))
+
+    return 1500
+
+
 def estimate_performance_ratings(
     accuracy: Dict[str, Optional[float]],
     white_base_rating: Optional[int] = None,
     black_base_rating: Optional[int] = None
 ) -> Dict[str, Optional[int]]:
     """
-    Maps accuracy to estimated performance rating relative to player's rating:
-      estimated = clamp(100, 3000, player_rating + (accuracy - expected_accuracy) * sensitivity_k)
-      expected_accuracy = base + (player_rating / 3000) * slope
-
-    Fallback (if base_rating is None or 0) uses calibrated anchor interpolation.
+    Maps game accuracy to Chess.com monotone estimated rating.
     """
-    base_acc = getattr(settings, "rating_expected_acc_base", 60.0)
-    slope = getattr(settings, "rating_expected_acc_slope", 35.0)
-    k = getattr(settings, "rating_sensitivity_k", 45.0)
-
-    def calc_rating(acc: Optional[float], base: Optional[int]) -> Optional[int]:
-        if acc is None:
-            return None
-        acc = max(0.0, min(100.0, acc))
-
-        if base is not None and base > 0:
-            expected = base_acc + (base / 3000.0) * slope
-            diff = acc - expected
-            est = round(base + diff * k)
-            return max(100, min(3000, int(est)))
-
-        # Fallback piecewise lookup
-        if acc <= 50.0:
-            rating = 100.0 + (acc / 50.0) * 400.0
-        elif acc <= 75.0:
-            rating = 500.0 + ((acc - 50.0) / 25.0) * 700.0
-        elif acc <= 90.0:
-            rating = 1200.0 + ((acc - 75.0) / 15.0) * 800.0
-        elif acc <= 98.0:
-            rating = 2000.0 + ((acc - 90.0) / 8.0) * 700.0
-        else:
-            rating = 2700.0 + ((acc - 98.0) / 2.0) * 150.0
-
-        return max(100, min(3000, int(round(rating))))
-
     return {
-        "white": calc_rating(accuracy.get("white"), white_base_rating),
-        "black": calc_rating(accuracy.get("black"), black_base_rating)
+        "white": estimate_game_rating(accuracy.get("white")),
+        "black": estimate_game_rating(accuracy.get("black")),
     }
 
 

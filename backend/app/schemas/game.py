@@ -21,6 +21,7 @@ class TopEngineLine(CamelModel):
     move: str
     eval: float
     mate: int | None = None
+    mate_in: int | None = None
     depth: int
     why: str
     pv: list[str]
@@ -29,11 +30,18 @@ class TopEngineLine(CamelModel):
 class MoveEval(CamelModel):
     eval: float
     mate: int | None = None
+    mate_in: int | None = None
     best_move: str | None = None
     win_pct: float | None = None
     why: str | None = None
     best_why: str | None = None
     lines: list[TopEngineLine] | None = None
+    eval_before: float | None = None
+    eval_after: float | None = None
+    mate_before: int | None = None
+    mate_after: int | None = None
+    mate_in_before: int | None = None
+    mate_in_after: int | None = None
 
 
 MoveAnnotationTint = Literal[
@@ -134,6 +142,7 @@ class Game(CamelModel):
     termination: str | None = None
     analysis_depth: int | None = None
     analysis_level: str | None = None
+    book_end: int | None = None
 
 
 class CoachGameCreate(CamelModel):

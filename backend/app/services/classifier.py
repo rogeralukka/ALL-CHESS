@@ -17,17 +17,17 @@ MoveClassificationType = Literal[
 
 CLASSIFICATION_THRESHOLDS: Dict[str, float] = {
     "best_max_drop": 0.0,
-    "excellent_max_drop": 1.5,
-    "good_max_drop": 5.8,
+    "excellent_max_drop": 2.0,
+    "good_max_drop": 5.5,
     "inaccuracy_max_drop": 10.0,
     "mistake_max_drop": 18.0,
     "miss_min_drop": 10.0,
-    "great_min_gap_win_pct": 6.5,
-    "great_min_after_win_pct": 40.0,
-    "great_max_before_win_pct": 95.0,
-    "brilliant_max_drop": 1.0,
-    "brilliant_min_after_win_pct": 45.0,
-    "brilliant_max_before_win_pct": 90.0,
+    "great_min_gap_win_pct": 6.0,
+    "great_min_after_win_pct": 35.0,
+    "great_max_before_win_pct": 90.0,
+    "brilliant_max_drop": 5.0,
+    "brilliant_min_after_win_pct": 40.0,
+    "brilliant_max_before_win_pct": 93.0,
 }
 
 SEE_PIECE_VALUES: Dict[chess.PieceType, int] = {
@@ -88,7 +88,7 @@ def is_material_sacrifice(board: chess.Board, move: chess.Move) -> bool:
     Protected pieces where opponent loses material on exchange are NOT sacrifices.
     """
     piece = board.piece_at(move.from_square)
-    if not piece or piece.piece_type in (chess.PAWN, chess.KING):
+    if not piece or piece.piece_type == chess.KING:
         return False
 
     captured = board.piece_at(move.to_square)
@@ -98,11 +98,7 @@ def is_material_sacrifice(board: chess.Board, move: chess.Move) -> bool:
     test_board = board.copy()
     test_board.push(move)
 
-    # Opponent turn: what can opponent net by capturing on move.to_square?
     opp_net_gain = see_capture_sequence(test_board, move.to_square)
-
-    # To be a genuine sacrifice: opponent net gain on the square must exceed
-    # the mover's capture value by at least 150 centipawns (more than a minor piece trade)
     return (opp_net_gain - captured_val) >= 150
 
 
@@ -192,79 +188,69 @@ def classify_move(
     # Drop in mover's winning chances
     drop = max(0.0, mover_before - mover_after)
 
-    # 1. Brilliant: top move, genuine material sacrifice, stays winning/good, wasn't trivially winning
+    # 1. Brilliant: material is given up versus best-play baseline, win% stays within ~5 of best move, not completely winning
     if (
         is_sacrifice
-        and is_top_engine_move
+        and not is_recapture
+        and drop <= CLASSIFICATION_THRESHOLDS["brilliant_max_drop"]
         and mover_after >= CLASSIFICATION_THRESHOLDS["brilliant_min_after_win_pct"]
         and mover_before < CLASSIFICATION_THRESHOLDS["brilliant_max_before_win_pct"]
     ):
         return 'brilliant'
 
-    # 2. Great: top engine move, NOT a recapture, more than 1 legal move,
-    # large gap to 2nd move, and saved or progressed game
-    if (
-        is_top_engine_move
-        and not is_recapture
-        and num_legal_moves > 1
-        and gap_to_second_win_pct >= CLASSIFICATION_THRESHOLDS["great_min_gap_win_pct"]
-        and mover_after >= CLASSIFICATION_THRESHOLDS["great_min_after_win_pct"]
-        and (mover_before < CLASSIFICATION_THRESHOLDS["great_max_before_win_pct"] or opponent_just_made_mistake)
-    ):
-        return 'great'
+    # 2. Great: top engine move, not a recapture, more than 1 legal move:
+    if is_top_engine_move and not is_recapture and num_legal_moves > 1:
+        if (
+            gap_to_second_win_pct >= CLASSIFICATION_THRESHOLDS["great_min_gap_win_pct"]
+            and mover_after >= CLASSIFICATION_THRESHOLDS["great_min_after_win_pct"]
+            and mover_before < CLASSIFICATION_THRESHOLDS["great_max_before_win_pct"]
+        ):
+            return 'great'
+        if gap_to_second_win_pct >= 4.0:
+            if mover_before <= 42.0 and mover_after >= 48.0:
+                return 'great'
+            if mover_before <= 55.0 and mover_after >= 62.0:
+                return 'great'
 
     # 3. Best: ONLY the engine top move
     if is_top_engine_move:
         return 'best'
 
-    # 4. Miss: Player had a tactical continuation available to win or equalize,
-    # usually right after opponent's error or with clear material/mate win.
-    # Takes priority over Mistake/Blunder when opponent just made an error.
-    # Must NOT override when player was already comfortably winning (mover_before >= 75.0),
-    # nor when player hung their own major piece without opponent error.
-    is_miss = False
+    # 4. Miss: player failed to take a tactical shot (best move wins material/mate)
+    # or opponent just made an error and player gave back >= 10 win%.
+    # Never overrides an outright blunder (allowing mate in 1 or checkmate).
+    is_mate_drop = (mate_after == 0) or (mate_after is not None and abs(mate_after) <= 1)
     if (
-        (opponent_just_made_mistake or best_wins_material_or_mate)
-        and not is_recapture
-        and mover_before < 78.0
-        and (drop >= CLASSIFICATION_THRESHOLDS["inaccuracy_max_drop"] or (best_eval_gap is not None and best_eval_gap >= 1.5))
-        and mover_after < 85.0
+        drop >= CLASSIFICATION_THRESHOLDS["miss_min_drop"]
+        and not is_mate_drop
+        and (drop < 35.0 or opponent_just_made_mistake)
     ):
-        if drop < 25.0 or opponent_just_made_mistake:
-            is_miss = True
+        if opponent_just_made_mistake and (best_wins_material_or_mate or (best_eval_gap is not None and best_eval_gap >= 1.2)):
+            return 'miss'
+        if best_wins_material_or_mate and (best_eval_gap is not None and best_eval_gap >= 1.5):
+            return 'miss'
 
-    if is_miss:
-        return 'miss'
-
-    # Dynamic good threshold based on rating (beginners get slightly more lenient 'good' category in contestable positions)
-    effective_rating = rating if (rating is not None and rating > 0) else 1500
-    if effective_rating < 1200 and (35.0 <= mover_before <= 75.0):
-        good_threshold = 4.0 + max(0.0, (1200 - effective_rating) / 1000.0) * 4.0
-    else:
-        good_threshold = CLASSIFICATION_THRESHOLDS["good_max_drop"]
-
-    # 5. Excellent: drop <= excellent_max_drop
-    if drop <= CLASSIFICATION_THRESHOLDS["excellent_max_drop"]:
+    # 5. Excellent: drop <= excellent_max_drop AND eval gap <= 0.35 pawns
+    if drop <= CLASSIFICATION_THRESHOLDS["excellent_max_drop"] and (best_eval_gap is None or best_eval_gap <= 0.35):
         return 'excellent'
 
-    # In clearly winning positions (mover_before >= 75.0), preserving a large lead (+5 pawns) is excellent
-    if mover_before >= 75.0 and mover_after >= 75.0 and drop <= good_threshold:
+    # In clearly winning positions (mover_before >= 75.0), preserving advantage is excellent
+    if mover_before >= 75.0 and mover_after >= 75.0 and drop <= CLASSIFICATION_THRESHOLDS["good_max_drop"] and (best_eval_gap is None or best_eval_gap <= 0.5):
         return 'excellent'
 
-    # 6. Good: drop <= good_threshold
-    if drop <= good_threshold:
+    # 6. Good: drop <= good_max_drop
+    if drop <= CLASSIFICATION_THRESHOLDS["good_max_drop"] or (drop <= 7.5 and (best_eval_gap is None or best_eval_gap <= 0.75)):
         return 'good'
 
     # 7. Inaccuracy: drop <= inaccuracy_max_drop
     if drop <= CLASSIFICATION_THRESHOLDS["inaccuracy_max_drop"]:
-        # Upgrade to mistake if eval loss is large (>= 1.35 pawns from an already worse/equal position, or massive eval gap >= 3.0)
         if best_eval_gap is not None:
             if (best_eval_gap >= 1.35 and mover_before <= 50.0) or (best_eval_gap >= 3.0):
                 return 'mistake'
         return 'inaccuracy'
 
-    # 8. Mistake: drop <= 18.0%
-    if drop <= CLASSIFICATION_THRESHOLDS["mistake_max_drop"]:
+    # 8. Mistake: drop <= mistake_max_drop, or player preserves winning advantage (mover_after >= 55.0)
+    if drop <= CLASSIFICATION_THRESHOLDS["mistake_max_drop"] or (mover_after >= 55.0 and drop <= 30.0):
         return 'mistake'
 
     # 9. Blunder: drop > 18.0%
