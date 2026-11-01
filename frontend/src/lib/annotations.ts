@@ -24,3 +24,12 @@ export function annotationSquares(a: MoveAnnotations): string[] {
 export function hasAnnotations(m?: Move): m is Move & { annotations: MoveAnnotations } {
   return !!m?.annotations;
 }
+
+/**
+ * A game reviewed before the backend produced annotations has grades but no arrows or squares.
+ * Such a review is worth running once more so the board can draw them.
+ */
+export function needsAnnotationRefresh(moves?: Move[]): boolean {
+  if (!moves?.length) return false;
+  return moves[0].eval !== undefined && !moves.some((m) => m.annotations);
+}
