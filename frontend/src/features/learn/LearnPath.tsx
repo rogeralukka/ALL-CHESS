@@ -50,7 +50,7 @@ export const LearnPath: React.FC = () => {
 
   const panel = (
     <div className="flex flex-col h-full w-full min-h-0 overflow-hidden lg:rounded-[5px]" style={{ background: theme.bar, transition: 'background-color .3s' }} data-testid={phone ? 'learn-mobile' : 'learn-panel'}>
-      <div className="relative flex items-center justify-center h-[60px] lg:h-[72px] px-3 flex-shrink-0" style={{ background: 'var(--side-header-bg)' }}>
+      <div className="relative flex items-center justify-center h-[60px] lg:h-[72px] px-3 flex-shrink-0" style={{ background: 'radial-gradient(120% 140% at 50% 0%, #34312d 0%, #262421 70%)' }}>
         <h1 className="flex items-center gap-2.5 font-display font-extrabold text-[26px] lg:text-[30px] leading-none" style={{ color: 'var(--color-text-strong)' }}>
           <img src="/assets/ui/icon_learn.webp" alt="" className="w-9 h-9 object-contain" />
           Learn
@@ -62,7 +62,7 @@ export const LearnPath: React.FC = () => {
       </div>
 
       <div className="relative flex-1 min-h-0">
-        <LearnMap stages={ordered} selectedId={selected.id} currentId={next.id} onSelect={setSelected} onSectionChange={setSection} />
+        <LearnMap compact={!phone} stages={ordered} selectedId={selected.id} currentId={next.id} onSelect={setSelected} onSectionChange={setSection} />
 
         {/* the coach, over the top of the map */}
         <div className="absolute top-0 inset-x-0 z-10 px-2 pt-2 pb-6 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(36,35,32,0.92), rgba(36,35,32,0))' }}>

@@ -15,6 +15,11 @@ export interface SectionTheme {
   hotTop: string;
   hotSide: string;
   glow: string;
+  /** Topic glyph on an upcoming tile */
+  icon: string;
+  /** Finished lesson tile */
+  doneTop: string;
+  doneSide: string;
   /** Background diamond tint */
   cell: string;
   /** Medallion disc behind the graduation cap */
@@ -30,8 +35,11 @@ export const SECTION_THEMES: Record<SectionId, SectionTheme> = {
   openings: {
     id: 'openings',
     name: 'Openings',
-    tileTop: '#1f4d50',
-    tileSide: '#163b3e',
+    tileTop: '#1f4f52',
+    tileSide: '#163a3c',
+    icon: '#3e7f80',
+    doneTop: '#2a8a7a',
+    doneSide: '#1d675b',
     hotTop: '#5ff2c6',
     hotSide: '#2fb995',
     glow: 'rgba(95,242,198,0.55)',
@@ -44,8 +52,11 @@ export const SECTION_THEMES: Record<SectionId, SectionTheme> = {
   middlegame: {
     id: 'middlegame',
     name: 'Middlegame',
-    tileTop: '#7b381d',
-    tileSide: '#5d2b16',
+    tileTop: '#7a3a1f',
+    tileSide: '#5a2a15',
+    icon: '#a65c38',
+    doneTop: '#b8592a',
+    doneSide: '#8a411d',
     hotTop: '#fb9c4c',
     hotSide: '#e2711f',
     glow: 'rgba(251,156,76,0.55)',
@@ -58,10 +69,13 @@ export const SECTION_THEMES: Record<SectionId, SectionTheme> = {
   endgame: {
     id: 'endgame',
     name: 'Endgames',
-    tileTop: '#3b3a80',
-    tileSide: '#2b2a60',
-    hotTop: '#8f72f4',
-    hotSide: '#6a4fd4',
+    tileTop: '#45408f',
+    tileSide: '#322e6d',
+    icon: '#6d66b8',
+    doneTop: '#6a58c9',
+    doneSide: '#4e3f9e',
+    hotTop: '#9d82f5',
+    hotSide: '#6f55d6',
     glow: 'rgba(143,114,244,0.55)',
     cell: '70,60,160',
     medal: '#2a2a5c',
