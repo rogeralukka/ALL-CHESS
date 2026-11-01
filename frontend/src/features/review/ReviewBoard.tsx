@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { SidebarPanel, SidebarHeader, HeaderIconButton } from '@/components/SidebarPanel';
 import { useNavigate } from 'react-router-dom';
+import { LeaveGuard } from '@/components/LeaveGuard';
 
 interface ReviewBoardProps {
   game: Game;
@@ -776,6 +777,13 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
+      <LeaveGuard
+        when
+        title="Leave this review?"
+        message="You will go back out of the game review."
+        leaveLabel="Leave review"
+        stayLabel="Stay"
+      />
       {/* --- CENTER ZONE: CHESS BOARD & EVAL BAR (Sticky at top on mobile) --- */}
       <div className="sticky top-0 z-20 w-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-6 bg-theme-page border-b lg:border-b-0 border-theme-border/60 flex-shrink-0 lg:flex-1 min-w-0">
         <div className="w-full max-w-[min(calc(100vh-108px),900px)] flex flex-col gap-2">

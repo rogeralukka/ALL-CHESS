@@ -11,6 +11,7 @@ import { storage } from '@/lib/storage';
 import { api } from '@/data/api';
 import { PieceHopper } from '@/components/LoadingScreen';
 import { gameRepository } from '@/data/repositories';
+import { useFocusMode } from '@/lib/focusMode';
 
 /** 3D section icons, rendered from scripts/map-art/render_ui_art.py */
 export const SECTION_ICON: Record<string, string> = {
@@ -78,6 +79,7 @@ const NavIcon: React.FC<{ name: string; size?: number; active?: boolean }> = ({ 
 export const Layout: React.FC = () => {
   const { appTheme, setAppTheme } = useSettingsStore();
   const { isOff } = useMotion();
+  const focus = useFocusMode((st) => st.on);
   const { isAuthenticated, isLoading, checkSession } = useAuthStore();
   const [isSyncing, setIsSyncing] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => storage.get('all_chess_sidebar_collapsed', false));
@@ -303,7 +305,7 @@ export const Layout: React.FC = () => {
       </aside>
 
       {/* --- MAIN --- */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overscroll-contain pb-16 sm:pb-0 relative z-10">
+      <main className={`flex-1 flex flex-col min-w-0 h-full overflow-y-auto overscroll-contain ${focus ? 'pb-0' : 'pb-16'} sm:pb-0 relative z-10`}>
         {/* soft page entrance when switching sections */}
         <motion.div
           key={location.pathname.split('/')[1] || 'home'}
@@ -318,7 +320,7 @@ export const Layout: React.FC = () => {
 
       {/* --- PHONE BOTTOM NAVIGATION (< 640px): Home / Puzzles / Learn / Review / More, as in the Chess.com app --- */}
       <nav
-        className="sm:hidden fixed bottom-0 left-0 right-0 h-16 backdrop-blur-md flex items-center justify-around px-1 z-40 pb-[env(safe-area-inset-bottom)]"
+        className={`sm:hidden fixed bottom-0 left-0 right-0 h-16 backdrop-blur-md ${focus ? '!hidden' : 'flex'} items-center justify-around px-1 z-40 pb-[env(safe-area-inset-bottom)]`}
         style={{ background: 'color-mix(in srgb, var(--color-sidebar) 94%, transparent)', boxShadow: '0 -1px 0 rgba(255,255,255,0.06)' }}
         aria-label="Mobile Navigation"
       >

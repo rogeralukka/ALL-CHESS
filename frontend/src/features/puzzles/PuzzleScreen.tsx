@@ -20,6 +20,7 @@ import { PuzzlePieceBadge } from './PuzzlePieceBadge';
 import { BoardBadge, CoachExpression } from '@/data/types';
 import { sound } from '@/lib/sound';
 import { useMotion } from '@/lib/useMotion';
+import { LeaveGuard } from '@/components/LeaveGuard';
 import {
   Flame,
   Lightbulb,
@@ -632,11 +633,23 @@ export const PuzzleScreen: React.FC = () => {
       </aside>
   );
 
+  // Back in the middle of a puzzle asks first instead of throwing the attempt away
+  const leaveGuard = (
+    <LeaveGuard
+      when={started && status === 'solving'}
+      title="Leave this puzzle?"
+      message="You are in the middle of a puzzle. If you leave now, this attempt is lost."
+      leaveLabel="Leave puzzle"
+      stayLabel="Keep solving"
+    />
+  );
+
   // --- PHONE: the puzzle home is just the map panel; solving is coach above a full-width board, as in the app ---
   if (isPhone) {
     if (started && !showLevelMap) {
       return (
         <div className="flex flex-col h-full w-full bg-theme-bg select-none overflow-hidden" data-testid="puzzle-mobile">
+          {leaveGuard}
           {headerEl}
           <div className="flex-shrink-0 px-2 pt-2 pb-1 h-[150px] flex items-end overflow-hidden">
             <CoachSpeech expression={coachExp} messages={bubbleMessages} size={72} className="w-full !items-end" />
@@ -661,6 +674,7 @@ export const PuzzleScreen: React.FC = () => {
   return (
     <div className="flex flex-col lg:flex-row h-full w-full bg-theme-bg select-none overflow-y-auto lg:overflow-hidden lg:items-center lg:justify-center lg:gap-6 lg:px-6 lg:py-4 pb-20 lg:pb-4">
       {/* Board: as large as the viewport allows, like the reference (about 96% of the height) */}
+      {leaveGuard}
       <div className="flex-none lg:h-full flex items-center justify-center p-2 sm:p-4 lg:p-0 min-w-0 lg:flex-1 lg:max-w-[calc(100vh-32px)]">
         {boardEl}
       </div>

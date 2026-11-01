@@ -65,17 +65,17 @@ export const EvalBar: React.FC<EvalBarProps> = ({
       />
 
       {/* Numerical score printed as positive absolute value at leading side's end */}
-      <div className="relative z-10 flex flex-col justify-between h-full py-1 text-center font-mono font-bold text-xs leading-tight pointer-events-none">
+      <div className="relative z-10 flex flex-col justify-between h-full py-1 text-center font-mono font-bold text-[9px] sm:text-xs leading-tight tracking-tighter sm:tracking-normal pointer-events-none">
         {/* Top score */}
         {showTopScore ? (
-          <span data-testid="eval-score-top" className={`${topTextColor} px-0.5`}>{absScoreText}</span>
+          <span data-testid="eval-score-top" className={`${topTextColor} sm:px-0.5`}>{absScoreText}</span>
         ) : (
           <span />
         )}
 
         {/* Bottom score */}
         {showBottomScore ? (
-          <span data-testid="eval-score-bottom" className={`${bottomTextColor} px-0.5`}>{absScoreText}</span>
+          <span data-testid="eval-score-bottom" className={`${bottomTextColor} sm:px-0.5`}>{absScoreText}</span>
         ) : (
           <span />
         )}
