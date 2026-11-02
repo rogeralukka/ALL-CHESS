@@ -186,8 +186,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const explainSentences = useMemo(() => (currentMove?.annotations?.explain ?? []).filter(Boolean), [currentMove]);
 
   // Reset secondary modes when navigating moves
+  // (Show and Best are on/off switches that stay as they are from move to move, so they are not reset here)
   const resetModes = useCallback(() => {
-    setShowMove(false);
     setExplaining(false);
     setVariationStep(0);
     setRetryMode(false);
@@ -561,7 +561,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   if (isPhone) {
     const stepCount = refutationMoves.length;
     const barBtn = (enabled: boolean) =>
-      `flex flex-col items-center justify-center gap-0.5 h-14 w-16 flex-shrink-0 rounded-lg text-[13px] font-bold select-none transition-colors ${
+      `flex flex-col items-center justify-center gap-0.5 h-14 w-14 flex-shrink-0 rounded-lg text-[13px] font-bold select-none transition-colors ${
         enabled ? 'text-theme-text active:bg-white/10' : 'text-theme-muted/40 pointer-events-none'
       }`;
     const screen = (
@@ -682,18 +682,10 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             <>
               <button
                 type="button"
-                className={barBtn(true)}
+                className={`${barBtn(true)} ${showMove ? 'bg-white/10 !text-amber-400' : ''}`}
                 aria-pressed={showMove}
                 data-testid="mobile-show"
-                onClick={() => {
-                  if (isMistakeOrBlunder && hasExplain) {
-                    setExplaining(true);
-                    setRetryMode(false);
-                    setVariationStep(0);
-                  } else {
-                    setShowMove((v) => !v);
-                  }
-                }}
+                onClick={() => setShowMove((v) => !v)}
               >
                 <Eye size={22} className={showMove ? 'text-amber-400' : ''} />
                 Show
@@ -712,6 +704,21 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 <Sparkles size={22} className={bestLock ? 'text-amber-400' : ''} />
                 {bestLock ? 'Best: on' : 'Best'}
               </button>
+              {isMistakeOrBlunder && hasExplain && (
+                <button
+                  type="button"
+                  className={barBtn(true)}
+                  data-testid="mobile-explain"
+                  onClick={() => {
+                    setExplaining(true);
+                    setRetryMode(false);
+                    setVariationStep(0);
+                  }}
+                >
+                  <HelpCircle size={22} />
+                  Explain
+                </button>
+              )}
               {isMistakeOrBlunder ? (
                 <button
                   type="button"
@@ -971,14 +978,14 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                     <Button
                       variant={showMove ? 'primary' : 'secondary'}
                       aria-pressed={showMove}
-                      title="Draw the move that was played as an arrow"
+                      title="Draw the move that was played as an arrow, on every move until you switch this off"
                       data-testid="desktop-show"
                       size="md"
                       className="!h-12 flex-1"
                       icon={<Eye size={18} />}
                       onClick={() => setShowMove((v) => !v)}
                     >
-                      Show
+                      {showMove ? 'Show: on' : 'Show'}
                     </Button>
 
                     {/* 2. BEST BUTTON (shown whenever the engine has a different, better move; hidden on the best move and book moves) */}
