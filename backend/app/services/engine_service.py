@@ -898,7 +898,19 @@ def _run_single_pass_review_sync(
         "analysisLevel": level,
         "analysisDepth": real_depth,
         "bookEnd": book_end_ply,
+        "reviewSummary": {"headline": generate_review_headline(accuracy, analyzed_moves)},
     }
+
+
+def generate_review_headline(
+    accuracy: dict[str, float] | None,
+    analyzed_moves: list[dict[str, Any]] | None = None,
+) -> str:
+    if not accuracy:
+        return "Game review complete."
+    w = accuracy.get("white", 0.0)
+    b = accuracy.get("black", 0.0)
+    return f"White played with {w:.1f}% accuracy, Black played with {b:.1f}% accuracy."
 
 
 def select_critical_turning_point_indices(
