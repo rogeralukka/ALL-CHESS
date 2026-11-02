@@ -24,7 +24,7 @@ class TopEngineLine(CamelModel):
     mate: int | None = None
     mate_in: int | None = None
     depth: int
-    why: str
+    why: str | None = None
     pv: list[str]
 
 
