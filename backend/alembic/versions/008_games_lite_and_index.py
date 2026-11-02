@@ -29,7 +29,7 @@ def upgrade() -> None:
         if "move_count" not in cols:
             batch_op.add_column(sa.Column("move_count", sa.Integer(), nullable=True))
         if "ends_in_mate" not in cols:
-            batch_op.add_column(sa.Column("ends_in_mate", sa.Boolean(), nullable=True, server_default=sa.text("0")))
+            batch_op.add_column(sa.Column("ends_in_mate", sa.Boolean(), nullable=True, server_default=sa.false()))
         if "ix_games_user_id_date" not in indexes:
             batch_op.create_index("ix_games_user_id_date", ["user_id", "date"])
 
