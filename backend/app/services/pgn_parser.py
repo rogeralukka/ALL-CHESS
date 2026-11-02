@@ -134,15 +134,16 @@ def parse_pgn_game(
     white_name = headers.get("White", "White Player")
     black_name = headers.get("Black", "Black Player")
     
+    # 0 means "no rating known for this player"; the UI shows a dash. Never invent a number.
     try:
-        white_rating = int(headers.get("WhiteElo", "1200"))
+        white_rating = int(headers.get("WhiteElo", "0"))
     except ValueError:
-        white_rating = 1200
-        
+        white_rating = 0
+
     try:
-        black_rating = int(headers.get("BlackElo", "1200"))
+        black_rating = int(headers.get("BlackElo", "0"))
     except ValueError:
-        black_rating = 1200
+        black_rating = 0
 
     # Determine if user is White or Black
     target_lower = {name.lower() for name in target_user_names if name}

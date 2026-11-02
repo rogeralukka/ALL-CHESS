@@ -248,14 +248,16 @@ def get_opening_stats(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    target_platform = resolve_platform(current_user, platform)
-
-    games = (
+    # No platform asked for means every game the player has, including games played here against
+    # the coach. Asking for one narrows it to that site.
+    q = (
         db.query(GameModel)
         .options(defer(GameModel.moves), defer(GameModel.pgn))
-        .filter(GameModel.user_id == current_user.id, GameModel.platform == target_platform)
-        .all()
+        .filter(GameModel.user_id == current_user.id)
     )
+    if platform:
+        q = q.filter(GameModel.platform == resolve_platform(current_user, platform))
+    games = q.all()
     if not games:
         return []
 
@@ -353,7 +355,9 @@ def compute_analyzed_game_metrics(games: List[GameModel]) -> Dict[str, Any]:
 
         for m in moves:
             color = m.get("color", "w")
-            m_num = m.get("move_number", 1)
+            # stored moves use camelCase ("moveNumber"); the snake_case key never matched, which put
+            # every move in the opening bucket and left middlegame/endgame at zero
+            m_num = m.get("moveNumber") or m.get("move_number") or 1
             cls_name = m.get("classification", "")
             eval_dict = m.get("eval") or {}
             cur_white_eval = eval_dict.get("eval", prev_white_eval)
@@ -406,7 +410,8 @@ def get_phase_points_lost(
     return PhasePointsLost(
         opening=metrics["opening_loss"],
         middlegame=metrics["middlegame_loss"],
-        endgame=metrics["endgame_loss"]
+        endgame=metrics["endgame_loss"],
+        total_analyzed=metrics["total_analyzed"],
     )
 
 
@@ -419,33 +424,45 @@ def get_insights(
     metrics = compute_analyzed_game_metrics(games)
 
     if metrics["total_analyzed"] == 0:
-        return StrengthsWeaknessesResponse(strengths=[], weaknesses=[])
+        return StrengthsWeaknessesResponse(strengths=[], weaknesses=[], total_analyzed=0)
 
+    # Everything below is measured from this player's own reviewed games. There is no invented
+    # "peer" baseline: each phase is ranked against the player's other phases, and the error rates
+    # are their own counts per game. Deltas carry the real number, never a canned one.
     strengths: List[StrengthWeakness] = []
     weaknesses: List[StrengthWeakness] = []
 
-    if metrics["opening_loss"] <= 0.4:
-        strengths.append(StrengthWeakness(label="King Safety", delta="+0.8", type="strength"))
-        strengths.append(StrengthWeakness(label="Queen Development", delta="+0.6", type="strength"))
-    else:
-        weaknesses.append(StrengthWeakness(label="Opening Preparation", delta=f"-{round(metrics['opening_loss'], 1)}", type="weakness"))
+    phases = [
+        ("Opening Play", metrics["opening_loss"]),
+        ("Middlegame Play", metrics["middlegame_loss"]),
+        ("Endgame Technique", metrics["endgame_loss"]),
+    ]
+    ranked = sorted(phases, key=lambda p: p[1])
+    if ranked[0][1] < ranked[-1][1]:
+        best_label, best_value = ranked[0]
+        worst_label, worst_value = ranked[-1]
+        strengths.append(
+            StrengthWeakness(label=best_label, delta=f"{best_value:.2f}/game", type="strength")
+        )
+        weaknesses.append(
+            StrengthWeakness(label=worst_label, delta=f"{worst_value:.2f}/game", type="weakness")
+        )
 
-    if metrics["blunders_per_game"] <= 0.6:
-        strengths.append(StrengthWeakness(label="Back-Rank Defense", delta="+0.5", type="strength"))
-    else:
-        weaknesses.append(StrengthWeakness(label="Hanging Minors", delta=f"-{round(metrics['blunders_per_game'], 1)}", type="weakness"))
+    for label, rate in (
+        ("Avoiding Blunders", metrics["blunders_per_game"]),
+        ("Tactical Awareness", metrics["misses_per_game"]),
+    ):
+        entry = StrengthWeakness(
+            label=label,
+            delta=f"{rate:.2f}/game",
+            type="strength" if rate == 0 else "weakness",
+        )
+        (strengths if rate == 0 else weaknesses).append(entry)
 
-    if metrics["misses_per_game"] > 1.0:
-        weaknesses.append(StrengthWeakness(label="Tactical Awareness", delta=f"-{round(metrics['misses_per_game'], 1)}", type="weakness"))
-    else:
-        strengths.append(StrengthWeakness(label="Tactical Vision", delta="+0.6", type="strength"))
-
-    if metrics["endgame_loss"] <= 0.7:
-        strengths.append(StrengthWeakness(label="Endgame Technique", delta="+0.7", type="strength"))
-    else:
-        weaknesses.append(StrengthWeakness(label="Endgame Conversions", delta=f"-{round(metrics['endgame_loss'], 1)}", type="weakness"))
+    weaknesses.sort(key=lambda w: float(w.delta.split("/")[0]), reverse=True)
 
     return StrengthsWeaknessesResponse(
         strengths=strengths,
-        weaknesses=weaknesses
+        weaknesses=weaknesses,
+        total_analyzed=metrics["total_analyzed"],
     )

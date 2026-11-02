@@ -9,6 +9,8 @@ export interface CoachGameInput {
   reason: string;
   opponentName: string;
   opponentRating: number;
+  /** The player's own rating. Left out when it isn't known, so nothing is invented. */
+  userRating?: number;
 }
 
 export interface CoachGamePayload {
@@ -17,6 +19,7 @@ export interface CoachGamePayload {
   result: '1-0' | '0-1' | '1/2-1/2';
   opponentName: string;
   opponentRating: number;
+  userRating?: number;
   termination?: string;
 }
 
@@ -43,6 +46,7 @@ export function buildCoachGamePayload(input: CoachGameInput): CoachGamePayload {
     result,
     opponentName: input.opponentName,
     opponentRating: input.opponentRating,
+    ...(input.userRating ? { userRating: input.userRating } : {}),
     termination: terminationFromReason(input.reason),
   };
 }

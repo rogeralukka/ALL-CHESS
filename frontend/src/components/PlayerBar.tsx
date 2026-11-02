@@ -23,7 +23,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ name, rating, avatar, capt
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="font-bold text-[15px] text-theme-text truncate">{name}</span>
-          {rating !== undefined && <span className="text-[14px] text-theme-muted tabular-nums">({rating})</span>}
+          {rating !== undefined && rating !== 0 && rating !== '0' && <span className="text-[14px] text-theme-muted tabular-nums">({rating})</span>}
         </div>
         <div className="flex items-center gap-1 h-[18px] text-[15px] leading-none text-theme-muted">
           {captured}

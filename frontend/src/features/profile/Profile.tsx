@@ -125,6 +125,10 @@ export const Profile: React.FC = () => {
     };
   }, [range]);
 
+  const lastPlayed = games.map((g) => g.date).filter(Boolean).sort().at(-1);
+  // the profile is the signed-in player's own: say when they last played instead of a fixed "Online now"
+  const analyzedLabel = lastPlayed ? `Last game ${new Date(lastPlayed).toLocaleDateString()}` : 'No games yet';
+
   const ratingOf = (m: string) => ratings.find((r) => r.mode.toLowerCase() === m)?.rating ?? 0;
   const deltaOf = (m: string) => ratings.find((r) => r.mode.toLowerCase() === m)?.deltaWeekly;
   const trendOf = (m: Speed) => (history.length ? history.map((p) => p[m]) : [0, 0]);
@@ -205,7 +209,7 @@ export const Profile: React.FC = () => {
               <span>
                 <b className="text-theme-text font-semibold">{games.length}</b> Games
               </span>
-              <span className="text-theme-text font-semibold">Online now</span>
+              <span className="text-theme-text font-semibold">{analyzedLabel}</span>
             </div>
           </div>
         </div>

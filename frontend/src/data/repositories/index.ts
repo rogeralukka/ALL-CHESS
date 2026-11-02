@@ -1,4 +1,4 @@
-import { Game, OpeningStat, RatingPoint, Puzzle, LessonStage, Friend, ScoutProfile, TopEngineLine, MoveClassification } from '../types';
+import { Game, OpeningStat, RatingPoint, Puzzle, LessonStage, Friend, ScoutProfile, TopEngineLine, MoveClassification, PhasePointsLost, Insights } from '../types';
 import { MOCK_GAMES } from '../mock/mockGames';
 import { MOCK_RATING_HISTORY, MOCK_OPENING_STATS, MOCK_PHASE_POINTS_LOST, MOCK_STRENGTHS, MOCK_WEAKNESSES } from '../mock/mockStats';
 import { MOCK_PUZZLES } from '../mock/mockPuzzles';
@@ -34,8 +34,8 @@ export interface IStatsRepository {
   getRatingHistory(range?: '30d' | '90d' | 'all'): Promise<RatingPoint[]>;
   getUserRatings(): Promise<RatingSummary[]>;
   getOpeningStats(): Promise<OpeningStat[]>;
-  getPhasePointsLost(): Promise<{ opening: number; middlegame: number; endgame: number }>;
-  getStrengthsAndWeaknesses(): Promise<{ strengths: typeof MOCK_STRENGTHS; weaknesses: typeof MOCK_WEAKNESSES }>;
+  getPhasePointsLost(): Promise<PhasePointsLost>;
+  getStrengthsAndWeaknesses(): Promise<Insights>;
 }
 
 export interface IPuzzleRepository {
@@ -223,10 +223,10 @@ export const statsRepository: IStatsRepository = {
       return MOCK_PHASE_POINTS_LOST;
     }
     try {
-      return await api.get<{ opening: number; middlegame: number; endgame: number }>('/stats/phases');
+      return await api.get<PhasePointsLost>('/stats/phases');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        return { opening: 0, middlegame: 0, endgame: 0 };
+        return { opening: 0, middlegame: 0, endgame: 0, totalAnalyzed: 0 };
       }
       throw err;
     }
@@ -234,13 +234,13 @@ export const statsRepository: IStatsRepository = {
 
   async getStrengthsAndWeaknesses() {
     if (isMockMode()) {
-      return { strengths: MOCK_STRENGTHS, weaknesses: MOCK_WEAKNESSES };
+      return { strengths: MOCK_STRENGTHS, weaknesses: MOCK_WEAKNESSES, totalAnalyzed: 12 };
     }
     try {
-      return await api.get<{ strengths: typeof MOCK_STRENGTHS; weaknesses: typeof MOCK_WEAKNESSES }>('/stats/insights');
+      return await api.get<Insights>('/stats/insights');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        return { strengths: [], weaknesses: [] };
+        return { strengths: [], weaknesses: [], totalAnalyzed: 0 };
       }
       throw err;
     }
@@ -310,9 +310,9 @@ export const friendRepository: IFriendRepository = {
     if (isMockMode()) return MOCK_FRIENDS;
     try {
       return await api.get<Friend[]>('/friends');
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) return [];
-      return MOCK_FRIENDS;
+    } catch {
+      // never show sample people in the real app
+      return [];
     }
   },
   async addFriend(username: string) {

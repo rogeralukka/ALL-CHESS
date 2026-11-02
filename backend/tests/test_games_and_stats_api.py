@@ -1,3 +1,4 @@
+import pytest
 from app.models.game import Game as GameModel
 
 def test_brand_new_user_empty_stats(auth_client):
@@ -30,13 +31,13 @@ def test_brand_new_user_empty_stats(auth_client):
     resp_phases = auth_client.get("/api/v1/stats/phases")
     assert resp_phases.status_code == 200
     phases = resp_phases.json()
-    assert phases == {"opening": 0.0, "middlegame": 0.0, "endgame": 0.0}
+    assert phases == {"opening": 0.0, "middlegame": 0.0, "endgame": 0.0, "totalAnalyzed": 0}
 
     # Insights returns empty lists
     resp_insights = auth_client.get("/api/v1/stats/insights")
     assert resp_insights.status_code == 200
     insights = resp_insights.json()
-    assert insights == {"strengths": [], "weaknesses": []}
+    assert insights == {"strengths": [], "weaknesses": [], "totalAnalyzed": 0}
 
 def test_user_with_games_stats(auth_client, test_user, db_session):
     """Asserts stats are derived from real games, calculating ratings per speed and openings."""
@@ -183,3 +184,79 @@ def test_games_filtering(auth_client, test_user, db_session):
     assert coach_resp.status_code == 200
     assert len(coach_resp.json()) == 1
     assert coach_resp.json()[0]["id"] == "filter-coach"
+
+
+def test_insights_are_measured_from_the_players_own_games(auth_client, test_user, db_session):
+    """Strengths/weaknesses rank the player's own phases and error rates; no canned numbers."""
+    moves = []
+    white_eval = 0.2
+    for n, drop in ((3, 0.1), (20, 1.5), (40, 0.4)):
+        white_eval -= drop
+        moves.append({
+            "san": "Qd4", "color": "w", "moveNumber": n,
+            "classification": "blunder" if n == 20 else "inaccuracy",
+            "eval": {"eval": round(white_eval, 2)},
+        })
+    db_session.add(GameModel(
+        id="analyzed-01", user_id=test_user.id, source="online", platform="chesscom",
+        pgn="1. e4 e5", white={"username": test_user.username, "rating": 900},
+        black={"username": "Opponent", "rating": 900}, result="0-1",
+        date="2026-10-21T10:00:00Z", time_control="600", speed="rapid",
+        opening={"eco": "C20", "name": "King's Pawn"}, moves=moves, is_user_white=True,
+    ))
+    db_session.commit()
+
+    data = auth_client.get("/api/v1/stats/insights").json()
+    phases = auth_client.get("/api/v1/stats/phases").json()
+    assert data["totalAnalyzed"] == 1
+
+    found = {e["label"]: e["delta"] for e in data["strengths"] + data["weaknesses"]}
+    # the player's cheapest phase is a strength, the most expensive a weakness, with real numbers
+    assert found["Opening Play"] == f"{phases['opening']:.2f}/game"
+    assert found["Middlegame Play"] == f"{phases['middlegame']:.2f}/game"
+    assert [e["label"] for e in data["strengths"]] == ["Opening Play", "Tactical Awareness"]
+    assert data["weaknesses"][0]["label"] == "Middlegame Play"
+    assert found["Avoiding Blunders"] == "1.00/game"
+
+
+def test_phase_losses_land_in_the_right_phase(auth_client, test_user, db_session):
+    """Moves are bucketed by their real move number, not all dumped into the opening."""
+    moves = []
+    white_eval = 0.2
+    for n in (5, 20, 40):  # one losing move in each phase
+        white_eval -= 1.0
+        moves.append({
+            "san": "Qd4", "color": "w", "moveNumber": n,
+            "classification": "mistake", "eval": {"eval": round(white_eval, 2)},
+        })
+    db_session.add(GameModel(
+        id="phases-01", user_id=test_user.id, source="online", platform="chesscom",
+        pgn="1. e4 e5", white={"username": test_user.username, "rating": 900},
+        black={"username": "Opponent", "rating": 900}, result="0-1",
+        date="2026-10-22T10:00:00Z", time_control="600", speed="rapid",
+        opening={"eco": "C20", "name": "King's Pawn"}, moves=moves, is_user_white=True,
+    ))
+    db_session.commit()
+
+    phases = auth_client.get("/api/v1/stats/phases").json()
+    assert phases["totalAnalyzed"] == 1
+    assert phases["opening"] == pytest.approx(1.0, abs=0.01)
+    assert phases["middlegame"] == pytest.approx(1.0, abs=0.01)
+    assert phases["endgame"] == pytest.approx(1.0, abs=0.01)
+
+
+def test_openings_cover_every_game_including_coach_games(auth_client, test_user, db_session):
+    """Openings are not limited to one site: games played here on ALL-CHESS count too."""
+    db_session.add(GameModel(
+        id="coach-op-01", user_id=test_user.id, source="vs_coach", platform="coach",
+        pgn="1. e4 e5", white={"username": test_user.username, "rating": 0},
+        black={"username": "Coach All-Chess", "rating": 800}, result="1-0",
+        date="2026-10-23T10:00:00Z", time_control="-", speed="rapid",
+        opening={"eco": "C50", "name": "Italian Game"}, moves=[], is_user_white=True,
+    ))
+    db_session.commit()
+
+    names = [o["name"] for o in auth_client.get("/api/v1/stats/openings").json()]
+    assert "Italian Game" in names
+    # asking for one site still narrows it
+    assert auth_client.get("/api/v1/stats/openings?platform=lichess").json() == []
