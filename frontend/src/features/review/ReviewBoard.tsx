@@ -1,4 +1,4 @@
-import { bookCommentary, openingAt } from './phases';
+import { bookCommentary } from './phases';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { Game, Move, CoachExpression, Arrow, BoardBadge, MoveClassification } from '@/data/types';
@@ -182,6 +182,9 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     return currentMove?.variation || currentMove?.eval?.lines?.[0]?.pv || currentMove?.annotations?.pv || [];
   }, [currentMove]);
 
+  // What Explain can show: the backend's proven sentences and/or the engine line to step through. Book moves already show their opening text.
+  const explainSentences = useMemo(() => (currentMove?.annotations?.explain ?? []).filter(Boolean), [currentMove]);
+
   // Reset secondary modes when navigating moves
   const resetModes = useCallback(() => {
     setShowMove(false);
@@ -270,6 +273,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const classification = currentMove?.classification || 'book';
   const isBookMove = classification === 'book';
   const isMistakeOrBlunder = ['inaccuracy', 'mistake', 'miss', 'blunder'].includes(classification);
+  // Explain only appears when there is something to show: proven sentences, or an engine line after an error (never for book moves, which already show their opening text)
+  const hasExplain = !isBookMove && (explainSentences.length > 0 || (isMistakeOrBlunder && refutationMoves.length > 0));
   const targetBestMove = currentMove?.eval?.bestMove || currentMove?.eval?.lines?.[0]?.move || currentMove?.annotations?.bestMove?.san || '';
 
   // "Best" is available whenever the engine prefers a different move than the one played (not only after mistakes)
@@ -432,16 +437,13 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     coachText = `${targetBestMove} was best.${currentMove?.eval?.lines?.[0]?.why ? ` ${currentMove.eval.lines[0].why}` : ''}`;
   } else if (explaining) {
     coachExpression = 'thinking';
-    if (isBookMove) {
-      const op = openingAt(game.moves, currentMoveIndex + 1);
-      coachText = op
-        ? `${op.name} (${op.eco}). ${op.idea || 'A known theory line: develop pieces, fight for the centre and get the king safe.'}`
-        : 'A known theory move: develop pieces, fight for the centre and get the king safe.';
-    } else {
-      coachText = `Step ${variationStep + 1} of ${refutationMoves.length}: ${
-        refutationMoves[variationStep] ? `Refutation continues with ${refutationMoves[variationStep]}.` : 'End of critical refutation line.'
-      }`;
-    }
+    const sentences = explainSentences.join(' ');
+    const lineSoFar = refutationMoves.slice(0, variationStep).join(' ');
+    const next = refutationMoves[variationStep];
+    coachText =
+      variationStep === 0
+        ? `${sentences}${sentences && next ? ' ' : ''}${next ? `Next in the line: ${next}.` : ''}`.trim() || 'No deeper line to show here.'
+        : `${lineSoFar}${next ? `, then ${next}.` : '. End of the line.'}`;
   } else if (retryMode) {
     if (retrySuccess) {
       coachExpression = 'brilliant';
@@ -684,7 +686,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 aria-pressed={showMove}
                 data-testid="mobile-show"
                 onClick={() => {
-                  if (isMistakeOrBlunder || isBookMove) {
+                  if (isMistakeOrBlunder && hasExplain) {
                     setExplaining(true);
                     setRetryMode(false);
                     setVariationStep(0);
@@ -949,7 +951,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 ) : (
                   <>
                     {/* 1. EXPLAIN BUTTON (Shown for Mistake/Blunder and Book; replaced by Retry on Miss; hidden on Best/Excellent) */}
-                    {(isMistakeOrBlunder || isBookMove) && classification !== 'miss' && (
+                    {hasExplain && classification !== 'miss' && (
                       <Button
                         variant="secondary"
                         size="md"

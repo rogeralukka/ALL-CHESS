@@ -53,6 +53,10 @@ export interface MoveAnnotations {
   bestMove?: MoveRef | null;
   refutation?: MoveRef | null;
   pv?: string[] | null;
+  /** Commentary v2: why the move was good or bad, one proven sentence each */
+  explain?: string[] | null;
+  reasonCode?: string | null;
+  comment?: string | null;
 }
 
 export interface Move {
