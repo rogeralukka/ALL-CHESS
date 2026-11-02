@@ -5,7 +5,7 @@ import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 import app.database
 from app.auth import get_current_user
@@ -35,10 +35,10 @@ import chess.pgn
 from app.services.pgn_parser import parse_pgn_game
 
 
-def extract_termination(dg: GameModel) -> str | None:
+def extract_termination(dg: GameModel, lite: bool = False) -> str | None:
     if getattr(dg, "termination", None):
         return dg.termination
-    if dg.pgn:
+    if not lite and getattr(dg, "pgn", None):
         m = re.search(r'\[Termination\s+"([^"]+)"\]', dg.pgn)
         if m:
             return m.group(1)
@@ -96,6 +96,8 @@ def maybe_seed_demo_data(db: Session, user: User) -> None:
                 speed=g.get("speed", "rapid"),
                 opening=g.get("opening", {"eco": "A00", "name": "Unknown"}),
                 moves=g.get("moves", []),
+                move_count=len(g.get("moves", [])),
+                ends_in_mate=bool(g.get("moves") and g.get("moves")[-1].get("san", "").endswith("#")),
                 is_user_white=is_white,
                 accuracy=g.get("accuracy"),
                 estimated_rating=g.get("estimatedRating"),
@@ -117,12 +119,16 @@ def get_games(
     source: Literal["online", "vs_coach", "all"] | None = Query("all"),
     speed: Literal["bullet", "blitz", "rapid", "all"] | None = Query("all"),
     search_query: str | None = Query(None, alias="searchQuery"),
+    lite: bool = Query(False),
+    limit: int | None = Query(None, ge=1),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     maybe_seed_demo_data(db, current_user)
 
     query = db.query(GameModel).filter(GameModel.user_id == current_user.id)
+    if lite:
+        query = query.options(defer(GameModel.moves), defer(GameModel.pgn))
 
     if speed and speed != "all":
         query = query.filter(GameModel.speed == speed)
@@ -131,7 +137,11 @@ def get_games(
     if color and color != "all":
         query = query.filter(GameModel.is_user_white == (color == "white"))
 
-    db_games = query.order_by(GameModel.date.desc()).all()
+    query = query.order_by(GameModel.date.desc())
+    if limit is not None and not opening and not search_query and (not result or result == "all"):
+        query = query.limit(limit)
+
+    db_games = query.all()
     results: list[Game] = []
 
     for dg in db_games:
@@ -171,31 +181,69 @@ def get_games(
                 continue
 
         # Convert to Pydantic Game schema
-        results.append(
-            Game(
-                id=dg.id,
-                pgn=dg.pgn,
-                white=dg.white,
-                black=dg.black,
-                result=dg.result,
-                date=dg.date,
-                time_control=dg.time_control,
-                speed=dg.speed,
-                source=dg.source,
-                platform=dg.platform,
-                opening=ensure_opening_name(dg.opening),
-                moves=dg.moves,
-                is_user_white=dg.is_user_white,
-                accuracy=dg.accuracy,
-                estimated_rating=dg.estimated_rating,
-                phase_grades=dg.phase_grades,
-                termination=extract_termination(dg),
-                analysis_level=dg.analysis_level
-                or ("standard" if dg.accuracy else None),
-                analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
-                book_end=getattr(dg, "book_end", None) if getattr(dg, "book_end", None) is not None else (last_book_index(dg.moves) if getattr(dg, "moves", None) and last_book_index(dg.moves) >= 0 else None),
+        if lite:
+            mc = dg.move_count
+            em = dg.ends_in_mate
+            if mc is None:
+                raw_moves = dg.moves or []
+                mc = len(raw_moves)
+                em = bool(raw_moves and raw_moves[-1].get("san", "").endswith("#"))
+            results.append(
+                Game(
+                    id=dg.id,
+                    pgn=None,
+                    white=dg.white,
+                    black=dg.black,
+                    result=dg.result,
+                    date=dg.date,
+                    time_control=dg.time_control,
+                    speed=dg.speed,
+                    source=dg.source,
+                    platform=dg.platform,
+                    opening=ensure_opening_name(dg.opening),
+                    moves=None,
+                    is_user_white=dg.is_user_white,
+                    accuracy=dg.accuracy,
+                    estimated_rating=dg.estimated_rating,
+                    phase_grades=dg.phase_grades,
+                    termination=extract_termination(dg, lite=True),
+                    analysis_level=dg.analysis_level
+                    or ("standard" if dg.accuracy else None),
+                    analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
+                    book_end=getattr(dg, "book_end", None),
+                    move_count=mc,
+                    ends_in_mate=em,
+                )
             )
-        )
+        else:
+            results.append(
+                Game(
+                    id=dg.id,
+                    pgn=dg.pgn,
+                    white=dg.white,
+                    black=dg.black,
+                    result=dg.result,
+                    date=dg.date,
+                    time_control=dg.time_control,
+                    speed=dg.speed,
+                    source=dg.source,
+                    platform=dg.platform,
+                    opening=ensure_opening_name(dg.opening),
+                    moves=dg.moves,
+                    is_user_white=dg.is_user_white,
+                    accuracy=dg.accuracy,
+                    estimated_rating=dg.estimated_rating,
+                    phase_grades=dg.phase_grades,
+                    termination=extract_termination(dg, lite=False),
+                    analysis_level=dg.analysis_level
+                    or ("standard" if dg.accuracy else None),
+                    analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
+                    book_end=getattr(dg, "book_end", None) if getattr(dg, "book_end", None) is not None else (last_book_index(dg.moves) if getattr(dg, "moves", None) and last_book_index(dg.moves) >= 0 else None),
+                )
+            )
+
+        if limit is not None and len(results) >= limit:
+            break
 
     return results
 
@@ -260,6 +308,8 @@ def save_coach_game(
         estimated_rating=parsed["estimatedRating"],
         phase_grades=parsed["phaseGrades"],
         termination=body.termination,
+        move_count=len(parsed["moves"]),
+        ends_in_mate=bool(parsed["moves"] and parsed["moves"][-1].get("san", "").endswith("#")),
     )
     db.add(db_game)
     db.commit()

@@ -9,18 +9,28 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
+_CACHED_PUZZLES_DATA = None
 
-def seed_puzzles(db: Session) -> int:
+
+def seed_puzzles(db: Session, force: bool = False) -> int:
     """Seed puzzles table if empty or count mismatch from app/data/puzzles.json."""
-    puzzles_file = DATA_DIR / "puzzles.json"
-    if not puzzles_file.exists():
-        logger.warning(f"puzzles.json not found at {puzzles_file}")
-        return 0
+    global _CACHED_PUZZLES_DATA
+
+    # Fast DB check: if table already has puzzles, no need to read disk or re-seed
+    if not force and db.query(Puzzle.id).first() is not None:
+        return 1
+
+    if _CACHED_PUZZLES_DATA is None:
+        puzzles_file = DATA_DIR / "puzzles.json"
+        if not puzzles_file.exists():
+            logger.warning(f"puzzles.json not found at {puzzles_file}")
+            return 0
+        with open(puzzles_file, "r", encoding="utf-8") as f:
+            _CACHED_PUZZLES_DATA = json.load(f)
+
+    data = _CACHED_PUZZLES_DATA
 
     try:
-        with open(puzzles_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
         count = db.query(Puzzle).count()
         if count >= len(data) and count > 0:
             return count

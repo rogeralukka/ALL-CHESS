@@ -124,7 +124,9 @@ async def run_sync_job_task(job_id: str, user_id: str) -> None:
                             is_user_white=parsed["isUserWhite"],
                             accuracy=parsed["accuracy"],
                             estimated_rating=parsed["estimatedRating"],
-                            phase_grades=parsed["phaseGrades"]
+                            phase_grades=parsed["phaseGrades"],
+                            move_count=len(parsed["moves"]),
+                            ends_in_mate=bool(parsed["moves"] and parsed["moves"][-1].get("san", "").endswith("#")),
                         )
                         db.add(db_game)
                         existing_chesscom_ids.add(ext_id)
@@ -198,7 +200,9 @@ async def run_sync_job_task(job_id: str, user_id: str) -> None:
                         is_user_white=parsed["isUserWhite"],
                         accuracy=parsed["accuracy"],
                         estimated_rating=parsed["estimatedRating"],
-                        phase_grades=parsed["phaseGrades"]
+                        phase_grades=parsed["phaseGrades"],
+                        move_count=len(parsed["moves"]),
+                        ends_in_mate=bool(parsed["moves"] and parsed["moves"][-1].get("san", "").endswith("#")),
                     )
                     db.add(db_game)
                     existing_lichess_ids.add(ext_id)
