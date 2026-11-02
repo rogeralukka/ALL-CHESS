@@ -72,7 +72,11 @@ export const LoginGate: React.FC<LoginGateProps> = ({ onSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passcode) return setFormError('Enter the app passcode.');
-    if (!username.trim()) return setFormError('Enter your name.');
+    const cc = chesscomUsername.trim();
+    const li = lichessUsername.trim();
+    if (!cc && !li) return setFormError('Enter your Chess.com or Lichess username to log in.');
+    // the name is optional: it defaults to the linked account's username
+    const name = username.trim() || cc || li;
     setFormError('');
 
     setSubmitting(true);
@@ -80,13 +84,13 @@ export const LoginGate: React.FC<LoginGateProps> = ({ onSuccess }) => {
     try {
       await login({
         passcode,
-        username: username.trim(),
-        chesscomUsername: chesscomUsername.trim() || undefined,
-        lichessUsername: lichessUsername.trim() || undefined,
+        username: name,
+        chesscomUsername: cc || undefined,
+        lichessUsername: li || undefined,
       });
       try {
         if (remember) {
-          localStorage.setItem(PREFS_KEY, JSON.stringify({ username: username.trim(), chesscom: chesscomUsername.trim(), lichess: lichessUsername.trim() }));
+          localStorage.setItem(PREFS_KEY, JSON.stringify({ username: name, chesscom: cc, lichess: li }));
         } else {
           localStorage.removeItem(PREFS_KEY);
         }
@@ -144,30 +148,37 @@ export const LoginGate: React.FC<LoginGateProps> = ({ onSuccess }) => {
             />
 
             <Field
-              label="Your name"
+              label="Chess.com username"
+              icon={<Link2 size={18} />}
+              type="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={chesscomUsername}
+              onChange={(e) => setChesscomUsername(e.target.value)}
+              placeholder="Chess.com username"
+            />
+            <Field
+              label="Lichess username"
+              icon={<Link2 size={18} />}
+              type="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={lichessUsername}
+              onChange={(e) => setLichessUsername(e.target.value)}
+              placeholder="Lichess username"
+            />
+            <p className="text-[13px] leading-snug text-[#a7a6a2] !-mt-1">Link at least one account: your games are pulled from it.</p>
+
+            <Field
+              label="Your name (optional)"
               icon={<User size={19} fill="currentColor" />}
               type="text"
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Your name"
-            />
-
-            <Field
-              label="Chess.com username (optional)"
-              icon={<Link2 size={18} />}
-              type="text"
-              value={chesscomUsername}
-              onChange={(e) => setChesscomUsername(e.target.value)}
-              placeholder="Chess.com username (optional)"
-            />
-            <Field
-              label="Lichess username (optional)"
-              icon={<Link2 size={18} />}
-              type="text"
-              value={lichessUsername}
-              onChange={(e) => setLichessUsername(e.target.value)}
-              placeholder="Lichess username (optional)"
+              placeholder="Your name (optional)"
             />
 
             <div className="flex items-center justify-between text-[16px] text-[#c3c2c0] !mt-[14px]">

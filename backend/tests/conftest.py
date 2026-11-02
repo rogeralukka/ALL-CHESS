@@ -34,6 +34,17 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+@pytest.fixture(autouse=True)
+def _no_real_network_for_account_checks(monkeypatch):
+    """Login checks that the Chess.com / Lichess account exists; tests must never hit the real sites."""
+    from unittest.mock import AsyncMock
+    monkeypatch.setattr("app.services.chesscom_client.ChesscomClient.fetch_player_profile", AsyncMock(return_value={}))
+    monkeypatch.setattr("app.services.lichess_client.LichessClient.fetch_player_stats", AsyncMock(return_value={}))
+    # the login rate limiter is per IP and tests all share one
+    from app.routers import auth as auth_router
+    auth_router._SESSION_ATTEMPTS.clear()
+
+
 @pytest.fixture
 def db_session():
     Base.metadata.create_all(bind=engine)

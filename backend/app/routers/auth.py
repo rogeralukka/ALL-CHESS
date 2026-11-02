@@ -1,3 +1,4 @@
+import asyncio
 import hmac
 import re
 import time
@@ -11,6 +12,7 @@ from app.models.user import User
 from app.schemas.auth import LinkedAccountsUpdate, SessionCreate, SessionResponse, UserResponse
 from app.auth import set_session_cookie, clear_session_cookie, get_current_user
 from app.services.chesscom_client import ChesscomClient
+from app.services.lichess_client import LichessClient
 
 logger = logging.getLogger("all_chess.auth")
 router = APIRouter(prefix="/session", tags=["Session"])
@@ -39,7 +41,7 @@ async def sync_user_chesscom_profile(user: User, db: Session) -> None:
         return
     try:
         client = ChesscomClient()
-        profile = await client.fetch_player_profile(user.chesscom_username)
+        profile = await asyncio.wait_for(client.fetch_player_profile(user.chesscom_username), timeout=_VERIFY_TIMEOUT_SECS)
         if profile:
             changed = False
             if profile.get("avatar") and user.avatar_url != profile["avatar"]:
@@ -56,6 +58,40 @@ async def sync_user_chesscom_profile(user: User, db: Session) -> None:
                 db.refresh(user)
     except Exception as e:
         logger.warning(f"Failed to fetch Chess.com profile for {user.chesscom_username}: {e}")
+
+
+_VERIFY_TIMEOUT_SECS = 8.0
+_HANDLE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _clean_handle(value: str | None, label: str) -> str | None:
+    """None/blank = unlink. Otherwise a valid platform username."""
+    if value is None or not value.strip():
+        return None
+    handle = value.strip()
+    if not _HANDLE_RE.match(handle):
+        raise HTTPException(
+            status_code=422,
+            detail=f"{label} usernames can only contain letters, numbers, _ and - (max 64).",
+        )
+    return handle
+
+
+async def _verify_exists(platform: str, handle: str) -> None:
+    """Refuse a username that does not exist on the platform. Network trouble never blocks (we cannot tell)."""
+    try:
+        if platform == "chesscom":
+            lookup = ChesscomClient().fetch_player_profile(handle)
+        else:
+            lookup = LichessClient().fetch_player_stats(handle)
+        # a slow platform must not make logging in hang
+        profile = await asyncio.wait_for(lookup, timeout=_VERIFY_TIMEOUT_SECS)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not verify {platform} user {handle}: {e}")
+        return
+    if profile is None:
+        label = "Chess.com" if platform == "chesscom" else "Lichess"
+        raise HTTPException(status_code=404, detail=f"{label} user '{handle}' was not found.")
 
 
 @router.post("", response_model=SessionResponse, response_model_exclude_none=True)
@@ -81,11 +117,27 @@ async def create_session(
         )
 
     user = db.query(User).filter(User.username == clean_username).first()
+    new_cc = _clean_handle(data.chesscom_username, "Chess.com")
+    new_li = _clean_handle(data.lichess_username, "Lichess")
+
+    # A login needs a real Chess.com or Lichess account: the one given now, or one already linked to this name.
+    has_cc = new_cc or (user.chesscom_username if user else None)
+    has_li = new_li or (user.lichess_username if user else None)
+    if not has_cc and not has_li:
+        raise HTTPException(
+            status_code=422,
+            detail="Enter your Chess.com or Lichess username to log in.",
+        )
+    if new_cc and (not user or new_cc.lower() != (user.chesscom_username or "").lower()):
+        await _verify_exists("chesscom", new_cc)
+    if new_li and (not user or new_li.lower() != (user.lichess_username or "").lower()):
+        await _verify_exists("lichess", new_li)
+
     if not user:
         user = User(
             username=clean_username,
-            chesscom_username=data.chesscom_username.strip() if data.chesscom_username else None,
-            lichess_username=data.lichess_username.strip() if data.lichess_username else None
+            chesscom_username=new_cc,
+            lichess_username=new_li,
         )
         db.add(user)
         db.commit()
@@ -93,13 +145,17 @@ async def create_session(
     else:
         # Update linked usernames if provided
         updated = False
-        if data.chesscom_username and data.chesscom_username.strip() != user.chesscom_username:
-            user.chesscom_username = data.chesscom_username.strip()
-            user.avatar_url = None
-            user.country_code = None
+        if new_cc and new_cc != user.chesscom_username:
+            if new_cc.lower() != (user.chesscom_username or "").lower():
+                user.avatar_url = None
+                user.country_code = None
+                user.chesscom_backfill_done = False
+            user.chesscom_username = new_cc
             updated = True
-        if data.lichess_username and data.lichess_username.strip() != user.lichess_username:
-            user.lichess_username = data.lichess_username.strip()
+        if new_li and new_li != user.lichess_username:
+            if new_li.lower() != (user.lichess_username or "").lower():
+                user.lichess_backfill_done = False
+            user.lichess_username = new_li
             updated = True
         if updated:
             db.commit()
@@ -152,22 +208,6 @@ async def get_session(
     )
 
 
-_HANDLE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-
-
-def _clean_handle(value: str | None, label: str) -> str | None:
-    """None/blank = unlink. Otherwise a valid platform username."""
-    if value is None or not value.strip():
-        return None
-    handle = value.strip()
-    if not _HANDLE_RE.match(handle):
-        raise HTTPException(
-            status_code=422,
-            detail=f"{label} usernames can only contain letters, numbers, _ and - (max 64).",
-        )
-    return handle
-
-
 @router.patch("/linked-accounts", response_model=SessionResponse, response_model_exclude_none=True)
 async def update_linked_accounts(
     data: LinkedAccountsUpdate,
@@ -176,33 +216,27 @@ async def update_linked_accounts(
 ):
     """Link, change or unlink the Chess.com / Lichess usernames of the signed-in user (no passcode needed)."""
     sent = data.model_fields_set
+    new_cc = _clean_handle(data.chesscom_username, "Chess.com") if "chesscom_username" in sent else current_user.chesscom_username
+    new_li = _clean_handle(data.lichess_username, "Lichess") if "lichess_username" in sent else current_user.lichess_username
+    if not new_cc and not new_li:
+        raise HTTPException(status_code=422, detail="Keep at least one account linked (Chess.com or Lichess).")
+
     chesscom_changed = False
     if "chesscom_username" in sent:
-        new_cc = _clean_handle(data.chesscom_username, "Chess.com")
         if (new_cc or "").lower() != (current_user.chesscom_username or "").lower():
             if new_cc:
-                # refuse typos: the Chess.com public profile must exist (network trouble does not block linking)
-                try:
-                    profile = await ChesscomClient().fetch_player_profile(new_cc)
-                except Exception as e:  # noqa: BLE001
-                    logger.warning(f"Could not verify Chess.com user {new_cc}: {e}")
-                else:
-                    if profile is None:
-                        raise HTTPException(status_code=404, detail=f"Chess.com user '{new_cc}' was not found.")
-            current_user.chesscom_username = new_cc
+                await _verify_exists("chesscom", new_cc)
             current_user.avatar_url = None
             current_user.country_code = None
             current_user.chesscom_backfill_done = False
             chesscom_changed = True
-        elif new_cc and new_cc != current_user.chesscom_username:
-            current_user.chesscom_username = new_cc  # same user, only the capitalisation changed
+        current_user.chesscom_username = new_cc
     if "lichess_username" in sent:
-        new_li = _clean_handle(data.lichess_username, "Lichess")
         if (new_li or "").lower() != (current_user.lichess_username or "").lower():
-            current_user.lichess_username = new_li
+            if new_li:
+                await _verify_exists("lichess", new_li)
             current_user.lichess_backfill_done = False
-        elif new_li and new_li != current_user.lichess_username:
-            current_user.lichess_username = new_li
+        current_user.lichess_username = new_li
     db.commit()
     db.refresh(current_user)
     if chesscom_changed and current_user.chesscom_username:
