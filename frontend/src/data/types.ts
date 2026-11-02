@@ -48,8 +48,8 @@ export interface MoveRef {
 
 export interface MoveAnnotations {
   tint?: MoveClassification | null;
-  arrows?: { from: string; to: string; kind: 'best' | 'refutation' | 'threat' | 'played' | 'missed' }[];
-  squares?: { square: string; kind: 'attacked' | 'hanging' | 'target' | 'king-danger'; reason: string }[];
+  arrows?: { from: string; to: string; kind: 'best' | 'refutation' | 'threat' | 'played' | 'missed' | 'alt' }[];
+  squares?: { square: string; kind: 'attacked' | 'hanging' | 'target' | 'king-danger'; reason: string; tone?: 'green' | 'orange' }[];
   bestMove?: MoveRef | null;
   refutation?: MoveRef | null;
   pv?: string[] | null;

@@ -7,30 +7,67 @@ describe('annotation helpers', () => {
       { from: 'f1', to: 'b5', kind: 'best' as const },
       { from: 'd5', to: 'd4', kind: 'refutation' as const },
       { from: 'g1', to: 'f3', kind: 'threat' as const },
+      { from: 'c1', to: 'h6', kind: 'threat' as const },
+      { from: 'a1', to: 'a8', kind: 'threat' as const },
+      { from: 'f1', to: 'a6', kind: 'alt' as const },
     ],
   };
 
   it('draws what Chess.com draws for each grade', () => {
-    expect(annotationArrows(a, 'miss')).toEqual([{ from: 'f1', to: 'b5', color: 'green' }]);
+    expect(annotationArrows(a, 'miss')).toEqual([
+      { from: 'f1', to: 'b5', color: 'green' },
+      { from: 'f1', to: 'a6', color: 'blue' },
+    ]);
     expect(annotationArrows(a, 'blunder')).toEqual([{ from: 'd5', to: 'd4', color: 'red' }]);
-    expect(annotationArrows(a, 'mistake')).toEqual([{ from: 'd5', to: 'd4', color: 'red' }]);
+    expect(annotationArrows(a, 'mistake')).toEqual([
+      { from: 'd5', to: 'd4', color: 'red' },
+      { from: 'f1', to: 'b5', color: 'green' },
+    ]);
     expect(annotationArrows(a, 'inaccuracy')).toEqual([{ from: 'f1', to: 'b5', color: 'green' }]);
-    expect(annotationArrows(a, 'great')).toEqual([{ from: 'g1', to: 'f3', color: 'blue' }]);
-    expect(annotationArrows(a, 'brilliant')).toEqual([{ from: 'g1', to: 'f3', color: 'blue' }]);
   });
 
-  it('draws nothing on clean moves and never the played move', () => {
-    expect(annotationArrows(a, 'best')).toEqual([]);
+  it('draws at most two orange threat arrows on clean moves', () => {
+    const two = [
+      { from: 'g1', to: 'f3', color: 'orange' },
+      { from: 'c1', to: 'h6', color: 'orange' },
+    ];
+    for (const c of ['best', 'excellent', 'good', 'great', 'brilliant'] as const) {
+      expect(annotationArrows(a, c)).toEqual(two);
+    }
+  });
+
+  it('draws nothing on book moves and never the played move', () => {
     expect(annotationArrows(a, 'book')).toEqual([]);
     expect(annotationArrows({ arrows: [{ from: 'e2', to: 'e4', kind: 'played' as const }] }, 'miss')).toEqual([]);
+    expect(annotationArrows({ arrows: [{ from: 'e2', to: 'e4', kind: 'played' as const }] }, 'good')).toEqual([]);
   });
 
-  it('marks danger squares red and the better move green on errors only', () => {
-    const sq = { squares: [{ square: 'd5', kind: 'hanging' as const, reason: '' }, { square: 'e1', kind: 'king-danger' as const, reason: '' }], bestMove: { san: 'Qe7', from: 'd8', to: 'e7', uci: 'd8e7' } };
-    expect(annotationSquares(sq, 'blunder')).toEqual({ threats: ['d5', 'e1'], targets: ['e7'] });
-    expect(annotationSquares(sq, 'miss')).toEqual({ threats: ['d5', 'e1'], targets: [] });
-    expect(annotationSquares(sq, 'best')).toEqual({ threats: ['e1'], targets: [] });
-    expect(annotationSquares({}, 'blunder')).toEqual({ threats: [], targets: [] });
+  it('paints squares like Chess.com: miss = green target, mistake = orange target, blunder / inaccuracy = none', () => {
+    const none = { threats: [], targets: [], orangeTargets: [] };
+    expect(annotationSquares(a, 'miss')).toEqual({ ...none, targets: ['b5'] });
+    expect(annotationSquares(a, 'mistake')).toEqual({ ...none, orangeTargets: ['d4'] });
+    expect(annotationSquares(a, 'blunder')).toEqual(none);
+    expect(annotationSquares(a, 'inaccuracy')).toEqual(none);
+    expect(annotationSquares({}, 'mistake')).toEqual(none);
+  });
+
+  it('marks the king in check and attacked enemy pieces red on clean moves only', () => {
+    const sq = {
+      squares: [
+        { square: 'd5', kind: 'attacked' as const, reason: '' },
+        { square: 'e8', kind: 'king-danger' as const, reason: '' },
+        { square: 'a1', kind: 'hanging' as const, reason: '' },
+      ],
+    };
+    expect(annotationSquares(sq, 'best').threats).toEqual(['d5', 'e8']);
+    expect(annotationSquares(sq, 'great').threats).toEqual(['d5', 'e8']);
+    expect(annotationSquares(sq, 'blunder').threats).toEqual(['e8']);
+  });
+
+  it('uses the tone the backend gives a target square', () => {
+    const sq = { squares: [{ square: 'c3', kind: 'target' as const, reason: '', tone: 'orange' as const }] };
+    expect(annotationSquares(sq, 'mistake').orangeTargets).toEqual(['c3']);
+    expect(annotationSquares({ squares: [{ square: 'g4', kind: 'target' as const, reason: '', tone: 'green' as const }] }, 'miss').targets).toEqual(['g4']);
   });
 });
 

@@ -279,9 +279,10 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const showingBest = bestLock && canBest && !explaining && !retryMode;
 
   // Determine active board FEN, arrows, badges, and lastMove (memoized)
-  const { displayFen, arrows, badges, boardLastMove, threats, targets } = useMemo(() => {
+  const { displayFen, arrows, badges, boardLastMove, threats, targets, orangeTargets } = useMemo(() => {
     let thr: string[] = [];
     let tgt: string[] = [];
+    let orTgt: string[] = [];
     let fen = currentMove?.fen || START_FEN;
     let arrs: Arrow[] = [];
     let bdgs: BoardBadge[] = currentMove?.classification
@@ -295,21 +296,27 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
         }
       : null;
 
-    // 1. SHOW BEST MODE
+    // 1. SHOW BEST MODE: no piece moves; the better move is only drawn as a green arrow (like Chess.com)
     if (showingBest) {
-      bdgs = [];
-      lastM = null;
       if (targetBestMove) {
-        try {
-          const c = new Chess(fenBeforeMove);
-          c.move(targetBestMove);
-          fen = c.fen();
-          const sqs = getMoveSquares(fenBeforeMove, targetBestMove);
-          if (sqs) {
-            arrs = [{ from: sqs.from, to: sqs.to, color: 'green' }];
+        const sqs = getMoveSquares(fenBeforeMove, targetBestMove);
+        if (sqs) {
+          arrs = [{ from: sqs.from, to: sqs.to, color: 'green' }];
+          tgt = [sqs.to];
+          // if the played move itself changed the piece the arrow starts on, show the position before the move so the arrow starts on a piece
+          const pieceAt = (f: string, sq: string) => {
+            try {
+              const p = new Chess(f).get(sq as never);
+              return p ? `${p.color}${p.type}` : '';
+            } catch {
+              return '';
+            }
+          };
+          if (currentMove && pieceAt(currentMove.fen, sqs.from) !== pieceAt(fenBeforeMove, sqs.from)) {
+            fen = fenBeforeMove;
+            bdgs = [];
+            lastM = null;
           }
-        } catch {
-          fen = fenBeforeMove;
         }
       }
     }
@@ -361,8 +368,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
           if (refutSq) arrs = [{ from: refutSq.from, to: refutSq.to, color: 'red' }];
         }
       }
-      // The played move is drawn in orange on good moves (always) and on errors when Show is on; knights bend in an L
-      if (currentMove && (showMove || !isMistakeOrBlunder)) {
+      // The played move is drawn in orange only when Show is on (Chess.com draws the move's threats by default); knights bend in an L
+      if (currentMove && showMove) {
         arrs = [...arrs, { from: currentMove.from, to: currentMove.to, color: 'orange' }];
       }
     }
@@ -373,6 +380,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
         const sq = annotationSquares(currentMove.annotations, classification);
         thr = sq.threats;
         tgt = sq.targets;
+        orTgt = sq.orangeTargets;
       } else {
         thr = threatenedSquares(currentMove.fen, currentMove.to);
         if ((classification === 'mistake' || classification === 'blunder') && targetBestMove) {
@@ -384,6 +392,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     return {
       threats: thr,
       targets: tgt,
+      orangeTargets: orTgt,
       displayFen: fen,
       arrows: arrs,
       badges: bdgs,
@@ -400,7 +409,6 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     retryMode,
     retryFen,
     retrySuccess,
-    isMistakeOrBlunder,
     classification,
     showMove,
   ]);
@@ -421,7 +429,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     bubbleClassification = 'best';
     bubbleMoveSan = targetBestMove;
     bubbleEvalText = formatEval(currentMove?.eval?.lines?.[0]?.eval ?? currentMove?.eval?.eval);
-    coachText = `${targetBestMove} was best. ${currentMove?.eval?.lines?.[0]?.why || 'It maintains tactical harmony and central control.'}`;
+    coachText = `${targetBestMove} was best.${currentMove?.eval?.lines?.[0]?.why ? ` ${currentMove.eval.lines[0].why}` : ''}`;
   } else if (explaining) {
     coachExpression = 'thinking';
     if (isBookMove) {
@@ -607,6 +615,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
             arrows={arrows}
             threats={threats}
             targets={targets}
+            orangeTargets={orangeTargets}
             interactive={retryMode}
             onMove={handleRetryMove}
           />
@@ -823,6 +832,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                 arrows={arrows}
                 threats={threats}
             targets={targets}
+            orangeTargets={orangeTargets}
                 interactive={retryMode}
                 onMove={handleRetryMove}
               />
@@ -954,6 +964,20 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                         Explain
                       </Button>
                     )}
+
+                    {/* SHOW: draws the move that was played as an arrow (same as the Show button on the phone bar) */}
+                    <Button
+                      variant={showMove ? 'primary' : 'secondary'}
+                      aria-pressed={showMove}
+                      title="Draw the move that was played as an arrow"
+                      data-testid="desktop-show"
+                      size="md"
+                      className="!h-12 flex-1"
+                      icon={<Eye size={18} />}
+                      onClick={() => setShowMove((v) => !v)}
+                    >
+                      Show
+                    </Button>
 
                     {/* 2. BEST BUTTON (shown whenever the engine has a different, better move; hidden on the best move and book moves) */}
                     {(canBest || bestLock) && (
