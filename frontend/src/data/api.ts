@@ -105,6 +105,12 @@ export const api = {
       method: 'PUT',
       body: body !== undefined ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
     }),
+  patch: <T = unknown>(endpoint: string, body?: unknown, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: body !== undefined ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
+    }),
   del: <T = unknown>(endpoint: string, options?: RequestInit) =>
     apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
 };

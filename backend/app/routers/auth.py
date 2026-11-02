@@ -1,4 +1,5 @@
 import hmac
+import re
 import time
 import logging
 from collections import defaultdict
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import SessionCreate, SessionResponse, UserResponse
+from app.schemas.auth import LinkedAccountsUpdate, SessionCreate, SessionResponse, UserResponse
 from app.auth import set_session_cookie, clear_session_cookie, get_current_user
 from app.services.chesscom_client import ChesscomClient
 
@@ -148,6 +149,79 @@ async def get_session(
         avatar_url=current_user.avatar_url,
         country_code=current_user.country_code,
         created_at=current_user.created_at
+    )
+
+
+_HANDLE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _clean_handle(value: str | None, label: str) -> str | None:
+    """None/blank = unlink. Otherwise a valid platform username."""
+    if value is None or not value.strip():
+        return None
+    handle = value.strip()
+    if not _HANDLE_RE.match(handle):
+        raise HTTPException(
+            status_code=422,
+            detail=f"{label} usernames can only contain letters, numbers, _ and - (max 64).",
+        )
+    return handle
+
+
+@router.patch("/linked-accounts", response_model=SessionResponse, response_model_exclude_none=True)
+async def update_linked_accounts(
+    data: LinkedAccountsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Link, change or unlink the Chess.com / Lichess usernames of the signed-in user (no passcode needed)."""
+    sent = data.model_fields_set
+    chesscom_changed = False
+    if "chesscom_username" in sent:
+        new_cc = _clean_handle(data.chesscom_username, "Chess.com")
+        if (new_cc or "").lower() != (current_user.chesscom_username or "").lower():
+            if new_cc:
+                # refuse typos: the Chess.com public profile must exist (network trouble does not block linking)
+                try:
+                    profile = await ChesscomClient().fetch_player_profile(new_cc)
+                except Exception as e:  # noqa: BLE001
+                    logger.warning(f"Could not verify Chess.com user {new_cc}: {e}")
+                else:
+                    if profile is None:
+                        raise HTTPException(status_code=404, detail=f"Chess.com user '{new_cc}' was not found.")
+            current_user.chesscom_username = new_cc
+            current_user.avatar_url = None
+            current_user.country_code = None
+            current_user.chesscom_backfill_done = False
+            chesscom_changed = True
+        elif new_cc and new_cc != current_user.chesscom_username:
+            current_user.chesscom_username = new_cc  # same user, only the capitalisation changed
+    if "lichess_username" in sent:
+        new_li = _clean_handle(data.lichess_username, "Lichess")
+        if (new_li or "").lower() != (current_user.lichess_username or "").lower():
+            current_user.lichess_username = new_li
+            current_user.lichess_backfill_done = False
+        elif new_li and new_li != current_user.lichess_username:
+            current_user.lichess_username = new_li
+    db.commit()
+    db.refresh(current_user)
+    if chesscom_changed and current_user.chesscom_username:
+        await sync_user_chesscom_profile(current_user, db)
+
+    user_resp = UserResponse(
+        id=current_user.id,
+        username=current_user.username,
+        chesscom_username=current_user.chesscom_username,
+        lichess_username=current_user.lichess_username,
+        avatar_url=current_user.avatar_url,
+        country_code=current_user.country_code,
+        created_at=current_user.created_at,
+    )
+    return SessionResponse(
+        user=user_resp,
+        avatar_url=current_user.avatar_url,
+        country_code=current_user.country_code,
+        created_at=current_user.created_at,
     )
 
 

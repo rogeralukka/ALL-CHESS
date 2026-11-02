@@ -71,6 +71,29 @@ export const SettingsShell: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const chesscomUser = user?.chesscomUsername || '';
   const lichessUser = user?.lichessUsername || '';
+  const { updateLinkedAccounts } = useAuthStore();
+  const [draft, setDraft] = useState<{ chesscom: string; lichess: string }>({ chesscom: '', lichess: '' });
+  const [savingAcct, setSavingAcct] = useState<'chesscom' | 'lichess' | null>(null);
+  const [acctMsg, setAcctMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // the boxes always start from what is linked right now
+  useEffect(() => {
+    setDraft({ chesscom: user?.chesscomUsername || '', lichess: user?.lichessUsername || '' });
+  }, [user?.chesscomUsername, user?.lichessUsername]);
+
+  const saveAccount = async (which: 'chesscom' | 'lichess') => {
+    if (savingAcct) return;
+    setSavingAcct(which);
+    setAcctMsg(null);
+    try {
+      const value = draft[which].trim();
+      await updateLinkedAccounts(which === 'chesscom' ? { chesscomUsername: value || null } : { lichessUsername: value || null });
+      setAcctMsg({ ok: true, text: value ? `${which === 'chesscom' ? 'Chess.com' : 'Lichess'} linked to ${value}. Tap Sync Games Now to pull your games.` : `${which === 'chesscom' ? 'Chess.com' : 'Lichess'} unlinked.` });
+    } catch (e) {
+      setAcctMsg({ ok: false, text: e instanceof Error && e.message ? e.message : 'Could not save the username' });
+    } finally {
+      setSavingAcct(null);
+    }
+  };
 
   // Active board object for 3x3 preview
   const previewTheme = BOARD_THEMES.find((t) => t.id === stagedBoardId) || BOARD_THEMES[0];
@@ -757,11 +780,19 @@ export const SettingsShell: React.FC = () => {
           </div>
 
           <div className="space-y-4">
+            {acctMsg && (
+              <div
+                role="status"
+                className={`p-3 rounded-lg border text-xs font-semibold ${acctMsg.ok ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500' : 'bg-red-500/15 border-red-500/30 text-red-400'}`}
+              >
+                {acctMsg.text}
+              </div>
+            )}
             {([
-              ['Chess.com', chesscomUser, 'chesscom-linked'],
-              ['Lichess.org', lichessUser, 'lichess-linked'],
-            ] as const).map(([name, handle, testId]) => (
-              <div key={name} className="p-4 rounded-xl bg-theme-raised border border-theme-border space-y-1" data-testid={testId}>
+              ['Chess.com', 'chesscom', chesscomUser, 'chesscom-linked'],
+              ['Lichess.org', 'lichess', lichessUser, 'lichess-linked'],
+            ] as const).map(([name, key, handle, testId]) => (
+              <div key={name} className="p-4 rounded-xl bg-theme-raised border border-theme-border space-y-3" data-testid={testId}>
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-sm text-theme-text">{name}</div>
                   <span
@@ -770,18 +801,36 @@ export const SettingsShell: React.FC = () => {
                     {handle ? 'Connected' : 'Not linked'}
                   </span>
                 </div>
-                <div className="text-xs text-theme-muted">
-                  {handle ? (
-                    <>
-                      Username: <span className="font-mono text-amber-500 font-bold">{handle}</span>
-                    </>
-                  ) : (
-                    `No ${name} username linked.`
-                  )}
-                </div>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void saveAccount(key);
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={draft[key]}
+                    onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
+                    placeholder={`Your ${name} username`}
+                    aria-label={`${name} username`}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="flex-1 min-w-0 px-3 py-2 bg-theme-card border border-theme-border rounded-lg text-xs text-theme-text focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    type="submit"
+                    disabled={savingAcct !== null || draft[key].trim() === handle}
+                    data-testid={`save-${key}`}
+                  >
+                    {savingAcct === key ? 'Saving...' : handle && !draft[key].trim() ? 'Unlink' : 'Save'}
+                  </Button>
+                </form>
               </div>
             ))}
-            <p className="text-xs text-theme-muted">To link or change a username, log out and log in again with the new one.</p>
 
             {/* Active Session & Logout */}
             <div className="p-4 rounded-xl bg-theme-raised border border-theme-border flex items-center justify-between">

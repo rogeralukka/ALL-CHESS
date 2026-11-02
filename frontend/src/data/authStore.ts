@@ -25,6 +25,8 @@ interface AuthState {
     chesscomUsername?: string;
     lichessUsername?: string;
   }) => Promise<UserSession>;
+  /** Link, change or unlink the Chess.com / Lichess usernames (null or "" unlinks). Omitted fields stay as they are. */
+  updateLinkedAccounts: (data: { chesscomUsername?: string | null; lichessUsername?: string | null }) => Promise<UserSession>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -118,6 +120,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ error: errorMsg });
         throw err;
       }
+    },
+
+    updateLinkedAccounts: async (data) => {
+      const res = await api.patch<{ user: UserSession }>('/session/linked-accounts', data);
+      if (!res?.user) throw new Error('No user returned');
+      set({ user: res.user });
+      return res.user;
     },
 
     logout: async () => {
