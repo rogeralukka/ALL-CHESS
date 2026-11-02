@@ -382,7 +382,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g6",
                 "d4",
@@ -637,9 +637,9 @@
             "Nc3",
             "Be7"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "pawn_structure",
           "explain": [
-            "d3 is a solid move."
+            "d3 solidifies the pawn structure."
           ],
           "mateSquares": []
         },
@@ -758,7 +758,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Na5",
                 "Bd5",
@@ -774,7 +774,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h6",
                 "c3",
@@ -858,7 +858,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Be7",
@@ -874,7 +874,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ng5",
                 "Nh6",
@@ -958,7 +958,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h6",
                 "Nc3",
@@ -1043,9 +1043,9 @@
             "h3",
             "Be6"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "pawn_structure",
           "explain": [
-            "c3 is a solid move."
+            "c3 solidifies the pawn structure."
           ],
           "mateSquares": []
         },
@@ -1154,9 +1154,9 @@
             "Bg7",
             "Ba2"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "development",
           "explain": [
-            "Nf6 is an excellent move."
+            "Nf6 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -1175,7 +1175,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "h3",
@@ -1191,7 +1191,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qf6",
                 "Nbd2",
@@ -1260,9 +1260,9 @@
             "Re1",
             "O-O"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "castling",
           "explain": [
-            "O-O is an excellent move."
+            "Castles kingside to secure king safety and activate the rook."
           ],
           "mateSquares": []
         },
@@ -1313,7 +1313,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Be6",
@@ -1381,7 +1381,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "Nbd2",
@@ -1413,7 +1413,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g6",
                 "Re1",
@@ -1487,7 +1487,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re1",
                 "Bg7",
@@ -1519,7 +1519,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bb3",
                 "Bg7",
@@ -1592,7 +1592,7 @@
           "reasonCode": "missed_tactic",
           "explain": [
             "h5 misses a tactical opportunity.",
-            "Nxe4 wins material."
+            "Nxe4 wins a pawn: the pawn on e4 is undefended."
           ],
           "mateSquares": []
         },
@@ -1643,7 +1643,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nd7",
                 "Re1",
@@ -1730,7 +1730,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ng5",
                 "d5",
@@ -1762,7 +1762,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re1",
                 "Qe7",
@@ -1815,9 +1815,9 @@
             "Ke7",
             "Rxd1"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "dxe5 is best."
+            "dxe5 trades the pawns on e5."
           ],
           "mateSquares": []
         },
@@ -1852,7 +1852,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ng4",
                 "Bg5",
@@ -1868,7 +1868,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nd7",
                 "e6",
@@ -1936,16 +1936,16 @@
             "uci": "d8d1"
           },
           "pv": [
-            "Ng5",
             "Qxd1",
             "Rxd1",
-            "h4",
-            "h3",
-            "Be6"
+            "Nxe4",
+            "Nbd2",
+            "Nxg5",
+            "Nxg5"
           ],
-          "reasonCode": "mistake",
+          "reasonCode": "loses_piece",
           "explain": [
-            "Bg5 is a mistake.",
+            "Qxd1 wins your queen on d1.",
             "Ng5 was better."
           ],
           "mateSquares": []
@@ -1965,7 +1965,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ng5",
                 "Qxd1",
@@ -1997,7 +1997,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa4",
                 "Bd6",
@@ -2070,7 +2070,7 @@
           "reasonCode": "missed_tactic",
           "explain": [
             "Bd7 misses a tactical opportunity.",
-            "Qxd1 wins material."
+            "Qxd1 wins material on d1."
           ],
           "mateSquares": []
         },
@@ -2188,12 +2188,12 @@
             "uci": "d8f6"
           },
           "pv": [
-            "Qb3",
-            "Rh7",
+            "Qxf6",
             "Nbd2",
-            "Be7",
-            "Bxf6",
-            "Bxf6"
+            "h4",
+            "Ne1",
+            "O-O-O",
+            "b4"
           ],
           "reasonCode": "loses_piece",
           "explain": [
@@ -2217,7 +2217,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb3",
                 "Rh7",
@@ -2249,7 +2249,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b4",
                 "Qe7",
@@ -2355,7 +2355,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h4",
                 "Bxd8",
@@ -2371,7 +2371,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be6",
                 "Bxd8",
@@ -2424,9 +2424,9 @@
             "Qf3",
             "Rh6"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "development",
           "explain": [
-            "Nbd2 is an excellent move."
+            "Nbd2 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -2445,7 +2445,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b4",
                 "Ne7",
@@ -2461,7 +2461,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne1",
                 "O-O-O",
@@ -2557,7 +2557,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "b4",
@@ -2669,7 +2669,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe2",
                 "Bc5",
@@ -2685,7 +2685,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "O-O-O"
@@ -2697,7 +2697,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc2",
                 "Bh6",
@@ -2750,9 +2750,9 @@
             "g4",
             "Bxe6"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "castling",
           "explain": [
-            "O-O-O is a solid move."
+            "Castles queenside to secure king safety and activate the rook."
           ],
           "mateSquares": []
         },
@@ -2771,7 +2771,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "b4",
@@ -2877,7 +2877,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc2",
                 "Bh6",
@@ -2893,7 +2893,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe1",
                 "g5",
@@ -2909,7 +2909,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc1",
                 "Bh6",
@@ -2968,9 +2968,9 @@
             "Kb8",
             "Nc4"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "development",
           "explain": [
-            "Bh6 is an excellent move."
+            "Bh6 develops the bishop to an active square."
           ],
           "mateSquares": []
         },
@@ -2989,7 +2989,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "b4",
@@ -3005,7 +3005,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "Nc4",
@@ -3021,7 +3021,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be6",
                 "Bc4",
@@ -3074,9 +3074,9 @@
             "Nc4",
             "Be6"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "central_knight",
           "explain": [
-            "Nc4 is a solid move."
+            "Nc4 centralizes the knight on c4."
           ],
           "mateSquares": []
         },
@@ -3203,7 +3203,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe6",
                 "Ne3",
@@ -3219,7 +3219,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "Rfd1",
@@ -3235,7 +3235,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be6",
                 "Rfd1",
@@ -3292,11 +3292,11 @@
           },
           "pv": [
             "h3",
-            "Bh5",
-            "b4",
-            "Qe6",
-            "Ne3",
-            "Kb8"
+            "Rfd1",
+            "Rdg8",
+            "Bf1",
+            "hxg2",
+            "Bxg2"
           ],
           "reasonCode": "blunder",
           "explain": [
@@ -3320,7 +3320,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h3",
                 "Bh5",
@@ -3336,7 +3336,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne3",
                 "Bxf3"
@@ -3348,7 +3348,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne1",
                 "Be6",
@@ -3428,7 +3428,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h3",
                 "Rfd1",
@@ -3444,7 +3444,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be6",
                 "Qa4",
@@ -3460,7 +3460,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "Ne3",
@@ -3519,9 +3519,9 @@
             "Kxg2",
             "Bf4"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "open_file",
           "explain": [
-            "Rfd1 is a solid move."
+            "Rfd1 places the rook on the open d-file."
           ],
           "mateSquares": []
         },
@@ -3572,7 +3572,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne3",
                 "hxg2",
@@ -3633,7 +3633,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Rxd1+ is slightly inaccurate.",
-            "hxg2 keeps the edge."
+            "hxg2 wins material on g2."
           ],
           "mateSquares": []
         },
@@ -3668,7 +3668,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "Rd5",
@@ -3684,7 +3684,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be6",
                 "Rxd8+",
@@ -3752,7 +3752,7 @@
           "reasonCode": "missed_tactic",
           "explain": [
             "Rxd1 misses a tactical opportunity.",
-            "Qxd1 wins material."
+            "Qxd1 wins a rook: the rook on d1 is undefended."
           ],
           "mateSquares": []
         },
@@ -3872,7 +3872,7 @@
           "reasonCode": "missed_tactic",
           "explain": [
             "Bf4 misses a tactical opportunity.",
-            "hxg2 wins material."
+            "hxg2 wins material on g2."
           ],
           "mateSquares": []
         },
@@ -3907,7 +3907,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be6",
                 "Qa4",
@@ -3923,7 +3923,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "Ncxe5",
@@ -4003,7 +4003,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g3",
                 "Bh6",
@@ -4019,7 +4019,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne3",
                 "Bxe3",
@@ -4035,7 +4035,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc2",
                 "hxg2",
@@ -4103,7 +4103,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bh6",
                 "Rd3",
@@ -4119,7 +4119,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg5",
                 "Rd3",
@@ -4135,7 +4135,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bc1",
                 "Rxc1"
@@ -4187,16 +4187,16 @@
             "uci": "g4f3"
           },
           "pv": [
-            "Rd3",
-            "Kb8",
+            "Bxf3",
             "Qc2",
-            "Be6",
-            "Nxg5",
-            "Qxg5"
+            "Kb8",
+            "b4",
+            "b5",
+            "Na5"
           ],
-          "reasonCode": "blunder",
+          "reasonCode": "loses_piece",
           "explain": [
-            "Re1 is a blunder.",
+            "Bxf3 wins your knight on f3.",
             "Rd3 was better."
           ],
           "mateSquares": []
@@ -4232,7 +4232,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne3",
                 "Bxf3",
@@ -4248,7 +4248,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Bxf3",
@@ -4370,7 +4370,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bh6",
                 "Ne3",
@@ -4444,7 +4444,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bf1",
                 "Bg4",
@@ -4460,7 +4460,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bd3",
                 "Bg4",
@@ -4476,7 +4476,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd1",
                 "Bxe4",
@@ -4556,7 +4556,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Ne3",
@@ -4572,7 +4572,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "Ne3",
@@ -4662,7 +4662,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bf1",
                 "Kb8",
@@ -4678,7 +4678,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Bg5",
@@ -4694,7 +4694,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc2",
                 "Bg5",
@@ -4795,7 +4795,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bh6",
                 "Qc2",
@@ -4811,7 +4811,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg5",
                 "Nd5",
@@ -4869,9 +4869,9 @@
             "Qe6",
             "b4"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Rxe3 is best."
+            "Rxe3 captures the undefended bishop on e3."
           ],
           "mateSquares": []
         },
@@ -4921,7 +4921,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc2",
                 "Bb6",
@@ -5001,7 +5001,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nd8",
                 "a4",
@@ -5017,7 +5017,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "Qc2",
@@ -5033,7 +5033,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Qc2",
@@ -5113,7 +5113,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc2",
                 "Rd8",
@@ -5129,7 +5129,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Kb8",
@@ -5144,7 +5144,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd1",
                 "Qd6",
@@ -5218,7 +5218,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Na5",
                 "Qa4",
@@ -5250,7 +5250,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "Bd5",
@@ -5309,9 +5309,9 @@
             "Qd7",
             "Nc8"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Bxf7 is best."
+            "Bxf7 captures on f7."
           ],
           "mateSquares": []
         },
@@ -5346,7 +5346,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd1",
                 "Qc6",
@@ -5362,7 +5362,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa4",
                 "Rd8",
@@ -5420,9 +5420,9 @@
             "Rf8",
             "Bb3"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "open_file",
           "explain": [
-            "Rd8 is an excellent move."
+            "Rd8 places the rook on the open d-file."
           ],
           "mateSquares": []
         },
@@ -5441,7 +5441,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "Qe6",
@@ -5457,7 +5457,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qg5",
                 "Be6+",
@@ -5526,9 +5526,9 @@
             "Qxf6",
             "Rxf6"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "check",
           "explain": [
-            "Be6+ is an excellent move."
+            "Be6+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -5579,7 +5579,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Kb8",
@@ -5647,7 +5647,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "Bg4",
@@ -5747,16 +5747,16 @@
             "uci": "e7d5"
           },
           "pv": [
-            "Bg4",
-            "Ng8",
-            "c4",
-            "Rf8",
-            "f3",
-            "Rd8"
+            "Nxd5",
+            "exd5",
+            "Qf5",
+            "Qa2",
+            "Bxd5",
+            "Qa1"
           ],
-          "reasonCode": "mistake",
+          "reasonCode": "loses_piece",
           "explain": [
-            "Bd5 is a mistake.",
+            "Bd5 leaves your bishop hanging on d5.",
             "Bg4 was better."
           ],
           "mateSquares": []
@@ -5776,7 +5776,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Ng8",
@@ -5792,7 +5792,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re2",
                 "c6",
@@ -5808,7 +5808,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bc4",
                 "Bxe4",
@@ -5877,9 +5877,9 @@
             "Bxd5",
             "Qa1"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Nxd5 is best."
+            "Nxd5 captures on d5."
           ],
           "mateSquares": []
         },
@@ -5914,7 +5914,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b6",
                 "c4",
@@ -5930,7 +5930,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "c4",
@@ -5983,9 +5983,9 @@
             "Qe1",
             "Qd7"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "exd5 is best."
+            "exd5 captures on d5."
           ],
           "mateSquares": []
         },
@@ -6020,7 +6020,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re1",
                 "Nb6",
@@ -6036,7 +6036,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re2",
                 "Bxe4",
@@ -6094,9 +6094,9 @@
             "Bxf3",
             "Qb4"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Rxd5 is best."
+            "Rxd5 captures on d5."
           ],
           "mateSquares": []
         },
@@ -6227,7 +6227,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "f3",
                 "Rd2",
@@ -6259,7 +6259,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Rd2",
@@ -6441,12 +6441,12 @@
             "uci": "f6d6"
           },
           "pv": [
-            "f3",
-            "Qf5",
-            "Rd3",
-            "Rxd3",
-            "Qc2",
-            "Bxf3"
+            "Qd6",
+            "g4",
+            "Rd1+",
+            "Kf2",
+            "Qd2+",
+            "Kg3"
           ],
           "reasonCode": "mistake",
           "explain": [
@@ -6470,7 +6470,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "f3",
                 "Qf5",
@@ -6571,9 +6571,9 @@
             "Qd2+",
             "Kg3"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "trade",
           "explain": [
-            "exf4 is an excellent move."
+            "exf4 trades the pawns on f4."
           ],
           "mateSquares": []
         },
@@ -6592,7 +6592,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd6",
                 "g4",
@@ -6624,7 +6624,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd8",
                 "Re1",
@@ -6692,17 +6692,17 @@
             "uci": "f6d4"
           },
           "pv": [
-            "Re8+",
-            "Ka7",
-            "Ra8+",
-            "Kxa8",
-            "Qc3",
-            "Qb6+"
+            "Qd4+",
+            "Re3",
+            "Qxe3+",
+            "Qxe3",
+            "fxe3",
+            "b3"
           ],
-          "reasonCode": "mistake",
+          "reasonCode": "allows_check",
           "explain": [
-            "Rf3 allows Qd4+.",
-            "Re8+ was better."
+            "Rf3 allows Qd4+, checking your king.",
+            "Re8+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -6753,7 +6753,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc3",
                 "Rd1+",
@@ -6811,9 +6811,9 @@
             "fxe3",
             "b3"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "capture",
           "explain": [
-            "Bxf3 is an excellent move."
+            "Bxf3 captures on f3."
           ],
           "mateSquares": []
         },
@@ -6848,7 +6848,7 @@
               "mate": -5,
               "mateIn": -5,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe7",
                 "Qxb7+",
@@ -6954,7 +6954,7 @@
               "mate": -5,
               "mateIn": -5,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf1",
                 "Qd4",
@@ -6986,7 +6986,7 @@
               "mate": -4,
               "mateIn": -4,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc3",
                 "Qxc3",
@@ -7105,7 +7105,7 @@
               "mate": -6,
               "mateIn": -6,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe6",
                 "Qf1",
@@ -7173,7 +7173,7 @@
               "mate": -4,
               "mateIn": -4,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf1",
                 "Qxc4+",
@@ -7189,7 +7189,7 @@
               "mate": -2,
               "mateIn": -2,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe3",
                 "Qxe3+",
@@ -7203,7 +7203,7 @@
               "mate": -2,
               "mateIn": -2,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kh1",
                 "Rd1+",
@@ -7254,9 +7254,9 @@
             "Rd1+",
             "Kf2"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "check",
           "explain": [
-            "Rd1+ is an excellent move."
+            "Rd1+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -7375,12 +7375,7 @@
             "uci": "d4d2"
           },
           "pv": [
-            "Qxd1",
-            "Qxd1+",
-            "Kf2",
-            "Qd2+",
-            "Kf3",
-            "fxg3"
+            "Qd2#"
           ],
           "reasonCode": "allows_mate",
           "explain": [
@@ -7423,7 +7418,7 @@
               "mate": -1,
               "mateIn": -1,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ke2",
                 "Qd2#"
@@ -7512,7 +7507,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rg1",
                 "Qb3",
@@ -7829,7 +7824,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "d3 is slightly inaccurate.",
-            "exd5 keeps the edge."
+            "exd5 wins material on d5."
           ],
           "mateSquares": []
         },
@@ -8041,7 +8036,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Nh3 is slightly inaccurate.",
-            "Nf3 keeps the edge."
+            "Nf3 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -8251,9 +8246,9 @@
             "Be2",
             "a5"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "gxh3 is best."
+            "gxh3 captures the undefended bishop on h3."
           ],
           "mateSquares": []
         },
@@ -8470,7 +8465,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Na3 is slightly inaccurate.",
-            "Bg2 keeps the edge."
+            "Bg2 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -8579,9 +8574,9 @@
             "Ne7",
             "Qg5"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "development",
           "explain": [
-            "Nc6 is a solid move."
+            "Nc6 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -8685,9 +8680,9 @@
             "Rg1",
             "Ng6"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "central_knight",
           "explain": [
-            "Nc4 is best."
+            "Nc4 centralizes the knight on c4."
           ],
           "mateSquares": []
         },
@@ -8722,7 +8717,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nb1",
                 "Nge7",
@@ -8791,9 +8786,9 @@
             "a4",
             "O-O"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "development",
           "explain": [
-            "Nge7 is an excellent move."
+            "Nge7 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -8812,7 +8807,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a5",
                 "Be2",
@@ -8924,7 +8919,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h4",
                 "h5",
@@ -9024,12 +9019,12 @@
             "uci": "h3h4"
           },
           "pv": [
+            "h4",
+            "exf4",
+            "Bh3",
             "Ng6",
-            "f5",
-            "Qh4+",
-            "Ke2",
-            "Nf4+",
-            "Bxf4"
+            "O-O",
+            "h5"
           ],
           "reasonCode": "mistake",
           "explain": [
@@ -9053,7 +9048,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ng6",
                 "f5",
@@ -9085,7 +9080,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "Nxe5",
@@ -9165,7 +9160,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h4",
                 "exf4",
@@ -9289,7 +9284,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ng6",
                 "Qg4",
@@ -9321,7 +9316,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "exf6",
@@ -9382,7 +9377,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Nd2 is slightly inaccurate.",
-            "Be2 keeps the edge."
+            "Be2 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -9503,7 +9498,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ng6",
                 "Qg4",
@@ -9519,7 +9514,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a5",
                 "Be2",
@@ -9535,7 +9530,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a6",
                 "Qh5+",
@@ -9615,7 +9610,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qg4",
                 "Be7",
@@ -9631,7 +9626,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qh5",
                 "Be7",
@@ -9647,7 +9642,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qf3",
                 "Be7"
@@ -9704,7 +9699,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Qe7 is slightly inaccurate.",
-            "Bb4+ keeps the edge."
+            "Bb4+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -9739,7 +9734,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nh4",
                 "Be2",
@@ -9755,7 +9750,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a5",
                 "Bg2",
@@ -9835,7 +9830,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a3",
                 "Nf4",
@@ -9863,7 +9858,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "h4",
                 "Qe6",
@@ -9959,7 +9954,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd6"
               ]
@@ -9970,7 +9965,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd7",
                 "Ng5"
@@ -10039,7 +10034,7 @@
           "reasonCode": "missed_tactic",
           "explain": [
             "cxd4 misses a tactical opportunity.",
-            "Bg5 wins material."
+            "Bg5 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -10170,7 +10165,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nh4",
                 "d5",
@@ -10202,7 +10197,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qf6",
                 "Bg5"
@@ -10245,9 +10240,9 @@
             "Nxh4",
             "Qxh4+"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "development",
           "explain": [
-            "Be2 is a solid move."
+            "Be2 develops the bishop to an active square."
           ],
           "mateSquares": []
         },
@@ -10266,7 +10261,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a3",
                 "Nh4",
@@ -10354,17 +10349,17 @@
             "uci": "c1f4"
           },
           "pv": [
-            "Qb4+",
-            "Qd2",
-            "Qb6",
-            "Qc2",
+            "Bxf4",
+            "Qe6",
+            "O-O",
             "Bd6",
-            "O-O"
+            "Bxd6",
+            "Rxd6"
           ],
           "reasonCode": "loses_piece",
           "explain": [
             "Nf4 loses your knight on f4.",
-            "Qb4+ was better."
+            "Qb4+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -10399,7 +10394,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "O-O",
@@ -10415,7 +10410,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd7",
                 "O-O",
@@ -10468,9 +10463,9 @@
             "Bxd6",
             "Rxd6"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Bxf4 is best."
+            "Bxf4 captures the undefended knight on f4."
           ],
           "mateSquares": []
         },
@@ -10606,7 +10601,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "Bxg5",
@@ -10622,7 +10617,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qf6",
                 "Bg5",
@@ -10638,7 +10633,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "O-O",
@@ -10718,7 +10713,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd2",
                 "Bd6",
@@ -10734,7 +10729,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nd2",
                 "Bd6",
@@ -10750,7 +10745,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bd2",
                 "Qxb2",
@@ -10872,7 +10867,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "Rg1",
@@ -10928,16 +10923,16 @@
             "uci": "b2a1"
           },
           "pv": [
-            "Qb1",
-            "Qc3",
-            "Rg1",
-            "Bd6",
-            "Bd2",
-            "Qa3"
+            "Qxa1+",
+            "Kg2",
+            "Qb2",
+            "Nd2",
+            "Qb4",
+            "Qc2"
           ],
-          "reasonCode": "blunder",
+          "reasonCode": "loses_piece",
           "explain": [
-            "Qa4 allows Qxa1+.",
+            "Qxa1+ wins your rook on a1.",
             "Qb1 was better."
           ],
           "mateSquares": []
@@ -10957,7 +10952,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb1",
                 "Qc3",
@@ -10973,7 +10968,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc1",
                 "Qxc1+",
@@ -10989,7 +10984,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bd2",
                 "Bb4",
@@ -11106,7 +11101,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "Kf2",
@@ -11174,7 +11169,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg2",
                 "Qb2",
@@ -11190,7 +11185,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bd1",
                 "Bd6",
@@ -11206,7 +11201,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne1",
                 "Kb8",
@@ -11286,7 +11281,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb2",
                 "Nd2",
@@ -11302,7 +11297,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc3",
                 "Rc1",
@@ -11386,16 +11381,16 @@
             "uci": "b2a2"
           },
           "pv": [
-            "Nd2",
-            "Qb4",
-            "Qc2",
-            "Qc3",
-            "Qd1",
-            "Bd6"
+            "Qxa2",
+            "Rf1",
+            "Bd6",
+            "e5",
+            "Bb4",
+            "Nd2"
           ],
-          "reasonCode": "mistake",
+          "reasonCode": "loses_piece",
           "explain": [
-            "Qd1 is a mistake.",
+            "Qxa2 wins your pawn on a2.",
             "Nd2 was better."
           ],
           "mateSquares": []
@@ -11415,7 +11410,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nd2",
                 "Qb4",
@@ -11431,7 +11426,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re1",
                 "Kb8",
@@ -11447,7 +11442,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf2",
                 "Be7",
@@ -11559,7 +11554,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "Qd2",
@@ -11649,7 +11644,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd2",
                 "Qxd2",
@@ -11665,7 +11660,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h4",
                 "Kb8",
@@ -11761,7 +11756,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "Qd2",
@@ -11777,7 +11772,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "h6",
                 "Ne6",
@@ -11867,7 +11862,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ne6",
                 "Rd7",
@@ -11883,7 +11878,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nf3",
                 "Kb8",
@@ -11955,12 +11950,12 @@
             "uci": "e2g4"
           },
           "pv": [
-            "Rd7",
-            "Rf1",
-            "Qxe6",
             "Bg4",
-            "Qg6",
-            "Bg3"
+            "Qxg4+",
+            "Qxg4+",
+            "Kb8",
+            "Rb1",
+            "Bd6"
           ],
           "reasonCode": "blunder",
           "explain": [
@@ -11984,7 +11979,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rd7",
                 "Rf1",
@@ -12000,7 +11995,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rd6",
                 "Nxf8",
@@ -12103,7 +12098,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Qxg4+",
@@ -12119,7 +12114,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa4",
                 "h5",
@@ -12135,7 +12130,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa1",
                 "Kb8",
@@ -12215,7 +12210,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb8",
                 "Bg4",
@@ -12247,7 +12242,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "Rc1",
@@ -12339,7 +12334,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Qxg4+",
@@ -12355,7 +12350,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg3",
                 "h5",
@@ -12467,7 +12462,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "Rb1",
@@ -12575,7 +12570,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Qxg4+",
@@ -12591,7 +12586,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf2",
                 "Qxh3",
@@ -12607,7 +12602,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "h4",
                 "Rxh4"
@@ -12704,7 +12699,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rh4",
                 "Kf2",
@@ -12788,7 +12783,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf2",
                 "Qe3+",
@@ -12804,7 +12799,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg1",
                 "Qe3+",
@@ -12851,9 +12846,9 @@
             "bxc6",
             "Bg4+"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Nxe5 is an excellent move."
+            "Nxe5 captures the undefended pawn on e5."
           ],
           "mateSquares": []
         },
@@ -12972,7 +12967,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa2",
                 "Bb4",
@@ -12988,7 +12983,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ke1",
                 "Nxd3+",
@@ -13004,7 +12999,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rd1",
                 "Qe3+"
@@ -13058,9 +13053,9 @@
             "Qe3+",
             "Kg2"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Nxd3+ is best."
+            "Nxd3+ captures on d3."
           ],
           "mateSquares": []
         },
@@ -13095,7 +13090,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe3",
                 "Kd1",
@@ -13169,9 +13164,9 @@
             "Kg2",
             "Qe2+"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Bxd3 is best."
+            "Bxd3 captures on d3."
           ],
           "mateSquares": []
         },
@@ -13206,7 +13201,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kd1",
                 "Nb2+",
@@ -13222,7 +13217,7 @@
               "mate": -4,
               "mateIn": -4,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kd2",
                 "Qe3+",
@@ -13280,9 +13275,9 @@
             "Qe2+",
             "Kg1"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Qxd3 is best."
+            "Qxd3 captures the undefended bishop on d3."
           ],
           "mateSquares": []
         },
@@ -13401,7 +13396,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf2",
                 "Qe3+",
@@ -13417,7 +13412,7 @@
               "mate": -5,
               "mateIn": -5,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h3",
                 "Bb4+",
@@ -13433,7 +13428,7 @@
               "mate": -5,
               "mateIn": -5,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa2",
                 "Bb4+",
@@ -13486,9 +13481,9 @@
             "Qf4+",
             "Ke1"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "check",
           "explain": [
-            "Qe3+ is an excellent move."
+            "Qe3+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -13607,7 +13602,7 @@
               "mate": -10,
               "mateIn": -10,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg2",
                 "Qe2+",
@@ -13623,7 +13618,7 @@
               "mate": -5,
               "mateIn": -5,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf1",
                 "Bb4",
@@ -13803,7 +13798,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc6",
                 "bxc6",
@@ -13819,7 +13814,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa5",
                 "Qf3+",
@@ -13835,7 +13830,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd1",
                 "Qe4+",
@@ -14251,7 +14246,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g3",
                 "c5",
@@ -14527,9 +14522,9 @@
             "e6",
             "Nxd4"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "development",
           "explain": [
-            "Nc6 is a solid move."
+            "Nc6 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -14627,9 +14622,9 @@
             "Bg2",
             "Nf6"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "development",
           "explain": [
-            "Bg2 is an excellent move."
+            "Bg2 develops the bishop to an active square."
           ],
           "mateSquares": []
         },
@@ -14733,9 +14728,9 @@
             "Bc5",
             "Nb3"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "pawn_structure",
           "explain": [
-            "e6 is best."
+            "e6 solidifies the pawn structure."
           ],
           "mateSquares": []
         },
@@ -14839,9 +14834,9 @@
             "Nb3",
             "Bb6"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "pawn_structure",
           "explain": [
-            "e3 is a solid move."
+            "e3 solidifies the pawn structure."
           ],
           "mateSquares": []
         },
@@ -14876,7 +14871,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b3",
                 "Be7",
@@ -14970,7 +14965,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "O-O",
@@ -15053,9 +15048,9 @@
             "Ne5",
             "Bb4+"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "castling",
           "explain": [
-            "O-O is an excellent move."
+            "Castles kingside to secure king safety and activate the rook."
           ],
           "mateSquares": []
         },
@@ -15074,7 +15069,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b3",
                 "cxb3",
@@ -15164,9 +15159,9 @@
             "b6",
             "Ne5"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "development",
           "explain": [
-            "Nf6 is best."
+            "Nf6 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -15281,7 +15276,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re1",
                 "b5",
@@ -15313,7 +15308,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b3",
                 "cxb3",
@@ -15374,7 +15369,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "b5 is slightly inaccurate.",
-            "cxb3 keeps the edge."
+            "cxb3 wins material on b3."
           ],
           "mateSquares": []
         },
@@ -15409,7 +15404,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Na5"
               ]
@@ -15420,7 +15415,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "a4",
@@ -15500,7 +15495,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "Qa5",
@@ -15516,7 +15511,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re1",
                 "cxb3",
@@ -15575,9 +15570,9 @@
             "exd5",
             "Re1"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "development",
           "explain": [
-            "Ba6 is an excellent move."
+            "Ba6 develops the bishop to an active square."
           ],
           "mateSquares": []
         },
@@ -15596,7 +15591,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b4",
                 "bxc4",
@@ -15612,7 +15607,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa5",
                 "Ne5",
@@ -15746,7 +15741,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 12,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nfd2",
                 "cxb3",
@@ -15793,9 +15788,9 @@
             "Rc8",
             "Nbd2"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Bxb5 is best."
+            "Bxb5 captures the undefended pawn on b5."
           ],
           "mateSquares": []
         },
@@ -15846,7 +15841,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rb8",
                 "bxa6",
@@ -15914,9 +15909,9 @@
             "Nbd2",
             "Bb5"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "bxc4 is best."
+            "bxc4 trades the pawns on c4."
           ],
           "mateSquares": []
         },
@@ -16026,9 +16021,9 @@
             "Bb4",
             "Nxc4"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Bxc4 is best."
+            "Bxc4 captures the undefended pawn on c4."
           ],
           "mateSquares": []
         },
@@ -16079,7 +16074,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a6",
                 "cxb5",
@@ -16153,7 +16148,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Re1",
                 "Rc8",
@@ -16293,7 +16288,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a5",
                 "Nbd2",
@@ -16309,7 +16304,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bb5",
                 "Na3"
@@ -16373,8 +16368,12 @@
             "uci": "a7a5"
           },
           "pv": [
-            "Nfd2",
-            "Bb5"
+            "a5",
+            "Ne5",
+            "Nxe5",
+            "dxe5",
+            "Nd7",
+            "e4"
           ],
           "reasonCode": "mistake",
           "explain": [
@@ -16398,7 +16397,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nfd2",
                 "Bb5"
@@ -16518,7 +16517,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a5",
                 "Ne5",
@@ -16534,7 +16533,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be7",
                 "Bc1",
@@ -16550,7 +16549,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bd6",
                 "Bc1",
@@ -16603,9 +16602,9 @@
             "c4",
             "Bd7"
           ],
-          "reasonCode": "only_move",
+          "reasonCode": "trade",
           "explain": [
-            "Bxb4 is a great move: the only move that maintains the advantage."
+            "Bxb4 trades the bishops on b4."
           ],
           "mateSquares": []
         },
@@ -16708,9 +16707,9 @@
             "Bd7",
             "cxd5"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Nxb4 is best."
+            "Nxb4 captures the undefended bishop on b4."
           ],
           "mateSquares": []
         },
@@ -16761,7 +16760,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "Ba3",
@@ -16830,9 +16829,9 @@
             "cxd5",
             "exd5"
           ],
-          "reasonCode": "only_move",
+          "reasonCode": "central_knight",
           "explain": [
-            "Ne5 is a great move: the only move that maintains the advantage."
+            "Ne5 centralizes the knight on e5."
           ],
           "mateSquares": []
         },
@@ -16867,7 +16866,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nfd2",
                 "Nxd2",
@@ -16951,7 +16950,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bb5",
                 "c4",
@@ -16967,7 +16966,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nd6",
                 "c3",
@@ -17142,9 +17141,9 @@
             "Nxc6",
             "Nxe4"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "dxe4 is best."
+            "dxe4 captures the undefended bishop on e4."
           ],
           "mateSquares": []
         },
@@ -17195,7 +17194,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "f6",
                 "Bd3",
@@ -17254,9 +17253,9 @@
             "Nxe4",
             "O-O"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "passed_pawn",
           "explain": [
-            "c4 is a solid move."
+            "c4 advances the passed pawn toward promotion."
           ],
           "mateSquares": []
         },
@@ -17363,16 +17362,16 @@
             "uci": "d1a4"
           },
           "pv": [
-            "Bd7",
-            "Nc3",
-            "O-O",
-            "Nxe4",
-            "Be8",
-            "c5"
+            "Qa4+",
+            "Kf8",
+            "Qxb4+",
+            "Qe7",
+            "Qxe7+",
+            "Kxe7"
           ],
-          "reasonCode": "blunder",
+          "reasonCode": "allows_check",
           "explain": [
-            "Ba6 allows Qa4+.",
+            "Ba6 allows Qa4+, checking your king.",
             "Bd7 was better."
           ],
           "mateSquares": []
@@ -17392,7 +17391,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bd7",
                 "Nc3",
@@ -17408,7 +17407,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bc6",
                 "Ra4",
@@ -17424,7 +17423,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a6",
                 "cxb5",
@@ -17546,7 +17545,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb3",
                 "Rb8",
@@ -17614,12 +17613,12 @@
             "uci": "a4c6"
           },
           "pv": [
+            "Qxc6+",
             "Kf8",
-            "Qxb4+",
-            "Kg8",
             "Rxa6",
-            "h5",
-            "Nc3"
+            "Qc8",
+            "Qxe4",
+            "Rb8"
           ],
           "reasonCode": "loses_piece",
           "explain": [
@@ -17643,7 +17642,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf8",
                 "Qxb4+",
@@ -17659,7 +17658,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ke7",
                 "Qxb4+",
@@ -17675,7 +17674,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bb5",
                 "Qxb5+",
@@ -17865,7 +17864,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf8",
                 "Rxa6",
@@ -17881,7 +17880,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ke7",
                 "Qxa6",
@@ -17897,7 +17896,7 @@
               "mate": 2,
               "mateIn": 2,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd7",
                 "Qxd7+",
@@ -18075,16 +18074,16 @@
             "uci": "c6b7"
           },
           "pv": [
-            "Qc8",
-            "Qa4",
-            "Rd8",
-            "Nc3",
-            "Kf8",
-            "Nxe4"
+            "Qb7+",
+            "Qc7",
+            "Qxc7+",
+            "Kf6",
+            "Qxf7+",
+            "Kg5"
           ],
-          "reasonCode": "mistake",
+          "reasonCode": "allows_check",
           "explain": [
-            "Re8 allows Qb7+.",
+            "Re8 allows Qb7+, checking your king.",
             "Qc8 was better."
           ],
           "mateSquares": []
@@ -18104,7 +18103,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc8",
                 "Qa4",
@@ -18120,7 +18119,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf8",
                 "Qxe4",
@@ -18135,7 +18134,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf6",
                 "Qxe4",
@@ -18196,7 +18195,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "d5 is slightly inaccurate.",
-            "Qb7+ keeps the edge."
+            "Qb7+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -18315,7 +18314,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf8",
                 "d6",
@@ -18331,7 +18330,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc8",
                 "Qd6+",
@@ -18347,7 +18346,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf6",
                 "Nd7+",
@@ -18400,9 +18399,9 @@
             "Rxc6",
             "Red8"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "check",
           "explain": [
-            "Nd7+ is an excellent move."
+            "Nd7+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -18521,7 +18520,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg8",
                 "d6",
@@ -18553,7 +18552,7 @@
               "mate": 1,
               "mateIn": 1,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ke7",
                 "d6#"
@@ -18596,9 +18595,9 @@
             "Qxc4",
             "Qxd7"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "passed_pawn",
           "explain": [
-            "d6 is best."
+            "d6 advances the passed pawn toward promotion."
           ],
           "mateSquares": []
         },
@@ -18633,7 +18632,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rd1",
                 "e5",
@@ -18649,7 +18648,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb5",
                 "Qg5",
@@ -18739,7 +18738,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "c5",
@@ -18755,7 +18754,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h6",
                 "Nd2",
@@ -18771,7 +18770,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc8",
                 "c5",
@@ -18861,7 +18860,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb5",
                 "Rxc4",
@@ -18877,7 +18876,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa4",
                 "Qg5",
@@ -18893,7 +18892,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb7",
                 "Qg5",
@@ -18950,9 +18949,9 @@
             "Kh8",
             "c5"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Rxc4 is a solid move."
+            "Rxc4 captures the undefended pawn on c4."
           ],
           "mateSquares": []
         },
@@ -18971,7 +18970,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h6",
                 "Rxa7",
@@ -18987,7 +18986,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qg5",
                 "Nd2",
@@ -19003,7 +19002,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "Rxa7",
@@ -19050,9 +19049,9 @@
             "Rxa7",
             "Rg8"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Rxa7 is an excellent move."
+            "Rxa7 captures the undefended pawn on a7."
           ],
           "mateSquares": []
         },
@@ -19171,12 +19170,12 @@
             "uci": "d7e5"
           },
           "pv": [
-            "Rc2",
-            "Rf1",
-            "h6",
             "Ne5",
-            "Rf8",
-            "d7"
+            "Qe7",
+            "dxe7",
+            "Rc2",
+            "Nc4",
+            "f6"
           ],
           "reasonCode": "mistake",
           "explain": [
@@ -19232,7 +19231,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "Nd2",
@@ -19328,7 +19327,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nb6",
                 "Rf8",
@@ -19403,9 +19402,9 @@
             "Qc3",
             "Rf1"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Qxf6 is best."
+            "Qxf6 captures the undefended knight on f6."
           ],
           "mateSquares": []
         },
@@ -19440,7 +19439,7 @@
               "mate": 4,
               "mateIn": 4,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg7",
                 "Qxf7+",
@@ -19456,7 +19455,7 @@
               "mate": 3,
               "mateIn": 3,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kh8",
                 "Qxf7",
@@ -19517,7 +19516,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "d7 is slightly inaccurate.",
-            "Nd2 keeps the edge."
+            "Nd2 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -19552,7 +19551,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb5",
                 "Rec8",
@@ -19664,7 +19663,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rf8",
                 "Nd2",
@@ -19680,7 +19679,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd8",
                 "dxe8=Q+",
@@ -19741,7 +19740,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Rd1 is slightly inaccurate.",
-            "Nd2 keeps the edge."
+            "Nd2 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -19792,7 +19791,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rf1",
                 "Rc5",
@@ -19859,12 +19858,12 @@
             "uci": "b1d2"
           },
           "pv": [
-            "Rc2",
             "Nd2",
-            "Kg7",
+            "Rc2",
             "Ra8",
-            "Rc7",
-            "Qxc7"
+            "Kg7",
+            "Rxd8",
+            "Qxd8"
           ],
           "reasonCode": "mistake",
           "explain": [
@@ -19904,7 +19903,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg7",
                 "Ra8",
@@ -19919,7 +19918,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qf3",
                 "Rf1",
@@ -20031,7 +20030,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb6",
                 "Rc2",
@@ -20115,7 +20114,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg7",
                 "Rxd8",
@@ -20131,7 +20130,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qg5",
                 "h4",
@@ -20184,9 +20183,9 @@
             "Nd2",
             "f5"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "Rxd8 is best."
+            "Rxd8 trades the rooks on d8."
           ],
           "mateSquares": []
         },
@@ -20237,7 +20236,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rf1",
                 "Rc7",
@@ -20408,9 +20407,9 @@
             "Nxe4",
             "h4"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "development",
           "explain": [
-            "Na3 is a solid move."
+            "Na3 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -20445,7 +20444,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb5",
                 "Rc2",
@@ -20637,9 +20636,9 @@
             "Qd4+",
             "Kh6"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Qxc7 is best."
+            "Qxc7 captures on c7."
           ],
           "mateSquares": []
         },
@@ -20674,7 +20673,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb5",
                 "Kh6",
@@ -20749,9 +20748,9 @@
             "Qxd6",
             "Rxd6"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "Qxc7 is best."
+            "Qxc7 trades the queens on c7."
           ],
           "mateSquares": []
         },
@@ -20786,7 +20785,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qf6",
                 "d8=Q",
@@ -20802,7 +20801,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qg5",
                 "d8=Q",
@@ -20898,7 +20897,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nc2",
                 "Qxc2",
@@ -21122,7 +21121,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nb5",
                 "Qc2",
@@ -21138,7 +21137,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd6",
                 "g5",
@@ -21228,7 +21227,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc2",
                 "Qd4+",
@@ -21260,7 +21259,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb4",
                 "Qd4+",
@@ -21356,7 +21355,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nc7",
                 "e5",
@@ -21372,7 +21371,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd7",
                 "Kh6",
@@ -21440,16 +21439,16 @@
             "uci": "c7e8"
           },
           "pv": [
-            "h5",
             "Ne8+",
             "Kg8",
-            "Qd4",
-            "Kf8",
-            "Qg7+"
+            "Nc7+",
+            "Kg7",
+            "Rd7",
+            "Qxd7"
           ],
-          "reasonCode": "mistake",
+          "reasonCode": "allows_check",
           "explain": [
-            "Qa4 allows Ne8+.",
+            "Qa4 allows Ne8+, checking your king.",
             "h5 was better."
           ],
           "mateSquares": []
@@ -21469,7 +21468,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h5",
                 "Ne8+",
@@ -21485,7 +21484,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h6",
                 "Rd7",
@@ -21501,7 +21500,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa4",
                 "Nxe6+",
@@ -21554,9 +21553,9 @@
             "Rd7",
             "Qxd7"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "check",
           "explain": [
-            "Ne8+ is best."
+            "Ne8+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -21679,7 +21678,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf8",
                 "Nc7+",
@@ -21695,7 +21694,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg8",
                 "Nc7+",
@@ -22287,9 +22286,9 @@
             "d5",
             "Nf3"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "exd4 is best."
+            "exd4 trades the pawns on d4."
           ],
           "mateSquares": []
         },
@@ -22559,7 +22558,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qa4",
                 "Nc6",
@@ -22575,7 +22574,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd2",
                 "d5",
@@ -22734,9 +22733,9 @@
             "Nc6",
             "cxd5"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "development",
           "explain": [
-            "Nc6 is a solid move."
+            "Nc6 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -22834,9 +22833,9 @@
             "Nge2",
             "Bg7"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "development",
           "explain": [
-            "Nc3 is an excellent move."
+            "Nc3 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -22898,7 +22897,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a6",
                 "g3",
@@ -22945,9 +22944,9 @@
             "d5",
             "exd5"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "development",
           "explain": [
-            "Nf6 is best."
+            "Nf6 develops the knight to an active square."
           ],
           "mateSquares": []
         },
@@ -23059,7 +23058,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "b3 is slightly inaccurate.",
-            "e4 keeps the edge."
+            "The pawn on e3 is stronger on e4: it takes space and opens lines."
           ],
           "mateSquares": []
         },
@@ -23159,9 +23158,9 @@
             "Bd6",
             "exd4"
           ],
-          "reasonCode": "only_move",
+          "reasonCode": "centre_control",
           "explain": [
-            "d5 is a great move: the only move that maintains the advantage."
+            "d5 takes control of the centre."
           ],
           "mateSquares": []
         },
@@ -23259,9 +23258,9 @@
             "Be2",
             "b5"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "development",
           "explain": [
-            "Bb2 is a solid move."
+            "Bb2 develops the bishop to an active square."
           ],
           "mateSquares": []
         },
@@ -23303,7 +23302,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "a6",
                 "Nf3",
@@ -23365,7 +23364,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Qa5 is slightly inaccurate.",
-            "d4 keeps the edge."
+            "The pawn on d5 is stronger on d4: it takes space and opens lines."
           ],
           "mateSquares": []
         },
@@ -23411,7 +23410,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd2",
                 "d4"
@@ -23423,7 +23422,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qe2",
                 "Be6",
@@ -23468,17 +23467,17 @@
             "uci": "c8g4"
           },
           "pv": [
-            "Bb5",
-            "Bd6",
-            "Nf3",
-            "O-O",
-            "O-O",
-            "Rd8"
+            "Bg4",
+            "Qg3",
+            "d4",
+            "Ne2",
+            "Bxe2",
+            "exd4"
           ],
           "reasonCode": "blunder",
           "explain": [
             "Qf3 is a blunder.",
-            "Bb5 was better."
+            "Bb5 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -23540,7 +23539,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a6",
                 "a3",
@@ -23597,17 +23596,17 @@
             "uci": "f1b5"
           },
           "pv": [
-            "Bg4",
-            "Qg3",
-            "d4",
-            "Ne2",
-            "Bxe2",
-            "exd4"
+            "Bb5",
+            "Bd6",
+            "Qd1",
+            "O-O-O",
+            "Bxc6",
+            "d4"
           ],
           "reasonCode": "mistake",
           "explain": [
             "Be6 is a mistake.",
-            "Bg4 was better."
+            "Bg4 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -23669,7 +23668,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "a3",
                 "Bd6",
@@ -23726,17 +23725,13 @@
             "uci": "e6g4"
           },
           "pv": [
-            "Bb5",
-            "Bd6",
-            "Qd1",
-            "O-O-O",
-            "Bxc6",
-            "d4"
+            "Bg4",
+            "Qf4"
           ],
           "reasonCode": "mistake",
           "explain": [
             "O-O-O is a mistake.",
-            "Bb5 was better."
+            "Bb5 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -23766,7 +23761,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Qf4"
@@ -23902,7 +23897,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 12,
-              "why": "",
+              "why": null,
               "pv": [
                 "h3",
                 "Ba3",
@@ -24118,7 +24113,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nb1",
                 "Bxb2+",
@@ -24180,7 +24175,7 @@
           "reasonCode": "missed_tactic",
           "explain": [
             "cxd5 misses a tactical opportunity.",
-            "Nxd5 wins material."
+            "Nxd5 wins material on d5."
           ],
           "mateSquares": []
         },
@@ -24226,7 +24221,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 12,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "dxc6",
@@ -24406,9 +24401,9 @@
             "Bc4",
             "Bg4"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "Bxa3 is best."
+            "Bxa3 trades the bishops on a3."
           ],
           "mateSquares": []
         },
@@ -24470,7 +24465,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Bb2",
@@ -24560,7 +24555,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb1",
                 "Nb4",
@@ -24576,7 +24571,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kd2",
                 "Bxd5",
@@ -24644,7 +24639,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 11,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nb4",
                 "Bb5+",
@@ -24676,7 +24671,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 11,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Rd3",
@@ -24718,9 +24713,9 @@
             "Bg4",
             "Qxg4"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "check",
           "explain": [
-            "Qb4+ is an excellent move."
+            "Qb4+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -24750,7 +24745,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ka1",
                 "Nxd5",
@@ -24766,7 +24761,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kc1",
                 "Qa3+",
@@ -24850,7 +24845,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bg4",
                 "Qf4",
@@ -25035,9 +25030,9 @@
             "Qh5",
             "Qe1+"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Rxd5 is best."
+            "Rxd5 captures on d5."
           ],
           "mateSquares": []
         },
@@ -25099,7 +25094,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qc3",
                 "Bd3",
@@ -25152,9 +25147,9 @@
             "Qe1+",
             "Kb2"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture",
           "explain": [
-            "Nxd5 is best."
+            "Nxd5 captures on d5."
           ],
           "mateSquares": []
         },
@@ -25388,7 +25383,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "O-O is slightly inaccurate.",
-            "Qa3+ keeps the edge."
+            "Qa3+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -25434,7 +25429,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qb5",
                 "Qc3",
@@ -25450,7 +25445,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qd2",
                 "Qa3+",
@@ -25498,9 +25493,9 @@
             "Qd6",
             "Qxf2"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "development",
           "explain": [
-            "Bd3 is best."
+            "Bd3 develops the bishop to an active square."
           ],
           "mateSquares": []
         },
@@ -25652,7 +25647,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb2",
                 "g6",
@@ -25713,7 +25708,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nb4",
                 "Bxh7+",
@@ -25729,7 +25724,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g6",
                 "Qc5",
@@ -25841,7 +25836,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qf3",
                 "Qxf3",
@@ -25907,7 +25902,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "h4 is slightly inaccurate.",
-            "Nf3 keeps the edge."
+            "Nf3 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -26065,7 +26060,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Qg5",
                 "Qd4+",
@@ -26149,7 +26144,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Nb4",
                 "Qd6",
@@ -26277,7 +26272,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb1",
                 "Qxd5",
@@ -26293,7 +26288,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kc1",
                 "Qxd5",
@@ -26351,9 +26346,9 @@
             "Nh3",
             "Rac8"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "Qxd4 is best."
+            "Qxd4 trades the queens on d4."
           ],
           "mateSquares": []
         },
@@ -26462,9 +26457,9 @@
             "Rac8",
             "Nf2"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "Nxd4 is best."
+            "Nxd4 captures the undefended queen on d4."
           ],
           "mateSquares": []
         },
@@ -26494,7 +26489,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "h6",
                 "g6",
@@ -26526,7 +26521,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rh4",
                 "Rfd8",
@@ -26606,7 +26601,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g6",
                 "Nh3",
@@ -26638,7 +26633,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "g5",
                 "Nh3",
@@ -26722,7 +26717,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rh4",
                 "Rad8",
@@ -26737,7 +26732,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 12,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kc1",
                 "Kh8",
@@ -26787,7 +26782,7 @@
           "reasonCode": "inaccuracy",
           "explain": [
             "Nf3 is slightly inaccurate.",
-            "Nh3 keeps the edge."
+            "Nh3 develops the piece to an active square."
           ],
           "mateSquares": []
         },
@@ -26896,9 +26891,9 @@
             "Rfd8",
             "Rf1"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "trade",
           "explain": [
-            "Nxf3 is best."
+            "Nxf3 trades the knights on f3."
           ],
           "mateSquares": []
         },
@@ -26944,7 +26939,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Bc4",
                 "Ne5",
@@ -26960,7 +26955,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "g4",
                 "Ne5",
@@ -27000,9 +26995,9 @@
             "Ra4",
             "Rc5"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "gxf3 is best."
+            "gxf3 captures the undefended knight on f3."
           ],
           "mateSquares": []
         },
@@ -27160,7 +27155,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ka3",
                 "Rfd8",
@@ -27176,7 +27171,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb3",
                 "Rfd8",
@@ -27323,9 +27318,9 @@
             "Rb8",
             "f5"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "semi_open_file",
           "explain": [
-            "Rab8 is an excellent move."
+            "Rab8 positions the rook on the semi-open b-file."
           ],
           "mateSquares": []
         },
@@ -27355,7 +27350,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Ka3",
                 "b5",
@@ -27371,7 +27366,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kb3",
                 "b5",
@@ -27455,7 +27450,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "b5",
                 "Rh4",
@@ -27571,7 +27566,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kc3",
                 "Rfd8",
@@ -27587,7 +27582,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rh4",
                 "Rfd8",
@@ -27699,7 +27694,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a4",
                 "gxh7+",
@@ -27735,9 +27730,9 @@
             "f5",
             "Rxb5"
           ],
-          "reasonCode": "solid_move",
+          "reasonCode": "trade",
           "explain": [
-            "fxg6 is a solid move."
+            "fxg6 trades the pawns on g6."
           ],
           "mateSquares": []
         },
@@ -27797,7 +27792,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Be4",
                 "Kf7",
@@ -27909,7 +27904,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rb6",
                 "Bd3",
@@ -27945,9 +27940,9 @@
             "Rbd8",
             "Rh6"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "capture_undefended",
           "explain": [
-            "hxg6 is best."
+            "hxg6 captures the undefended bishop on g6."
           ],
           "mateSquares": []
         },
@@ -27993,7 +27988,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rh3",
                 "Rb7",
@@ -28007,7 +28002,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "a3",
                 "Kh8",
@@ -28049,9 +28044,9 @@
             "Ra3",
             "b4"
           ],
-          "reasonCode": "best_move",
+          "reasonCode": "check",
           "explain": [
-            "h7+ is best."
+            "h7+ gives check, forcing the king to move."
           ],
           "mateSquares": []
         },
@@ -28081,7 +28076,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kh8",
                 "Rh3",
@@ -28097,7 +28092,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kg7",
                 "Rh3",
@@ -28113,7 +28108,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 13,
-              "why": "",
+              "why": null,
               "pv": [
                 "Kf7",
                 "c4",
@@ -28181,7 +28176,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rh3",
                 "Rf5",
@@ -28213,7 +28208,7 @@
               "mate": null,
               "mateIn": null,
               "depth": 14,
-              "why": "",
+              "why": null,
               "pv": [
                 "Rh6",
                 "Rf6",
@@ -28261,9 +28256,9 @@
             "a4",
             "Rf4"
           ],
-          "reasonCode": "excellent_move",
+          "reasonCode": "semi_open_file",
           "explain": [
-            "Rh6 is an excellent move."
+            "Rh6 positions the rook on the semi-open h-file."
           ],
           "mateSquares": []
         },

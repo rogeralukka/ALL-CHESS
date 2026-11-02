@@ -177,9 +177,16 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     return game.moves[currentMoveIndex - 1]?.fen || START_FEN;
   }, [game.moves, currentMoveIndex]);
 
-  // Refutation moves for explain
+  // The line Explain steps through. The review data (annotations.pv) says where it starts: the opponent's
+  // refutation from the position AFTER a mistake or blunder, the best line from the position BEFORE the move
+  // for every other class. Older data only has an engine line, which was always replayed from after the move.
+  const annotatedLine = currentMove?.annotations?.pv;
+  const hasAnnotatedLine = !!annotatedLine && annotatedLine.length > 0;
+  const lineFromBefore = hasAnnotatedLine && currentMove?.classification !== 'mistake' && currentMove?.classification !== 'blunder';
   const refutationMoves = useMemo(() => {
-    return currentMove?.variation || currentMove?.eval?.lines?.[0]?.pv || currentMove?.annotations?.pv || [];
+    const ann = currentMove?.annotations?.pv;
+    if (ann && ann.length > 0) return ann;
+    return currentMove?.variation || currentMove?.eval?.lines?.[0]?.pv || [];
   }, [currentMove]);
 
   // What Explain can show: the backend's proven sentences and/or the engine line to step through. Book moves already show their opening text.
@@ -330,7 +337,8 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
       bdgs = [];
       lastM = null;
       try {
-        const c = new Chess(currentMove?.fen || START_FEN);
+        const startFen = lineFromBefore ? fenBeforeMove : currentMove?.fen || START_FEN;
+        const c = new Chess(startFen);
         for (let s = 0; s < variationStep; s++) {
           c.move(refutationMoves[s]);
         }
@@ -339,11 +347,11 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
         if (variationStep < refutationMoves.length) {
           const nextSq = getMoveSquares(fen, refutationMoves[variationStep]);
           if (nextSq) {
-            arrs = [{ from: nextSq.from, to: nextSq.to, color: 'red' }];
+            arrs = [{ from: nextSq.from, to: nextSq.to, color: lineFromBefore ? 'green' : 'red' }];
           }
         }
       } catch {
-        fen = currentMove?.fen || START_FEN;
+        fen = lineFromBefore ? fenBeforeMove : currentMove?.fen || START_FEN;
       }
     }
     // 3. RETRY MODE
@@ -416,6 +424,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
     retrySuccess,
     classification,
     showMove,
+    lineFromBefore,
   ]);
 
   // Compute Material Difference and Captured Pieces
@@ -423,7 +432,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   // --- COACH EXPRESSION & DIALOGUE ---
   let coachExpression: CoachExpression = getExpressionForEvent(classification);
-  let coachText = currentMove?.coachComment || currentMove?.eval?.why || 'Solid positional continuation.';
+  let coachText = currentMove?.coachComment || currentMove?.eval?.why || '';
   let bubbleClassification = classification;
   let bubbleMoveSan = currentMove?.san;
   let bubbleEvalText = formatEval(currentMove?.eval?.eval, currentMove?.eval?.mateIn);
@@ -509,7 +518,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
   const activeVariation = explaining || showingBest
     ? {
         parentMoveIndex: currentMoveIndex,
-        title: showingBest ? 'Best Line Variation' : 'Refutation Line',
+        title: showingBest || lineFromBefore ? 'Best Line Variation' : 'Refutation Line',
         moves: showingBest ? currentMove?.eval?.lines?.[0]?.pv || [targetBestMove] : refutationMoves,
       }
     : null;
@@ -1096,7 +1105,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                         {formatEval(line.eval)}
                       </span>
                     </div>
-                    <p className="text-xs text-theme-muted">{line.why}</p>
+                    {line.why && <p className="text-xs text-theme-muted">{line.why}</p>}
                   </div>
                 )) || (
                   <div className="text-theme-muted text-xs">Calculating lines...</div>
