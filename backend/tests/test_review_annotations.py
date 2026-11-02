@@ -100,25 +100,18 @@ def test_f3_blunder_annotations():
     )
 
     assert ann["tint"] == "blunder"
-    # Rule 1: bestMove emitted for blunder with arrow kind 'best'
     assert ann["bestMove"] is not None
     assert ann["bestMove"]["san"] == "Nf3"
     assert ann["bestMove"]["from"] == "g1"
     assert ann["bestMove"]["to"] == "f3"
-    assert any(
-        a["kind"] == "best" and a["from"] == "g1" and a["to"] == "f3"
-        for a in ann["arrows"]
-    )
-
-    # Rule 2: refutation emitted for blunder with arrow kind 'refutation'
     assert ann["refutation"] is not None
     assert ann["refutation"]["san"] == "Qh4+"
     assert ann["refutation"]["from"] == "d8"
     assert ann["refutation"]["to"] == "h4"
-    assert any(
-        a["kind"] == "refutation" and a["from"] == "d8" and a["to"] == "h4"
-        for a in ann["arrows"]
-    )
+    assert len(ann["arrows"]) == 1
+    assert ann["arrows"][0]["kind"] == "refutation"
+    assert ann["arrows"][0]["from"] == "d8"
+    assert ann["arrows"][0]["to"] == "h4" 
 
     # Commentary
     comment = generate_improved_commentary(
@@ -418,7 +411,8 @@ def test_forced_move_emits_only_tint():
         classification="best",
         num_legal_moves=1,
     )
-    assert ann["tint"] == "best"
+    assert ann["tint"] is None
+    assert ann["reasonCode"] == "forced"
     assert ann["arrows"] == []
     assert ann["squares"] == []
     assert ann["bestMove"] is None
@@ -563,4 +557,5 @@ def test_evaluations_endpoint_stores_annotations(auth_client):
     assert blunder_move["annotations"]["bestMove"]["san"] == "Qe7"
     assert blunder_move["annotations"]["refutation"] is not None
     assert blunder_move["annotations"]["refutation"]["san"] == "Qxf7#"
-    assert len(blunder_move["annotations"]["arrows"]) >= 2
+    assert len(blunder_move["annotations"]["arrows"]) == 1
+    assert blunder_move["annotations"]["arrows"][0]["kind"] == "refutation"

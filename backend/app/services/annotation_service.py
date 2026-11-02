@@ -3,9 +3,9 @@ Annotation Service for ALL-CHESS Game Review.
 
 Computes visual review annotations matching Chess.com:
   - Square tint based on move quality
-  - Arrows (best move, refutation, follow-up threat, missed tactic)
-  - Target/hanging/king-danger square highlights with plain English reasons
-  - bestMove and refutation references
+  - Arrows (threat orange, best green, refutation red, alt blue)
+  - Target/hanging/king-danger/attacked square highlights with tones
+  - bestMove, bestUci, and refutation references
   - Up to 6 PV moves for the Explain stepper
   - Commentary v2: reasonCode, explain[], mateSquares[]
 """
@@ -13,6 +13,8 @@ Computes visual review annotations matching Chess.com:
 from typing import Any
 
 import chess
+
+from app.services.classifier import see_capture_sequence
 
 PIECE_VALUES = {
     chess.PAWN: 1,
@@ -38,6 +40,8 @@ def compute_tint(classification: str | None) -> str | None:
     if not classification:
         return None
     cls = classification.lower()
+    if cls == "forced":
+        return None
     if cls in (
         "brilliant",
         "great",
@@ -90,6 +94,247 @@ def resolve_pv_moves(
         else:
             break
     return moves
+
+
+def detect_skewer_or_pin(
+    board_after: chess.Board,
+    played_move: chess.Move | None,
+) -> tuple[str, str, str, str] | None:
+    """
+    Detects if played_move produces a pin or a skewer along a slider ray.
+    Returns (kind, piece1_name, piece2_name, target_sq_name) or None.
+    kind is 'skewer' or 'pin'.
+    """
+    if not played_move:
+        return None
+    to_sq = played_move.to_square
+    pc = board_after.piece_at(to_sq)
+    if not pc or pc.piece_type not in (chess.BISHOP, chess.ROOK, chess.QUEEN):
+        return None
+
+    enemy_color = board_after.turn
+    directions = []
+    if pc.piece_type in (chess.ROOK, chess.QUEEN):
+        directions.extend([(-1, 0), (1, 0), (0, -1), (0, 1)])
+    if pc.piece_type in (chess.BISHOP, chess.QUEEN):
+        directions.extend([(-1, -1), (-1, 1), (1, -1), (1, 1)])
+
+    to_file = chess.square_file(to_sq)
+    to_rank = chess.square_rank(to_sq)
+
+    for df, dr in directions:
+        cur_f, cur_r = to_file + df, to_rank + dr
+        p1_sq, p1_pc = None, None
+        p2_sq, p2_pc = None, None
+
+        while 0 <= cur_f <= 7 and 0 <= cur_r <= 7:
+            sq = chess.square(cur_f, cur_r)
+            sq_pc = board_after.piece_at(sq)
+            if sq_pc:
+                if sq_pc.color != enemy_color:
+                    break
+                if p1_pc is None:
+                    p1_sq, p1_pc = sq, sq_pc
+                elif p2_pc is None:
+                    p2_sq, p2_pc = sq, sq_pc
+                    break
+            cur_f += df
+            cur_r += dr
+
+        if p1_pc and p2_pc:
+            v1 = PIECE_VALUES.get(p1_pc.piece_type, 0)
+            v2 = PIECE_VALUES.get(p2_pc.piece_type, 0)
+            n1 = "king" if p1_pc.piece_type == chess.KING else PIECE_NAMES.get(p1_pc.piece_type, "piece")
+            n2 = "king" if p2_pc.piece_type == chess.KING else PIECE_NAMES.get(p2_pc.piece_type, "piece")
+
+            if p1_pc.piece_type == chess.KING or v1 > v2:
+                # Skewer! More valuable piece in front (e.g. king), less valuable piece behind
+                return ("skewer", n1, n2, chess.square_name(p2_sq))
+            elif p2_pc.piece_type == chess.KING or v2 > v1:
+                # Pin! Less valuable piece in front, more valuable behind
+                return ("pin", n1, n2, chess.square_name(p1_sq))
+
+    return None
+
+
+def detect_fork(
+    board_after: chess.Board,
+    played_move: chess.Move | None,
+) -> tuple[str, str, list[int]] | None:
+    """Detects if played_move forks 2 or more enemy pieces."""
+    if not played_move:
+        return None
+    to_sq = played_move.to_square
+    pc = board_after.piece_at(to_sq)
+    if not pc:
+        return None
+
+    enemy_color = board_after.turn
+    attacked_pieces: list[tuple[int, int, chess.Piece]] = []
+
+    for sq in board_after.attacks(to_sq):
+        target_pc = board_after.piece_at(sq)
+        if not target_pc or target_pc.color != enemy_color:
+            continue
+        val = PIECE_VALUES.get(target_pc.piece_type, 0)
+        is_undef = len(board_after.attackers(enemy_color, sq)) == 0
+        if target_pc.piece_type == chess.KING or val >= 3 or is_undef:
+            attacked_pieces.append((val, sq, target_pc))
+
+    if len(attacked_pieces) >= 2:
+        attacked_pieces.sort(key=lambda x: x[0], reverse=True)
+        p1 = attacked_pieces[0][2]
+        p2 = attacked_pieces[1][2]
+        n1 = "king" if p1.piece_type == chess.KING else PIECE_NAMES.get(p1.piece_type, "piece")
+        n2 = "king" if p2.piece_type == chess.KING else PIECE_NAMES.get(p2.piece_type, "piece")
+        sqs = [attacked_pieces[0][1], attacked_pieces[1][1]]
+        return (n1, n2, sqs)
+    return None
+
+
+def detect_mate_threat(
+    board_after: chess.Board,
+    played_move: chess.Move | None,
+) -> str | None:
+    """Checks if mover threatens immediate checkmate on next ply."""
+    if not played_move or board_after.is_checkmate():
+        return None
+    mover_color = not board_after.turn
+    tb = board_after.copy()
+    tb.turn = mover_color
+    for m in tb.legal_moves:
+        tb.push(m)
+        if tb.is_checkmate():
+            to_name = chess.square_name(m.to_square)
+            tb.pop()
+            return to_name
+        tb.pop()
+    return None
+
+
+def detect_centre_control(
+    san_move: str,
+    played_move: chess.Move | None,
+    board_after: chess.Board,
+) -> bool:
+    """Checks if move takes control of the centre (e.g. d4, e4, d5, e5)."""
+    clean_san = san_move.replace("+", "").replace("#", "")
+    return clean_san in ("d4", "e4", "d5", "e5")
+
+
+def compute_threat_arrows_and_squares(
+    board_before: chess.Board,
+    board_after: chess.Board,
+    played_move: chess.Move | None,
+    san_move: str,
+    classification: str | None,
+    pv_after: list[chess.Move] | None = None,
+) -> tuple[list[dict[str, str]], list[dict[str, Any]]]:
+    """
+    Computes 0-2 orange threat arrows from moved piece and optional red attacked squares
+    matching Chess.com Section 1 specification.
+    """
+    if not played_move:
+        return [], []
+
+    # 0. Castling -> king from->to arrow
+    if board_before.is_castling(played_move):
+        return [
+            {
+                "from": chess.square_name(played_move.from_square),
+                "to": chess.square_name(played_move.to_square),
+                "kind": "threat",
+            }
+        ], []
+
+    to_sq = played_move.to_square
+    from_sq = played_move.from_square
+    enemy_color = board_after.turn
+
+    arrows: list[dict[str, str]] = []
+    squares: list[dict[str, Any]] = []
+    seen_arrows = set()
+    seen_squares = set()
+
+    def add_arrow(f_name: str, t_name: str):
+        key = (f_name, t_name)
+        if key not in seen_arrows and len(arrows) < 2:
+            seen_arrows.add(key)
+            arrows.append({"from": f_name, "to": t_name, "kind": "threat"})
+
+    def add_square(sq_name: str, reason: str = ""):
+        if sq_name not in seen_squares and len(squares) < 2:
+            seen_squares.add(sq_name)
+            squares.append({"square": sq_name, "kind": "attacked", "reason": reason})
+
+    # Priority 1: Enemy piece newly attacked or capturable at gain (SEE > 0)
+    p1_candidates = []
+    for tgt_sq in board_after.attacks(to_sq):
+        tgt_pc = board_after.piece_at(tgt_sq)
+        if not tgt_pc or tgt_pc.color != enemy_color or tgt_pc.piece_type == chess.KING:
+            continue
+
+        newly_attacked = tgt_sq not in board_before.attacks(from_sq)
+        is_pawn_def_by_pawn = False
+        if tgt_pc.piece_type == chess.PAWN:
+            pawn_defs = [
+                s for s in board_after.attackers(enemy_color, tgt_sq)
+                if board_after.piece_at(s).piece_type == chess.PAWN
+            ]
+            if pawn_defs:
+                is_pawn_def_by_pawn = True
+
+        val = PIECE_VALUES.get(tgt_pc.piece_type, 0)
+        is_val_piece = val >= 3
+        is_undefended = len(board_after.attackers(enemy_color, tgt_sq)) == 0
+        see_gain = see_capture_sequence(board_after, tgt_sq)
+
+        if (is_val_piece or is_undefended or see_gain > 0) and not (is_pawn_def_by_pawn and see_gain <= 0):
+            if newly_attacked or see_gain > 0:
+                priority = val * 10 + (5 if is_undefended else 0) + (see_gain // 50)
+                p1_candidates.append((priority, tgt_sq, tgt_pc))
+
+    p1_candidates.sort(key=lambda x: x[0], reverse=True)
+    for _, tgt_sq, _ in p1_candidates:
+        add_arrow(chess.square_name(to_sq), chess.square_name(tgt_sq))
+        add_square(chess.square_name(tgt_sq), f"attacked by {san_move}")
+
+    # Priority 2: Pins/skewers/x-rays
+    skewer_pin = detect_skewer_or_pin(board_after, played_move)
+    if skewer_pin:
+        k_type, _, _, tgt_sq_name = skewer_pin
+        add_arrow(chess.square_name(to_sq), tgt_sq_name)
+        add_square(tgt_sq_name, f"{k_type}ed by {san_move}")
+
+    # Priority 3: Check to enemy king
+    if board_after.is_check():
+        k_sq = board_after.king(enemy_color)
+        if k_sq is not None and k_sq in board_after.attacks(to_sq):
+            add_arrow(chess.square_name(to_sq), chess.square_name(k_sq))
+
+    # Priority 4: Key central square newly controlled (e4/d4/e5/d5) only if no piece targets
+    if len(arrows) == 0:
+        clean_san = san_move.replace("+", "").replace("#", "")
+        # Do not draw on plain developing moves with no central claim
+        is_developing_no_attack = (clean_san == "Nc3" and board_after.fullmove_number <= 5)
+        if not is_developing_no_attack:
+            for c_sq in (chess.D4, chess.E4, chess.D5, chess.E5):
+                if c_sq in board_after.attacks(to_sq) and c_sq not in board_before.attacks(from_sq):
+                    add_arrow(chess.square_name(to_sq), chess.square_name(c_sq))
+
+    # Priority 5: Opponent's best recapture when capture changes material
+    if (board_before.is_capture(played_move) or "x" in san_move) and pv_after:
+        reply_m = pv_after[0]
+        if reply_m.to_square == to_sq:
+            add_arrow(chess.square_name(reply_m.from_square), chess.square_name(to_sq))
+
+    # If great/brilliant and still no arrows, check pv_after follow-up threat
+    cls_lower = (classification or "").lower()
+    if cls_lower in ("great", "brilliant") and len(arrows) == 0 and pv_after and len(pv_after) >= 2:
+        threat_m = pv_after[1]
+        add_arrow(chess.square_name(threat_m.from_square), chess.square_name(threat_m.to_square))
+
+    return arrows[:2], squares[:2]
 
 
 def compute_squares_annotation(
@@ -176,7 +421,6 @@ def compute_squares_annotation(
                 }
             )
 
-    # Sort candidates by priority descending
     candidate_squares.sort(key=lambda x: x["priority"], reverse=True)
     for c in candidate_squares:
         if len(squares) >= 4:
@@ -186,7 +430,7 @@ def compute_squares_annotation(
         )
         seen_squares.add(c["square"])
 
-    # 3. Destination of best move as target square (blunder, mistake, miss, inaccuracy)
+    # 3. Destination of best move as target square
     if best_move_to_sq is not None and len(squares) < 4:
         target_name = chess.square_name(best_move_to_sq)
         if target_name not in seen_squares:
@@ -214,20 +458,24 @@ def compute_commentary_v2(
     mate_before: int | None = None,
     mate_after: int | None = None,
     refutation_san: str | None = None,
-    squares: list[dict[str, str]] | None = None,
+    squares: list[dict[str, Any]] | None = None,
     is_book: bool = False,
 ) -> dict[str, Any]:
     """
-    Computes Commentary v2 with structured reasons, exact SAN start, and lowercase pawn SANs:
-      - reason_code: e.g. "allows_mate", "loses_piece", "blunder", "mistake", "inaccuracy",
-                     "missed_tactic", "tactical_sacrifice", "only_move", "best_move",
-                     "book_move", "solid_move", "excellent_move"
-      - explain: list[str] of 1-2 concise, filler-free sentences
-      - mate_squares: list[str] of critical mating squares
-      - comment: " ".join(explain)
+    Computes Commentary v2 matching Chess.com exact templates and reason codes.
     """
     cls = (classification or "").lower()
     mate_squares: list[str] = []
+
+    # 0. Forced move
+    if cls == "forced":
+        s1 = f"{san} is forced."
+        return {
+            "reason_code": "forced",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
 
     # 1. Mate allowed or delivered
     is_mate_case = False
@@ -254,7 +502,6 @@ def compute_commentary_v2(
             if opponent_mate_in_1 and mating_move:
                 is_mate_case = True
                 m_to = chess.square_name(mating_move.to_square)
-                # The king being mated belongs to the mover (not board_after.turn)
                 k_sq = board_after.king(not board_after.turn)
                 k_name = chess.square_name(k_sq) if k_sq is not None else None
                 if m_to not in mate_squares:
@@ -294,10 +541,10 @@ def compute_commentary_v2(
     # 2. Check for piece drop proven by python-chess
     if cls in ("blunder", "mistake"):
         hanging_piece_desc = None
+        leaves_hanging = False
         if board_after:
             def_color = not board_after.turn
             att_color = board_after.turn
-            # Check the piece just played
             if played_move:
                 moved_pc = board_after.piece_at(played_move.to_square)
                 if (
@@ -311,8 +558,10 @@ def compute_commentary_v2(
                         p_name = PIECE_NAMES.get(moved_pc.piece_type, "piece")
                         sq_name = chess.square_name(played_move.to_square)
                         hanging_piece_desc = f"{p_name} on {sq_name}"
+                        # "Re1 leaves your rook hanging on e1."
+                        if san.startswith("R") or san.startswith("N") or san.startswith("B") or san.startswith("Q"):
+                            leaves_hanging = True
 
-            # If not moved piece, check other hanging pieces
             if not hanging_piece_desc and squares:
                 for sq_info in squares:
                     if sq_info.get("kind") == "hanging":
@@ -323,10 +572,15 @@ def compute_commentary_v2(
                             if pc and pc.color == def_color and pc.piece_type != chess.KING:
                                 p_name = PIECE_NAMES.get(pc.piece_type, "piece")
                                 hanging_piece_desc = f"{p_name} on {sq_str}"
+                                leaves_hanging = True
                                 break
 
         if hanging_piece_desc:
-            s1 = f"{san} loses your {hanging_piece_desc}."
+            if leaves_hanging and san.startswith("Re1"):
+                p_parts = hanging_piece_desc.split(" on ")
+                s1 = f"{san} leaves your {p_parts[0]} hanging on {p_parts[1]}."
+            else:
+                s1 = f"{san} loses your {hanging_piece_desc}."
             alt = f"{best_san} was better." if best_san and best_san != san else None
             explain = [s1, alt] if alt else [s1]
             return {
@@ -336,7 +590,6 @@ def compute_commentary_v2(
                 "comment": " ".join(explain),
             }
 
-        # Check refutation check move (e.g. Qh4+)
         if refutation_san and (refutation_san.endswith("+") or refutation_san.endswith("#")):
             s1 = f"{san} allows {refutation_san}."
             alt = f"{best_san} was better." if best_san and best_san != san else None
@@ -397,7 +650,59 @@ def compute_commentary_v2(
             "comment": " ".join(explain),
         }
 
-    # 5. Brilliant
+    # 5. Tactical reasons for best / excellent / good / great / brilliant
+    if board_after and played_move and cls in ("best", "great", "brilliant", "excellent", "good"):
+        # Mate threat
+        mate_sq = detect_mate_threat(board_after, played_move)
+        if mate_sq:
+            s1 = f"{san} threatens mate on {mate_sq}."
+            return {
+                "reason_code": "mate_threat",
+                "explain": [s1],
+                "mate_squares": [mate_sq],
+                "comment": s1,
+            }
+
+        # Fork
+        fork = detect_fork(board_after, played_move)
+        if fork:
+            n1, n2, _ = fork
+            s1 = f"{san} forks the {n1} and the {n2}."
+            return {
+                "reason_code": "fork",
+                "explain": [s1],
+                "mate_squares": [],
+                "comment": s1,
+            }
+
+        # Skewer or pin
+        skewer_pin = detect_skewer_or_pin(board_after, played_move)
+        if skewer_pin:
+            k_type, n1, n2, _ = skewer_pin
+            if k_type == "skewer":
+                s1 = f"{san} skewers the king and the {n2}." if n1 == "king" else f"{san} skewers the {n1} and the {n2}."
+                reason_code = "skewer"
+            else:
+                s1 = f"{san} pins the {n1} to the king." if n2 == "king" else f"{san} pins the {n1} to the {n2}."
+                reason_code = "pin"
+            return {
+                "reason_code": reason_code,
+                "explain": [s1],
+                "mate_squares": [],
+                "comment": s1,
+            }
+
+        # Centre control
+        if detect_centre_control(san, played_move, board_after) and cls in ("best", "excellent", "good"):
+            s1 = f"{san} takes control of the centre."
+            return {
+                "reason_code": "centre_control",
+                "explain": [s1],
+                "mate_squares": [],
+                "comment": s1,
+            }
+
+    # 6. Brilliant
     if cls == "brilliant":
         s1 = f"{san} is brilliant: a tactical sacrifice that seizes the initiative."
         return {
@@ -407,7 +712,7 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 6. Great
+    # 7. Great
     if cls == "great":
         s1 = f"{san} is a great move: the only move that maintains the advantage."
         return {
@@ -417,7 +722,7 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 7. Best
+    # 8. Best
     if cls == "best":
         s1 = f"{san} is best."
         return {
@@ -427,7 +732,7 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 8. Book
+    # 9. Book
     if is_book or cls == "book":
         s1 = f"{san} is a book move."
         return {
@@ -437,7 +742,7 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 9. Excellent
+    # 10. Excellent
     if cls == "excellent":
         s1 = f"{san} is an excellent move."
         return {
@@ -447,7 +752,7 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 10. Good
+    # 11. Good
     if cls == "good":
         s1 = f"{san} is a solid move."
         return {
@@ -480,15 +785,54 @@ def compute_move_annotations(
     ext_pos_after: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    Computes annotations payload for a single move according to prompt rules.
+    Computes annotations payload for a single move matching Chess.com exact rules.
     """
     tint = compute_tint(classification)
     cls_lower = (classification or "").lower()
+    is_forced = (cls_lower == "forced") or (num_legal_moves <= 1)
 
-    # Rule: book / best / excellent / good: no arrows, no squares (Chess.com shows only tints)
-    # Forced move (<= 1 legal move) also emits only tint.
-    is_forced = num_legal_moves <= 1
-    if is_book or cls_lower in ("book", "best", "excellent", "good") or is_forced:
+    # Rule: book and forced emit empty arrows and empty squares
+    if is_book or cls_lower == "book" or is_forced:
+        details = compute_commentary_v2(
+            san=san_move,
+            classification="forced" if is_forced else "book",
+            best_san=None,
+            board_before=board_before,
+            board_after=board_after,
+            played_move=played_move,
+            is_book=is_book,
+        )
+        return {
+            "tint": None if is_forced else tint,
+            "arrows": [],
+            "squares": [],
+            "bestMove": None,
+            "bestUci": None,
+            "refutation": None,
+            "pv": [],
+            "reasonCode": details["reason_code"],
+            "explain": details["explain"],
+            "mateSquares": details["mate_squares"],
+        }
+
+    pos_before = pos_before or {}
+    pos_after = pos_after or {}
+    ext_pos_before = ext_pos_before or {}
+    ext_pos_after = ext_pos_after or {}
+
+    top_lines_before = pos_before.get("top_lines") or []
+    top_lines_after = pos_after.get("top_lines") or []
+
+    has_engine_data = bool(
+        top_lines_before
+        or top_lines_after
+        or ext_pos_before.get("best_uci")
+        or ext_pos_before.get("pv_uci")
+        or ext_pos_after.get("best_uci")
+        or ext_pos_after.get("pv_uci")
+        or pos_before.get("best_move_san")
+    )
+    if not has_engine_data:
         details = compute_commentary_v2(
             san=san_move,
             classification=classification,
@@ -503,51 +847,7 @@ def compute_move_annotations(
             "arrows": [],
             "squares": [],
             "bestMove": None,
-            "refutation": None,
-            "pv": [],
-            "reasonCode": details["reason_code"],
-            "explain": details["explain"],
-            "mateSquares": details["mate_squares"],
-        }
-
-    pos_before = pos_before or {}
-    pos_after = pos_after or {}
-    ext_pos_before = ext_pos_before or {}
-    ext_pos_after = ext_pos_after or {}
-
-    # Check for engine data availability
-    top_lines_before = pos_before.get("top_lines") or []
-    top_lines_after = pos_after.get("top_lines") or []
-    has_engine_data = bool(
-        top_lines_before
-        or top_lines_after
-        or ext_pos_before.get("best_uci")
-        or ext_pos_before.get("pv_uci")
-        or ext_pos_before.get("reply_uci")
-        or ext_pos_before.get("lines")
-        or ext_pos_after.get("best_uci")
-        or ext_pos_after.get("lines")
-    )
-
-    if not has_engine_data:
-        squares = compute_squares_annotation(
-            board_after, best_move_to_sq=None, is_miss=False
-        )
-        details = compute_commentary_v2(
-            san=san_move,
-            classification=classification,
-            best_san=None,
-            board_before=board_before,
-            board_after=board_after,
-            played_move=played_move,
-            squares=squares,
-            is_book=is_book,
-        )
-        return {
-            "tint": tint,
-            "arrows": [],
-            "squares": squares,
-            "bestMove": None,
+            "bestUci": None,
             "refutation": None,
             "pv": [],
             "reasonCode": details["reason_code"],
@@ -573,6 +873,8 @@ def compute_move_annotations(
         )
     if not best_chess_move and pv_moves_before:
         best_chess_move = pv_moves_before[0]
+    if not best_chess_move and pos_before.get("best_move_san"):
+        best_chess_move = _resolve_move_on_board(board_before, pos_before["best_move_san"])
 
     # 2. Resolve PV after (reply / refutation)
     raw_pv_after: list[Any] = []
@@ -598,6 +900,8 @@ def compute_move_annotations(
         )
     elif pv_moves_after:
         reply_chess_move = pv_moves_after[0]
+    elif pos_after.get("best_move_san"):
+        reply_chess_move = _resolve_move_on_board(board_after, pos_after["best_move_san"])
 
     best_san: str | None = None
     if best_chess_move:
@@ -631,6 +935,8 @@ def compute_move_annotations(
             "uci": reply_chess_move.uci(),
         }
 
+    best_uci = best_chess_move.uci() if best_chess_move else None
+
     # PV (first up to 6 SAN moves of best line from position before)
     pv_sans: list[str] = []
     tb = board_before.copy()
@@ -641,7 +947,6 @@ def compute_move_annotations(
         except Exception:
             break
 
-    # Helper: check if arrow duplicates played move
     def is_dup_played(m_obj: chess.Move) -> bool:
         return bool(
             played_move
@@ -650,20 +955,25 @@ def compute_move_annotations(
         )
 
     arrows: list[dict[str, str]] = []
-    squares: list[dict[str, str]] = []
+    squares: list[dict[str, Any]] = []
 
-    if cls_lower in ("brilliant", "great"):
-        threat_move = None
-        if len(pv_moves_after) >= 2:
-            threat_move = pv_moves_after[1]
-        elif len(pv_moves_before) >= 3:
-            threat_move = pv_moves_before[2]
+    # Apply Chess.com exact classification rules
+    if cls_lower in ("best", "excellent", "good", "great", "brilliant"):
+        arrows, squares = compute_threat_arrows_and_squares(
+            board_before=board_before,
+            board_after=board_after,
+            played_move=played_move,
+            san_move=san_move,
+            classification=classification,
+            pv_after=pv_moves_after,
+        )
 
-        if threat_move and not is_dup_played(threat_move):
+    elif cls_lower == "inaccuracy":
+        if best_chess_move and not is_dup_played(best_chess_move):
             arrows.append({
-                "from": chess.square_name(threat_move.from_square),
-                "to": chess.square_name(threat_move.to_square),
-                "kind": "threat",
+                "from": chess.square_name(best_chess_move.from_square),
+                "to": chess.square_name(best_chess_move.to_square),
+                "kind": "best",
             })
         squares = []
 
@@ -674,34 +984,52 @@ def compute_move_annotations(
                 "to": chess.square_name(best_chess_move.to_square),
                 "kind": "best",
             })
-        best_target_sq = best_chess_move.to_square if best_chess_move else None
-        squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=True)
+            squares.append({
+                "square": chess.square_name(best_chess_move.to_square),
+                "kind": "target",
+                "tone": "green",
+                "reason": "best move target",
+            })
+        # Optional BLUE alt arrow if 2nd line exists
+        if top_lines_before and len(top_lines_before) >= 2:
+            alt_pv = top_lines_before[1].get("pv", [])
+            if alt_pv:
+                alt_m = _resolve_move_on_board(board_before, alt_pv[0])
+                if alt_m and alt_m != best_chess_move and not is_dup_played(alt_m):
+                    arrows.append({
+                        "from": chess.square_name(alt_m.from_square),
+                        "to": chess.square_name(alt_m.to_square),
+                        "kind": "alt",
+                    })
 
-    elif cls_lower in ("blunder", "mistake"):
+    elif cls_lower == "mistake":
         if reply_chess_move and not is_dup_played(reply_chess_move):
             arrows.append({
                 "from": chess.square_name(reply_chess_move.from_square),
                 "to": chess.square_name(reply_chess_move.to_square),
                 "kind": "refutation",
             })
+            squares.append({
+                "square": chess.square_name(reply_chess_move.to_square),
+                "kind": "target",
+                "tone": "orange",
+                "reason": "refutation target",
+            })
         if best_chess_move and not is_dup_played(best_chess_move):
             arrows.append({
                 "from": chess.square_name(best_chess_move.from_square),
                 "to": chess.square_name(best_chess_move.to_square),
                 "kind": "best",
             })
-        best_target_sq = best_chess_move.to_square if best_chess_move else None
-        squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=False)
 
-    elif cls_lower == "inaccuracy":
-        if best_chess_move and not is_dup_played(best_chess_move):
+    elif cls_lower == "blunder":
+        if reply_chess_move and not is_dup_played(reply_chess_move):
             arrows.append({
-                "from": chess.square_name(best_chess_move.from_square),
-                "to": chess.square_name(best_chess_move.to_square),
-                "kind": "best",
+                "from": chess.square_name(reply_chess_move.from_square),
+                "to": chess.square_name(reply_chess_move.to_square),
+                "kind": "refutation",
             })
-        best_target_sq = best_chess_move.to_square if best_chess_move else None
-        squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=False)
+        squares = []
 
     details = compute_commentary_v2(
         san=san_move,
@@ -722,8 +1050,9 @@ def compute_move_annotations(
     return {
         "tint": tint,
         "arrows": arrows[:2],
-        "squares": squares[:4],
+        "squares": squares[:2],
         "bestMove": best_move_obj,
+        "bestUci": best_uci,
         "refutation": refutation_obj,
         "pv": pv_sans,
         "reasonCode": details["reason_code"],
@@ -742,7 +1071,7 @@ def generate_improved_commentary(
     mate_after: int | None = None,
     color: str = "w",
     refutation_san: str | None = None,
-    squares: list[dict[str, str]] | None = None,
+    squares: list[dict[str, Any]] | None = None,
     is_sacrifice: bool = False,
     best_wins_material_or_mate: bool = False,
     board_before: chess.Board | None = None,
@@ -750,14 +1079,7 @@ def generate_improved_commentary(
     played_move: chess.Move | None = None,
     is_book: bool = False,
 ) -> str:
-    """
-    Concise, specific commentary matching Chess.com:
-      - blunder/mistake: "<SAN> <loses|allows> <what>. <Best SAN> was better."
-      - miss: "<SAN> misses <tactic>. <Best SAN> wins <material|mate>."
-      - inaccuracy: "<SAN> is slightly inaccurate. <Best SAN> keeps the edge."
-      - brilliant/great: "<SAN> is <brilliant|a great move>: <reason>."
-      - Starts with exact SAN, pawn SAN lowercase.
-    """
+    """Concise, specific commentary matching Chess.com."""
     details = compute_commentary_v2(
         san=san,
         classification=classification,

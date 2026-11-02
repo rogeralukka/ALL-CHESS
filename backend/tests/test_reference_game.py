@@ -39,7 +39,7 @@ def test_reference_game_single_legal_move_not_great():
         is_recapture=False,
         num_legal_moves=1
     )
-    assert cls == 'best'
+    assert cls == 'forced'
     assert cls != 'great'
 
 

@@ -150,6 +150,8 @@ def generate_template_comment(
         comment = f"{san} is a solid and natural move, keeping your position steady.{best_desc}"
     elif classification == "book":
         comment = f"{san} follows established opening theory."
+    elif classification == "forced":
+        comment = f"{san} is forced."
     elif classification == "inaccuracy":
         alt = f" Better was {best_move}." if best_move and best_move != san else ""
         comment = f"{san} is slightly inaccurate.{alt}"
