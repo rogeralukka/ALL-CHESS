@@ -22,3 +22,9 @@ class SessionResponse(CamelModel):
     avatar_url: Optional[str] = None
     country_code: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class LinkedAccountsUpdate(CamelModel):
+    """Omit a field to leave it alone; send null or "" to unlink it."""
+    chesscom_username: Optional[str] = None
+    lichess_username: Optional[str] = None

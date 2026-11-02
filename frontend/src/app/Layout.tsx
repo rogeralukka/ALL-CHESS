@@ -8,7 +8,7 @@ import { LoginGate } from '@/components/LoginGate';
 import { ToastContainer, toast } from '@/components/Toast';
 import { useMotion } from '@/lib/useMotion';
 import { storage } from '@/lib/storage';
-import { api } from '@/data/api';
+import { runGameSync } from '@/lib/syncGames';
 import { PieceHopper } from '@/components/LoadingScreen';
 import { gameRepository } from '@/data/repositories';
 import { useFocusMode } from '@/lib/focusMode';
@@ -99,62 +99,10 @@ export const Layout: React.FC = () => {
   const handleSync = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
-    toast.info('Starting sync...', 'Connecting to Chess.com & Lichess');
     try {
-      const res = await api.post<{ jobId: string }>('/sync');
-      const jobId = res?.jobId;
-      if (!jobId) {
-        throw new Error('No job ID returned from sync endpoint');
-      }
-
-      let completed = false;
-      let attempts = 0;
-      while (!completed && attempts < 60) {
-        await new Promise((r) => setTimeout(r, 1000));
-        attempts++;
-        try {
-          const job = await api.get<{
-            id: string;
-            status: 'queued' | 'processing' | 'done' | 'failed';
-            progress: number;
-            error?: string;
-            result?: {
-              syncedCount: number;
-              chesscom: number;
-              lichess: number;
-              skipped: number;
-              message: string;
-            };
-          }>(`/jobs/${jobId}`);
-
-          if (job.status === 'done') {
-            completed = true;
-            setIsSyncing(false);
-            const msg = job.result?.message || 'Games up to date';
-            toast.success('Sync complete', msg);
-            window.dispatchEvent(new CustomEvent('chess-data-refresh'));
-            break;
-          } else if (job.status === 'failed') {
-            completed = true;
-            setIsSyncing(false);
-            toast.error('Sync failed', job.error || 'Unknown sync error');
-            break;
-          }
-        } catch {
-          // ignore transient poll error
-        }
-      }
-      if (!completed) {
-        setIsSyncing(false);
-        toast.warning('Sync taking longer than expected', 'Check back in a moment');
-      }
-    } catch (err: unknown) {
+      await runGameSync();
+    } finally {
       setIsSyncing(false);
-      let msg = 'Failed to start sync';
-      if (err instanceof Error) {
-        msg = err.message;
-      }
-      toast.error('Sync error', msg);
     }
   };
 
