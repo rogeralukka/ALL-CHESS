@@ -6,6 +6,7 @@ MoveClassificationType = Literal[
     'brilliant',
     'great',
     'book',
+    'forced',
     'best',
     'excellent',
     'good',
@@ -124,6 +125,9 @@ def classify_move(
     Classifies a move based on win% drop from the mover's point of view.
     eval_before_pawns and eval_after_pawns are in pawns from White's POV.
     """
+    if num_legal_moves == 1:
+        return 'forced'
+
     if is_book:
         return 'book'
 

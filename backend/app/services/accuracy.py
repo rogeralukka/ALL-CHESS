@@ -91,7 +91,7 @@ def calculate_game_accuracy(
         if color == 'w':
             mover_before = white_before
             mover_after = white_after
-            drop = 0.0 if m.get("classification") == "book" else max(0.0, mover_before - mover_after)
+            drop = 0.0 if m.get("classification") in ("book", "forced") else max(0.0, mover_before - mover_after)
             acc = move_accuracy(drop, method=method)
             white_accuracies.append(acc)
             white_drops.append(drop)
@@ -99,7 +99,7 @@ def calculate_game_accuracy(
         else:
             mover_before = 100.0 - white_before
             mover_after = 100.0 - white_after
-            drop = 0.0 if m.get("classification") == "book" else max(0.0, mover_before - mover_after)
+            drop = 0.0 if m.get("classification") in ("book", "forced") else max(0.0, mover_before - mover_after)
             acc = move_accuracy(drop, method=method)
             black_accuracies.append(acc)
             black_drops.append(drop)

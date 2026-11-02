@@ -884,6 +884,23 @@ def _run_single_pass_review_sync(
     )
     phase_grades = calculate_phase_grades(analyzed_moves, is_user_white=is_user_white)
 
+    all_classes = [
+        "brilliant", "great", "best", "excellent", "good", "book", "forced",
+        "inaccuracy", "mistake", "miss", "blunder"
+    ]
+    counts = {c: 0 for c in all_classes}
+    white_counts = {c: 0 for c in all_classes}
+    black_counts = {c: 0 for c in all_classes}
+
+    for m in analyzed_moves:
+        cls_name = m.get("classification")
+        if cls_name in counts:
+            counts[cls_name] += 1
+            if m.get("color") == "w":
+                white_counts[cls_name] += 1
+            elif m.get("color") == "b":
+                black_counts[cls_name] += 1
+
     real_depth = (
         int(round(sum(depths_reached) / len(depths_reached)))
         if depths_reached
@@ -898,7 +915,12 @@ def _run_single_pass_review_sync(
         "analysisLevel": level,
         "analysisDepth": real_depth,
         "bookEnd": book_end_ply,
-        "reviewSummary": {"headline": generate_review_headline(accuracy, analyzed_moves)},
+        "reviewSummary": {
+            "headline": generate_review_headline(accuracy, analyzed_moves),
+            "counts": counts,
+            "whiteCounts": white_counts,
+            "blackCounts": black_counts,
+        },
     }
 
 

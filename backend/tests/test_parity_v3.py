@@ -239,7 +239,20 @@ def test_annotation_section3_rules():
     assert ann_miss["arrows"][0]["kind"] == "best"
     assert ann_miss["refutation"] is None
 
-    # 3. Blunder / Mistake: refutation arrow first, best arrow second
+    # 3. Mistake: refutation arrow first, best arrow second. Blunder: refutation arrow only (v5 rule)
+    ann_mistake = compute_move_annotations(
+        board_before=b_before,
+        board_after=b_after,
+        played_move=m_miss,
+        san_move="e5",
+        classification="mistake",
+        pos_before=pos_b,
+        pos_after=pos_a,
+    )
+    assert len(ann_mistake["arrows"]) == 2
+    assert ann_mistake["arrows"][0]["kind"] == "refutation"
+    assert ann_mistake["arrows"][1]["kind"] == "best"
+
     ann_blunder = compute_move_annotations(
         board_before=b_before,
         board_after=b_after,
@@ -249,10 +262,9 @@ def test_annotation_section3_rules():
         pos_before=pos_b,
         pos_after=pos_a,
     )
-    assert len(ann_blunder["arrows"]) == 2
+    assert len(ann_blunder["arrows"]) == 1
     assert ann_blunder["arrows"][0]["kind"] == "refutation"
-    assert ann_blunder["arrows"][1]["kind"] == "best"
-    assert any(s["kind"] == "target" and s["reason"] == "best move target" for s in ann_blunder["squares"])
+    assert len(ann_blunder["squares"]) == 0
 
 
 # ---------------------------------------------------------------------------

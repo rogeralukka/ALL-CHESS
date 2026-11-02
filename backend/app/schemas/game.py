@@ -7,6 +7,7 @@ MoveClassification = Literal[
     "brilliant",
     "great",
     "book",
+    "forced",
     "best",
     "excellent",
     "good",
@@ -52,13 +53,14 @@ MoveAnnotationTint = Literal[
 class MoveAnnotationArrow(CamelModel):
     from_square: str = Field(..., alias="from")
     to: str
-    kind: Literal["best", "refutation", "threat", "played", "missed"]
+    kind: Literal["best", "refutation", "threat", "alt", "played", "missed"]
 
 
 class MoveAnnotationSquare(CamelModel):
     square: str
     kind: Literal["attacked", "hanging", "target", "king-danger"]
     reason: str
+    tone: Literal["green", "orange"] | None = None
 
 
 class MoveRef(CamelModel):
@@ -72,8 +74,9 @@ class MoveAnnotations(CamelModel):
     tint: MoveAnnotationTint | None = None
     arrows: list[MoveAnnotationArrow] = Field(default_factory=list)
     squares: list[MoveAnnotationSquare] = Field(default_factory=list)
-    best_move: MoveRef | None = None
-    refutation: MoveRef | None = None
+    best_move: MoveRef | str | None = None
+    best_uci: str | None = None
+    refutation: MoveRef | str | None = None
     pv: list[str] | None = Field(default_factory=list)
     reason_code: str | None = None
     explain: list[str] | None = Field(default_factory=list)
@@ -125,8 +128,25 @@ class EstimatedRating(CamelModel):
     black: int
 
 
+class ClassCounts(CamelModel):
+    brilliant: int = 0
+    great: int = 0
+    best: int = 0
+    excellent: int = 0
+    good: int = 0
+    book: int = 0
+    forced: int = 0
+    inaccuracy: int = 0
+    mistake: int = 0
+    miss: int = 0
+    blunder: int = 0
+
+
 class ReviewSummary(CamelModel):
     headline: str | None = None
+    counts: ClassCounts | dict[str, int] | None = None
+    white_counts: ClassCounts | dict[str, int] | None = None
+    black_counts: ClassCounts | dict[str, int] | None = None
 
 
 class Game(CamelModel):
