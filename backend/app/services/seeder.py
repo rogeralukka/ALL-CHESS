@@ -16,10 +16,6 @@ def seed_puzzles(db: Session, force: bool = False) -> int:
     """Seed puzzles table if empty or count mismatch from app/data/puzzles.json."""
     global _CACHED_PUZZLES_DATA
 
-    # Fast DB check: if table already has puzzles, no need to read disk or re-seed
-    if not force and db.query(Puzzle.id).first() is not None:
-        return 1
-
     if _CACHED_PUZZLES_DATA is None:
         puzzles_file = DATA_DIR / "puzzles.json"
         if not puzzles_file.exists():

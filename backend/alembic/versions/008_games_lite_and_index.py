@@ -33,6 +33,23 @@ def upgrade() -> None:
         if "ix_games_user_id_date" not in indexes:
             batch_op.create_index("ix_games_user_id_date", ["user_id", "date"])
 
+    # Fill the new columns for the games that already exist, so the lite list never has to load their moves
+    import json
+
+    rows = conn.execute(sa.text("SELECT id, moves FROM games WHERE move_count IS NULL")).fetchall()
+    for game_id, moves in rows:
+        if isinstance(moves, (str, bytes)):
+            try:
+                moves = json.loads(moves)
+            except ValueError:
+                moves = []
+        moves = moves if isinstance(moves, list) else []
+        last = moves[-1].get("san", "") if moves and isinstance(moves[-1], dict) else ""
+        conn.execute(
+            sa.text("UPDATE games SET move_count = :mc, ends_in_mate = :em WHERE id = :id"),
+            {"mc": len(moves), "em": bool(last.endswith("#")), "id": game_id},
+        )
+
 
 def downgrade() -> None:
     with op.batch_alter_table("games") as batch_op:
