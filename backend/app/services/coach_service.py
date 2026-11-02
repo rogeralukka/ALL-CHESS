@@ -138,16 +138,16 @@ def generate_template_comment(
     if classification == "brilliant":
         comment = f"{san} is a brilliant move! You found a deep, sacrifice-backed tactical shot that seized control."
     elif classification == "great":
-        comment = f"{san} is a great move. It was the only move that maintained your advantage in a sharp position."
+        comment = f"{san} is a great move: the only move that maintains the advantage."
     elif classification == "best":
         if best_move and best_move == san:
-            comment = f"{san} is the top engine recommendation, maintaining the optimal course for your pieces."
+            comment = f"{san} is the top engine recommendation."
         else:
-            comment = f"{san} is the best move in the position, efficiently improving piece harmony."
+            comment = f"{san} is the best move in the position."
     elif classification == "excellent":
-        comment = f"{san} is an excellent move, finding nearly all the benefits of the engine line."
+        comment = f"{san} is an excellent move."
     elif classification == "good":
-        comment = f"{san} is a solid and natural move, keeping your position steady.{best_desc}"
+        comment = f"{san} is a solid and natural move.{best_desc}"
     elif classification == "book":
         comment = f"{san} follows established opening theory."
     elif classification == "forced":

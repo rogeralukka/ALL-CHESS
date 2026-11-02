@@ -446,6 +446,254 @@ def compute_squares_annotation(
     return squares[:4]
 
 
+def is_pawn_passed(board: chess.Board, square: chess.Square) -> bool:
+    """Checks if pawn on square is a passed pawn (no enemy pawns in front or on adjacent files)."""
+    piece = board.piece_at(square)
+    if not piece or piece.piece_type != chess.PAWN:
+        return False
+    color = piece.color
+    file_idx = chess.square_file(square)
+    rank_idx = chess.square_rank(square)
+    enemy_color = not color
+
+    files_to_check = [file_idx]
+    if file_idx > 0:
+        files_to_check.append(file_idx - 1)
+    if file_idx < 7:
+        files_to_check.append(file_idx + 1)
+
+    for f in files_to_check:
+        for r in range(rank_idx + 1, 8) if color == chess.WHITE else range(0, rank_idx):
+            sq = chess.square(f, r)
+            p = board.piece_at(sq)
+            if p and p.color == enemy_color and p.piece_type == chess.PAWN:
+                return False
+    return True
+
+
+def generate_line_why_template(board: chess.Board, move: chess.Move) -> str:
+    """
+    Generates a human-friendly, piece-aware concrete reason for the suggested line.
+    Returns empty string if nothing concrete can be proven (no filler).
+    """
+    if not move or move not in board.legal_moves:
+        return ""
+
+    to_sq_name = chess.square_name(move.to_square)
+    from_sq_name = chess.square_name(move.from_square)
+
+    # 1. Castling
+    if board.is_castling(move) or move in (
+        chess.Move.from_uci("e1g1"),
+        chess.Move.from_uci("e1c1"),
+        chess.Move.from_uci("e8g8"),
+        chess.Move.from_uci("e8c8"),
+    ):
+        side = (
+            "kingside"
+            if chess.square_file(move.to_square) > chess.square_file(move.from_square)
+            else "queenside"
+        )
+        return f"Castles {side} to secure king safety and activate the rook."
+
+    piece = board.piece_at(move.from_square)
+    if not piece:
+        return ""
+
+    piece_type = piece.piece_type
+    color = piece.color
+    mover_name = chess.piece_name(piece_type)
+
+    # 2. Captures
+    if board.is_capture(move):
+        captured = board.piece_at(move.to_square)
+        cap_name = (
+            chess.piece_name(captured.piece_type)
+            if captured
+            else ("pawn" if board.is_en_passant(move) else "piece")
+        )
+        return f"Captures {cap_name} on {to_sq_name} with the {mover_name}."
+
+    # 3. Check / Checkmate
+    if board.gives_check(move):
+        b_after = board.copy()
+        b_after.push(move)
+        if b_after.is_checkmate():
+            return f"Delivers checkmate on {to_sq_name}."
+        return f"Delivers check on {to_sq_name}, disrupting opponent coordination."
+
+    # 4. Piece-specific concrete logic
+    if piece_type == chess.BISHOP:
+        is_white_starting = color == chess.WHITE and from_sq_name in ("c1", "f1")
+        is_black_starting = color == chess.BLACK and from_sq_name in ("c8", "f8")
+        if is_white_starting or is_black_starting:
+            prepares_castling = False
+            if color == chess.WHITE:
+                if from_sq_name == "f1" and board.has_kingside_castling_rights(
+                    chess.WHITE
+                ) or from_sq_name == "c1" and board.has_queenside_castling_rights(
+                    chess.WHITE
+                ):
+                    prepares_castling = True
+            else:
+                if from_sq_name == "f8" and board.has_kingside_castling_rights(
+                    chess.BLACK
+                ) or from_sq_name == "c8" and board.has_queenside_castling_rights(
+                    chess.BLACK
+                ):
+                    prepares_castling = True
+
+            if prepares_castling:
+                return f"Develops the bishop to {to_sq_name} and prepares castling."
+            return f"Develops the bishop to {to_sq_name}."
+
+        if to_sq_name in ("b2", "g2", "b7", "g7"):
+            return f"Fianchettos the bishop on {to_sq_name} along the long diagonal."
+        return ""
+
+    if piece_type == chess.KNIGHT:
+        is_white_starting = color == chess.WHITE and from_sq_name in ("b1", "g1")
+        is_black_starting = color == chess.BLACK and from_sq_name in ("b8", "g8")
+        if is_white_starting or is_black_starting:
+            prepares_castling = False
+            if color == chess.WHITE:
+                if from_sq_name == "g1" and board.has_kingside_castling_rights(
+                    chess.WHITE
+                ) or from_sq_name == "b1" and board.has_queenside_castling_rights(
+                    chess.WHITE
+                ):
+                    prepares_castling = True
+            else:
+                if from_sq_name == "g8" and board.has_kingside_castling_rights(
+                    chess.BLACK
+                ) or from_sq_name == "b8" and board.has_queenside_castling_rights(
+                    chess.BLACK
+                ):
+                    prepares_castling = True
+
+            if prepares_castling:
+                return f"Develops the knight to {to_sq_name} and prepares castling."
+            return f"Develops the knight to {to_sq_name}."
+
+        if to_sq_name in ("d5", "e5", "d4", "e4", "f5", "c5", "f4", "c4"):
+            return f"Posts the knight on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.PAWN:
+        if move.promotion:
+            return (
+                f"Promotes pawn to {chess.piece_name(move.promotion)} on {to_sq_name}."
+            )
+        if (color == chess.WHITE and chess.square_rank(move.to_square) == 6) or (
+            color == chess.BLACK and chess.square_rank(move.to_square) == 1
+        ):
+            return f"Advances dangerous passed pawn to {to_sq_name}."
+        if to_sq_name in ("e4", "d4", "e5", "d5"):
+            return f"Claims central space with the pawn on {to_sq_name}."
+        if to_sq_name in ("c4", "c5", "f4", "f5"):
+            return f"Challenges the center with {to_sq_name}."
+        if to_sq_name in ("c3", "c6", "e3", "e6", "d3", "d6"):
+            return f"Solidifies pawn structure with {to_sq_name}."
+        return ""
+
+    if piece_type == chess.ROOK:
+        file_idx = chess.square_file(move.to_square)
+        pawns_on_file = [
+            sq
+            for sq in chess.SQUARES
+            if chess.square_file(sq) == file_idx
+            and board.piece_at(sq)
+            and board.piece_at(sq).piece_type == chess.PAWN
+        ]
+        if len(pawns_on_file) == 0:
+            file_letter = chr(ord("a") + file_idx)
+            return f"Places the rook on the open {file_letter}-file."
+        if len(pawns_on_file) == 1 and board.piece_at(pawns_on_file[0]).color != color:
+            file_letter = chr(ord("a") + file_idx)
+            return f"Positions the rook on the semi-open {file_letter}-file."
+        if (color == chess.WHITE and chess.square_rank(move.to_square) == 6) or (
+            color == chess.BLACK and chess.square_rank(move.to_square) == 1
+        ):
+            return f"Infiltrates the 7th rank with the rook on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.QUEEN:
+        if to_sq_name in ("d4", "e4", "d5", "e5", "c4", "f4", "c5", "f5"):
+            return f"Centralizes the queen on {to_sq_name}."
+        return ""
+
+    if piece_type == chess.KING:
+        central_squares = {
+            "d4", "e4", "d5", "e5",
+            "c4", "c5", "f4", "f5",
+            "d3", "e3", "d6", "e6",
+        }
+        if len(board.piece_map()) <= 10 and to_sq_name in central_squares:
+            return f"Centralizes the king on {to_sq_name} for the endgame."
+        return ""
+
+    # Skewer or pin or fork on b_after
+    b_after = board.copy()
+    b_after.push(move)
+    sk = detect_skewer_or_pin(b_after, move)
+    if sk:
+        if sk[0] == "skewer":
+            return f"Skewers the king and the {sk[2]}." if sk[1] == "king" else f"Skewers the {sk[1]} and the {sk[2]}."
+        return f"Pins the {sk[1]} to the king." if sk[2] == "king" else f"Pins the {sk[1]} to the {sk[2]}."
+    fk = detect_fork(b_after, move)
+    if fk:
+        return f"Forks the {fk[0]} and the {fk[1]}."
+
+    return ""
+
+
+def _describe_best_move(
+    board_before: chess.Board | None,
+    best_chess_move: chess.Move | None,
+    best_san: str | None,
+    default_suffix: str = "was better.",
+) -> str | None:
+    """Produces a proven explanation of what best_san does from board_before, max 110 chars."""
+    if not best_san:
+        return None
+    if (
+        not board_before
+        or not best_chess_move
+        or best_chess_move not in board_before.legal_moves
+    ):
+        return f"{best_san} {default_suffix}"
+
+    if board_before.is_capture(best_chess_move):
+        cap = board_before.piece_at(best_chess_move.to_square)
+        cap_name = PIECE_NAMES.get(cap.piece_type, "piece") if cap else "piece"
+        sq_n = chess.square_name(best_chess_move.to_square)
+        defs = board_before.attackers(not board_before.turn, best_chess_move.to_square)
+        if not defs:
+            return f"{best_san} wins a {cap_name}: the {cap_name} on {sq_n} is undefended."
+        return f"{best_san} wins material on {sq_n}."
+
+    if board_before.gives_check(best_chess_move):
+        b_best = board_before.copy()
+        b_best.push(best_chess_move)
+        if b_best.is_checkmate():
+            return f"{best_san} delivers checkmate."
+        return f"{best_san} gives check, forcing the king to move."
+
+    p = board_before.piece_at(best_chess_move.from_square)
+    if p and p.piece_type == chess.PAWN:
+        to_sq = chess.square_name(best_chess_move.to_square)
+        from_sq = chess.square_name(best_chess_move.from_square)
+        if to_sq in ("e4", "d4", "e5", "d5"):
+            return f"The pawn on {from_sq} is stronger on {to_sq}: it takes space and opens lines."
+
+    if p and p.piece_type in (chess.KNIGHT, chess.BISHOP):
+        from_sq = chess.square_name(best_chess_move.from_square)
+        if from_sq in ("b1", "c1", "f1", "g1", "b8", "c8", "f8", "g8"):
+            return f"{best_san} develops the piece to an active square."
+
+    return f"{best_san} {default_suffix}"
+
+
 def compute_commentary_v2(
     san: str,
     classification: str | None,
@@ -453,6 +701,8 @@ def compute_commentary_v2(
     board_before: chess.Board | None = None,
     board_after: chess.Board | None = None,
     played_move: chess.Move | None = None,
+    best_chess_move: chess.Move | None = None,
+    reply_chess_move: chess.Move | None = None,
     eval_before: float | None = None,
     eval_after: float | None = None,
     mate_before: int | None = None,
@@ -463,11 +713,21 @@ def compute_commentary_v2(
 ) -> dict[str, Any]:
     """
     Computes Commentary v2 matching Chess.com exact templates and reason codes.
+    Returns 1-3 short python-chess-proven sentences (each <= 110 chars) with NO filler.
     """
     cls = (classification or "").lower()
     mate_squares: list[str] = []
 
-    # 0. Forced move
+    # 0. Book or Forced
+    if is_book or cls == "book":
+        s1 = f"{san} is a book move."
+        return {
+            "reason_code": "book_move",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
+
     if cls == "forced":
         s1 = f"{san} is forced."
         return {
@@ -477,10 +737,11 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 1. Mate allowed or delivered
+    # 1. Mate cases
     is_mate_case = False
     opponent_mate_in_1 = False
     mating_move = None
+
     if board_after:
         if board_after.is_checkmate():
             is_mate_case = True
@@ -538,7 +799,7 @@ def compute_commentary_v2(
             "comment": " ".join(explain),
         }
 
-    # 2. Check for piece drop proven by python-chess
+    # 2. Blunder / Mistake
     if cls in ("blunder", "mistake"):
         hanging_piece_desc = None
         leaves_hanging = False
@@ -558,8 +819,7 @@ def compute_commentary_v2(
                         p_name = PIECE_NAMES.get(moved_pc.piece_type, "piece")
                         sq_name = chess.square_name(played_move.to_square)
                         hanging_piece_desc = f"{p_name} on {sq_name}"
-                        # "Re1 leaves your rook hanging on e1."
-                        if san.startswith("R") or san.startswith("N") or san.startswith("B") or san.startswith("Q"):
+                        if san.startswith(("R", "N", "B", "Q")):
                             leaves_hanging = True
 
             if not hanging_piece_desc and squares:
@@ -581,7 +841,7 @@ def compute_commentary_v2(
                 s1 = f"{san} leaves your {p_parts[0]} hanging on {p_parts[1]}."
             else:
                 s1 = f"{san} loses your {hanging_piece_desc}."
-            alt = f"{best_san} was better." if best_san and best_san != san else None
+            alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
             explain = [s1, alt] if alt else [s1]
             return {
                 "reason_code": "loses_piece",
@@ -590,9 +850,62 @@ def compute_commentary_v2(
                 "comment": " ".join(explain),
             }
 
+        # Check refutation reply move on board_after
+        if reply_chess_move and board_after and reply_chess_move in board_after.legal_moves:
+            r_san = refutation_san or board_after.san(reply_chess_move)
+            if board_after.is_capture(reply_chess_move):
+                cap_pc = board_after.piece_at(reply_chess_move.to_square)
+                cap_name = PIECE_NAMES.get(cap_pc.piece_type, "piece") if cap_pc else "piece"
+                to_sq = chess.square_name(reply_chess_move.to_square)
+                if played_move and reply_chess_move.to_square == played_move.to_square:
+                    s1 = f"{san} leaves your {cap_name} hanging on {to_sq}."
+                else:
+                    s1 = f"{r_san} wins your {cap_name} on {to_sq}."
+                alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
+                explain = [s1, alt] if alt else [s1]
+                return {
+                    "reason_code": "loses_piece",
+                    "explain": explain,
+                    "mate_squares": [],
+                    "comment": " ".join(explain),
+                }
+            elif board_after.gives_check(reply_chess_move):
+                s1 = f"{san} allows {r_san}, checking your king."
+                alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
+                explain = [s1, alt] if alt else [s1]
+                return {
+                    "reason_code": "allows_check",
+                    "explain": explain,
+                    "mate_squares": [],
+                    "comment": " ".join(explain),
+                }
+            else:
+                sk = detect_skewer_or_pin(board_after, reply_chess_move)
+                fk = detect_fork(board_after, reply_chess_move)
+                if fk:
+                    s1 = f"{san} allows {r_san}, forking your pieces."
+                    alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
+                    explain = [s1, alt] if alt else [s1]
+                    return {
+                        "reason_code": "fork",
+                        "explain": explain,
+                        "mate_squares": [],
+                        "comment": " ".join(explain),
+                    }
+                elif sk:
+                    s1 = f"{san} allows {r_san}, pinning your pieces." if sk[0] == "pin" else f"{san} allows {r_san}, skewering your pieces."
+                    alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
+                    explain = [s1, alt] if alt else [s1]
+                    return {
+                        "reason_code": sk[0],
+                        "explain": explain,
+                        "mate_squares": [],
+                        "comment": " ".join(explain),
+                    }
+
         if refutation_san and (refutation_san.endswith("+") or refutation_san.endswith("#")):
             s1 = f"{san} allows {refutation_san}."
-            alt = f"{best_san} was better." if best_san and best_san != san else None
+            alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
             explain = [s1, alt] if alt else [s1]
             return {
                 "reason_code": cls,
@@ -603,7 +916,7 @@ def compute_commentary_v2(
 
         if cls == "blunder":
             s1 = f"{san} is a blunder."
-            alt = f"{best_san} was better." if best_san and best_san != san else None
+            alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
             explain = [s1, alt] if alt else [s1]
             return {
                 "reason_code": "blunder",
@@ -613,7 +926,7 @@ def compute_commentary_v2(
             }
 
         s1 = f"{san} is a mistake."
-        alt = f"{best_san} was better." if best_san and best_san != san else None
+        alt = _describe_best_move(board_before, best_chess_move, best_san, "was better.")
         explain = [s1, alt] if alt else [s1]
         return {
             "reason_code": "mistake",
@@ -629,7 +942,7 @@ def compute_commentary_v2(
             alt = f"{best_san} wins mate." if best_san and best_san != san else None
         else:
             s1 = f"{san} misses a tactical opportunity."
-            alt = f"{best_san} wins material." if best_san and best_san != san else None
+            alt = _describe_best_move(board_before, best_chess_move, best_san, "wins material.") if (best_san and best_san != san) else None
         explain = [s1, alt] if alt else [s1]
         return {
             "reason_code": "missed_tactic",
@@ -641,7 +954,7 @@ def compute_commentary_v2(
     # 4. Inaccuracy
     if cls == "inaccuracy":
         s1 = f"{san} is slightly inaccurate."
-        alt = f"{best_san} keeps the edge." if best_san and best_san != san else None
+        alt = _describe_best_move(board_before, best_chess_move, best_san, "keeps the edge.") if (best_san and best_san != san) else None
         explain = [s1, alt] if alt else [s1]
         return {
             "reason_code": "inaccuracy",
@@ -692,8 +1005,73 @@ def compute_commentary_v2(
                 "comment": s1,
             }
 
+        # Castling
+        if board_before and (board_before.is_castling(played_move) or played_move in (
+            chess.Move.from_uci("e1g1"), chess.Move.from_uci("e8g8"),
+            chess.Move.from_uci("e1c1"), chess.Move.from_uci("e8c8")
+        )):
+            side = "kingside" if chess.square_file(played_move.to_square) > chess.square_file(played_move.from_square) else "queenside"
+            s1 = f"Castles {side} to secure king safety and activate the rook."
+            return {
+                "reason_code": "castling",
+                "explain": [s1],
+                "mate_squares": [],
+                "comment": s1,
+            }
+
+        # Captures
+        if board_before and board_before.is_capture(played_move):
+            cap = board_before.piece_at(played_move.to_square)
+            cap_name = PIECE_NAMES.get(cap.piece_type, "piece") if cap else "piece"
+            mover = board_before.piece_at(played_move.from_square)
+            to_sq = chess.square_name(played_move.to_square)
+            if mover and cap and mover.piece_type == cap.piece_type:
+                s1 = f"{san} trades the {cap_name}s on {to_sq}."
+                return {
+                    "reason_code": "trade",
+                    "explain": [s1],
+                    "mate_squares": [],
+                    "comment": s1,
+                }
+            defs = board_before.attackers(not board_before.turn, played_move.to_square)
+            if not defs:
+                s1 = f"{san} captures the undefended {cap_name} on {to_sq}."
+                return {
+                    "reason_code": "capture_undefended",
+                    "explain": [s1],
+                    "mate_squares": [],
+                    "comment": s1,
+                }
+            s1 = f"{san} captures on {to_sq}."
+            return {
+                "reason_code": "capture",
+                "explain": [s1],
+                "mate_squares": [],
+                "comment": s1,
+            }
+
+        # Check
+        if board_before and board_before.gives_check(played_move):
+            s1 = f"{san} gives check, forcing the king to move."
+            return {
+                "reason_code": "check",
+                "explain": [s1],
+                "mate_squares": [],
+                "comment": s1,
+            }
+
+        # Passed pawn
+        if is_pawn_passed(board_after, played_move.to_square):
+            s1 = f"{san} advances the passed pawn toward promotion."
+            return {
+                "reason_code": "passed_pawn",
+                "explain": [s1],
+                "mate_squares": [],
+                "comment": s1,
+            }
+
         # Centre control
-        if detect_centre_control(san, played_move, board_after) and cls in ("best", "excellent", "good"):
+        if detect_centre_control(san, played_move, board_after):
             s1 = f"{san} takes control of the centre."
             return {
                 "reason_code": "centre_control",
@@ -701,6 +1079,80 @@ def compute_commentary_v2(
                 "mate_squares": [],
                 "comment": s1,
             }
+
+        # Development
+        if board_before:
+            mover = board_before.piece_at(played_move.from_square)
+            if mover and mover.piece_type in (chess.KNIGHT, chess.BISHOP):
+                from_sq = chess.square_name(played_move.from_square)
+                if from_sq in ("b1", "c1", "f1", "g1", "b8", "c8", "f8", "g8"):
+                    m_name = PIECE_NAMES.get(mover.piece_type, "piece")
+                    s1 = f"{san} develops the {m_name} to an active square."
+                    return {
+                        "reason_code": "development",
+                        "explain": [s1],
+                        "mate_squares": [],
+                        "comment": s1,
+                    }
+
+        # Rook open / semi-open file
+        if board_before:
+            mover = board_before.piece_at(played_move.from_square)
+            if mover and mover.piece_type == chess.ROOK:
+                file_idx = chess.square_file(played_move.to_square)
+                pawns = [
+                    sq
+                    for sq in chess.SQUARES
+                    if chess.square_file(sq) == file_idx
+                    and board_after.piece_type_at(sq) == chess.PAWN
+                ]
+                f_name = chr(ord("a") + file_idx)
+                if len(pawns) == 0:
+                    s1 = f"{san} places the rook on the open {f_name}-file."
+                    return {
+                        "reason_code": "open_file",
+                        "explain": [s1],
+                        "mate_squares": [],
+                        "comment": s1,
+                    }
+                elif len(pawns) == 1:
+                    s1 = f"{san} positions the rook on the semi-open {f_name}-file."
+                    return {
+                        "reason_code": "semi_open_file",
+                        "explain": [s1],
+                        "mate_squares": [],
+                        "comment": s1,
+                    }
+
+        # Centralizing knight
+        if board_before:
+            mover = board_before.piece_at(played_move.from_square)
+            to_sq = chess.square_name(played_move.to_square)
+            if mover and mover.piece_type == chess.KNIGHT and to_sq in (
+                "d4", "e4", "d5", "e5", "c5", "f5", "c4", "f4"
+            ):
+                s1 = f"{san} centralizes the knight on {to_sq}."
+                return {
+                    "reason_code": "central_knight",
+                    "explain": [s1],
+                    "mate_squares": [],
+                    "comment": s1,
+                }
+
+        # Solidifying pawn structure
+        if board_before:
+            mover = board_before.piece_at(played_move.from_square)
+            to_sq = chess.square_name(played_move.to_square)
+            if mover and mover.piece_type == chess.PAWN and to_sq in (
+                "c3", "c6", "d3", "d6", "e3", "e6", "f3", "f6"
+            ):
+                s1 = f"{san} solidifies the pawn structure."
+                return {
+                    "reason_code": "pawn_structure",
+                    "explain": [s1],
+                    "mate_squares": [],
+                    "comment": s1,
+                }
 
     # 6. Brilliant
     if cls == "brilliant":
@@ -732,17 +1184,7 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 9. Book
-    if is_book or cls == "book":
-        s1 = f"{san} is a book move."
-        return {
-            "reason_code": "book_move",
-            "explain": [s1],
-            "mate_squares": [],
-            "comment": s1,
-        }
-
-    # 10. Excellent
+    # 9. Excellent
     if cls == "excellent":
         s1 = f"{san} is an excellent move."
         return {
@@ -752,7 +1194,7 @@ def compute_commentary_v2(
             "comment": s1,
         }
 
-    # 11. Good
+    # 10. Good
     if cls == "good":
         s1 = f"{san} is a solid move."
         return {
@@ -937,10 +1379,21 @@ def compute_move_annotations(
 
     best_uci = best_chess_move.uci() if best_chess_move else None
 
-    # PV (first up to 6 SAN moves of best line from position before)
+    # PV: refutation line legal from board_after for blunders/mistakes;
+    # best continuation legal from board_before for other moves.
     pv_sans: list[str] = []
-    tb = board_before.copy()
-    for m in pv_moves_before[:6]:
+    if cls_lower in ("blunder", "mistake"):
+        tb = board_after.copy()
+        target_pv = pv_moves_after
+        if not target_pv and reply_chess_move:
+            target_pv = [reply_chess_move]
+    else:
+        tb = board_before.copy()
+        target_pv = pv_moves_before
+        if not target_pv and best_chess_move:
+            target_pv = [best_chess_move]
+
+    for m in target_pv[:6]:
         try:
             pv_sans.append(tb.san(m))
             tb.push(m)
@@ -1038,6 +1491,8 @@ def compute_move_annotations(
         board_before=board_before,
         board_after=board_after,
         played_move=played_move,
+        best_chess_move=best_chess_move,
+        reply_chess_move=reply_chess_move,
         eval_before=pos_before.get("eval") if pos_before else None,
         eval_after=pos_after.get("eval") if pos_after else None,
         mate_before=pos_before.get("mate") if pos_before else None,
