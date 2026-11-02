@@ -25,6 +25,7 @@ import { OpeningService, OpeningMatch } from '@/services/openingService';
 import { Lightbulb, RotateCcw, Flag, Download, ArrowLeft, BookOpen, ArrowUpDown, MoreHorizontal, Undo2, Search, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/lib/useCurrentUser';
+import { statsRepository } from '@/data/repositories';
 import { saveCoachGame } from '@/services/coachGameService';
 import { useToastStore } from '@/components/Toast';
 import { SidebarPanel, SidebarHeader } from '@/components/SidebarPanel';
@@ -107,6 +108,22 @@ export const PlayGame: React.FC = () => {
   const navigate = useNavigate();
   const isPhone = usePhoneLayout();
   const me = useCurrentUser();
+  // the player's own rating, so the board bar and the saved game never show a made-up number
+  const [myRating, setMyRating] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    statsRepository
+      .getUserRatings()
+      .then((rs) => {
+        if (!alive) return;
+        const by = (m: string) => rs.find((r) => r.mode.toLowerCase() === m)?.rating ?? 0;
+        setMyRating(by('rapid') || by('blitz') || by('bullet') || 0);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
   const { boardThemeId, pieceSetId, animationSpeed, coordinates, coachVoiceEnabled } = useSettingsStore();
   const currentBoardTheme = BOARD_THEMES.find((t) => t.id === boardThemeId) || BOARD_THEMES[0];
   const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
@@ -254,13 +271,14 @@ export const PlayGame: React.FC = () => {
         reason: gameOver.reason,
         opponentName: 'Coach All-Chess',
         opponentRating: activeConfig.levelRating,
+        userRating: myRating || undefined,
       });
       navigate(`/review/${id}`);
     } catch {
       useToastStore.getState().addToast({ type: 'error', title: 'Could not open the review', subtitle: 'The game could not be saved. Please try again.' });
       setSavingReview(false);
     }
-  }, [gameOver, activeConfig, savingReview, moves, userColor, navigate]);
+  }, [gameOver, activeConfig, savingReview, moves, userColor, navigate, myRating]);
 
   const triggerGameOver = useCallback((winner: 'user' | 'coach' | 'draw', reason: string) => {
     sound.gameEnd();
@@ -696,7 +714,7 @@ export const PlayGame: React.FC = () => {
 
   const userInfo = {
     name: me.username,
-    rating: 905,
+    rating: myRating,
     avatar: <PlayerAvatar name="You" size={40} className="!rounded-none" />,
     right: (
       <>

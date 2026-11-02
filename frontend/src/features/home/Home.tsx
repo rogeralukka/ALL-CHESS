@@ -1,5 +1,6 @@
 import { ModeIcon, GameMode } from '@/components/ModeIcon';
 import { useCurrentUser } from '@/lib/useCurrentUser';
+import { currentStreak, weekPlayed } from '@/lib/streak';
 import React, { useEffect, useState } from 'react';
 import { InlineLoader } from '@/components/LoadingScreen';
 import { useNavigate } from 'react-router-dom';
@@ -76,6 +77,8 @@ export const Home: React.FC = () => {
   const isPhone = useMediaQuery('(max-width: 639px)');
   const [coachDismissed, setCoachDismissed] = useState(false);
   const [recentGames, setRecentGames] = useState<Game[]>([]);
+  const [streak, setStreak] = useState(0);
+  const [week, setWeek] = useState<{ played: boolean[]; todayIndex: number }>({ played: [false, false, false, false, false, false, false], todayIndex: (new Date().getDay() + 6) % 7 });
   const [ratings, setRatings] = useState<RatingSummary[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [currentStage, setCurrentStage] = useState<LessonStage | null>(null);
@@ -96,6 +99,8 @@ export const Home: React.FC = () => {
         ([games, userRatings, friendList, stages, puzzle]) => {
           if (!mounted) return;
           setRecentGames(games.slice(0, 5));
+          setStreak(currentStreak(games));
+          setWeek(weekPlayed(games));
           setRatings(userRatings);
           setFriends(friendList);
           setCurrentStage(stages.find((s) => s.status === 'current') || stages[0] || null);
@@ -125,7 +130,7 @@ export const Home: React.FC = () => {
   const stageNo = currentStage ? Math.max(1, MOCK_LEARN_STAGES.filter((s) => s.category === currentStage.category).findIndex((s) => s.id === currentStage.id) + 1) : 1;
 
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const today = (new Date().getDay() + 6) % 7;
+  const today = week.todayIndex;
 
   if (!loaded) {
     return (
@@ -139,7 +144,7 @@ export const Home: React.FC = () => {
     return (
       <PhoneHome
         username={me.username}
-        streak={5}
+        streak={streak}
         recentGames={recentGames}
         ratings={ratings}
         friends={friends}
@@ -167,8 +172,13 @@ export const Home: React.FC = () => {
               <span
                 key={i}
                 className={`w-7 h-7 rounded-full text-[12px] font-black flex items-center justify-center ${
-                  i < today ? 'bg-amber-500 text-black' : i === today ? 'ring-2 ring-amber-500 text-amber-400 bg-amber-500/10' : 'bg-black/[0.05] dark:bg-white/[0.05] text-theme-muted/60'
+                  week.played[i]
+                    ? 'bg-amber-500 text-black'
+                    : i === today
+                      ? 'ring-2 ring-amber-500 text-amber-400 bg-amber-500/10'
+                      : 'bg-black/[0.05] dark:bg-white/[0.05] text-theme-muted/60'
                 }`}
+                title={`${week.played[i] ? 'Played' : 'No game'} ${i === today ? '(today)' : ''}`.trim()}
               >
                 {d}
               </span>
@@ -176,11 +186,13 @@ export const Home: React.FC = () => {
           </div>
           <motion.div
             className="flex items-center gap-1.5"
-            animate={isFull ? { scale: [1, 1.06, 1] } : undefined}
+            animate={isFull && streak > 0 ? { scale: [1, 1.06, 1] } : undefined}
             transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <Flame size={28} className="text-amber-400 fill-amber-400/30" />
-            <span className="text-[17px] md:text-[22px] font-black font-display text-theme-text whitespace-nowrap">5 Day Streak</span>
+            <Flame size={28} className={streak > 0 ? 'text-amber-400 fill-amber-400/30' : 'text-theme-muted/50'} />
+            <span className="text-[17px] md:text-[22px] font-black font-display text-theme-text whitespace-nowrap">
+              {streak === 0 ? 'No streak yet' : `${streak} Day Streak`}
+            </span>
           </motion.div>
         </div>
       </div>

@@ -59,6 +59,26 @@ router = APIRouter(prefix="/games", tags=["Games"])
 MOCK_GAMES_FILE = os.path.join(BACKEND_DIR, "app", "data", "mock_games.json")
 
 
+def latest_known_rating(db: Session, user: User, speed: str | None = None) -> int | None:
+    """The player's own rating in their most recent game that carries one, preferring the same speed."""
+    q = (
+        db.query(GameModel)
+        .options(defer(GameModel.moves), defer(GameModel.pgn))
+        .filter(GameModel.user_id == user.id)
+        .order_by(GameModel.date.desc())
+    )
+    games = q.limit(200).all()
+    for want_speed in ([speed] if speed else []) + [None]:
+        for g in games:
+            if want_speed and (g.speed or "").lower() != want_speed.lower():
+                continue
+            side = g.white if g.is_user_white else g.black
+            rating = (side or {}).get("rating")
+            if isinstance(rating, int) and rating > 0:
+                return rating
+    return None
+
+
 def maybe_seed_demo_data(db: Session, user: User) -> None:
     """Only seeds mock games if explicitly enabled by the dev flag SEED_DEMO_DATA=true."""
     if not settings.seed_demo_data:
@@ -264,9 +284,12 @@ def save_coach_game(
     game.headers["Date"] = datetime.now(UTC).strftime("%Y.%m.%d")
     game.headers["White"] = user_name if user_is_white else body.opponent_name
     game.headers["Black"] = body.opponent_name if user_is_white else user_name
-    user_elo = str(body.user_rating or 800)
-    game.headers["WhiteElo"] = user_elo if user_is_white else str(body.opponent_rating)
-    game.headers["BlackElo"] = str(body.opponent_rating) if user_is_white else user_elo
+    # The player's own rating: what the app sent, else their latest known rating from their own
+    # games. If neither exists we leave the Elo header off rather than inventing a number.
+    user_elo = body.user_rating or latest_known_rating(db, current_user, body.speed)
+    if user_elo:
+        game.headers["WhiteElo" if user_is_white else "BlackElo"] = str(user_elo)
+    game.headers["BlackElo" if user_is_white else "WhiteElo"] = str(body.opponent_rating)
     game.headers["Result"] = body.result
     if body.termination:
         game.headers["Termination"] = body.termination

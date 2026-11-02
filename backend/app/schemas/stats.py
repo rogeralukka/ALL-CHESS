@@ -25,6 +25,8 @@ class PhasePointsLost(CamelModel):
     opening: float
     middlegame: float
     endgame: float
+    #: how many reviewed games these averages were measured from (0 = nothing to show yet)
+    total_analyzed: int = 0
 
 class StrengthWeakness(CamelModel):
     label: str
@@ -34,6 +36,8 @@ class StrengthWeakness(CamelModel):
 class StrengthsWeaknessesResponse(CamelModel):
     strengths: List[StrengthWeakness]
     weaknesses: List[StrengthWeakness]
+    #: how many reviewed games these insights were measured from (0 = nothing to show yet)
+    total_analyzed: int = 0
 
 class SyncResponse(CamelModel):
     synced_count: int

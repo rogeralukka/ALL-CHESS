@@ -130,6 +130,28 @@ export interface Game {
   analysisLevel?: string;
 }
 
+export interface StrengthWeakness {
+  label: string;
+  delta: string;
+  type: 'strength' | 'weakness';
+}
+
+/** Points lost per game by phase, measured over the games that have been reviewed. */
+export interface PhasePointsLost {
+  opening: number;
+  middlegame: number;
+  endgame: number;
+  /** How many reviewed games the averages come from; 0 means there is nothing to show yet. */
+  totalAnalyzed?: number;
+}
+
+export interface Insights {
+  strengths: StrengthWeakness[];
+  weaknesses: StrengthWeakness[];
+  /** How many reviewed games the insights come from; 0 means there is nothing to show yet. */
+  totalAnalyzed?: number;
+}
+
 export interface OpeningStat {
   eco: string;
   name: string;

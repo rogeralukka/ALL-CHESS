@@ -859,24 +859,19 @@ export const SettingsShell: React.FC = () => {
       {activeTab === 'byok' && (
         <Card className="p-6 space-y-6">
           <div className="border-b border-theme-border pb-3">
-            <h3 className="text-base font-bold font-display text-theme-text">
-              Bring Your Own Key (BYOK) — AI Seam
-            </h3>
-            <p className="text-xs text-theme-muted mt-0.5">
-              Phase 1 / Phase 3 architectural seam for autonomous LLM coaching
-            </p>
+            <h3 className="text-base font-bold font-display text-theme-text">AI Keys (BYOK)</h3>
+            <p className="text-xs text-theme-muted mt-0.5">Not connected yet — saved here now, used once AI coaching ships</p>
           </div>
 
-          {/* Privacy Reassurance Banner */}
-          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-theme-text space-y-1">
-            <div className="flex items-center gap-2 font-bold text-amber-500">
-              <Shield size={16} />
-              <span>100% Client-Side Privacy Guarantee</span>
+          <div className="p-4 rounded-xl bg-theme-raised border border-theme-border text-xs text-theme-text space-y-1" data-testid="byok-notice">
+            <div className="flex items-center gap-2 font-bold text-theme-text">
+              <Shield size={16} className="text-amber-500" />
+              <span>Nothing in the app uses these keys yet</span>
             </div>
             <p className="text-theme-muted leading-relaxed">
-              Phase 1 uses zero secrets. When entering API keys for future Phase 3 autonomy, keys are stored
-              strictly in your browser’s local storage (<code>localStorage.all_chess_byok</code>). They never
-              touch any ALL-CHESS server or cloud infrastructure.
+              The coach runs on the engine and does not call any AI service, so a key you save here changes
+              nothing today. It is kept only in this browser (<code>localStorage.all_chess_byok</code>) and is
+              never sent to an ALL-CHESS server.
             </p>
           </div>
 

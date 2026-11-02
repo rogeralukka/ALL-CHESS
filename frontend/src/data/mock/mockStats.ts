@@ -1,4 +1,4 @@
-import { OpeningStat, RatingPoint } from '../types';
+import { OpeningStat, RatingPoint, StrengthWeakness } from '../types';
 
 /**
  * Mock stats data for ALL-CHESS Phase 1.
@@ -31,13 +31,13 @@ export const MOCK_PHASE_POINTS_LOST = {
   endgame: 1.0,    // MOCK
 };
 
-export const MOCK_STRENGTHS = [
+export const MOCK_STRENGTHS: StrengthWeakness[] = [
   { label: 'King Safety', delta: '+0.8', type: 'strength' },
   { label: 'Queen Development', delta: '+0.6', type: 'strength' },
   { label: 'Back-Rank Defense', delta: '+0.5', type: 'strength' },
 ];
 
-export const MOCK_WEAKNESSES = [
+export const MOCK_WEAKNESSES: StrengthWeakness[] = [
   { label: 'Hanging Minors', delta: '-1.2', type: 'weakness' },
   { label: 'Pawn Structure', delta: '-0.9', type: 'weakness' },
   { label: 'Time Management', delta: '-0.6', type: 'weakness' },

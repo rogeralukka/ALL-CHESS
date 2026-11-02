@@ -120,22 +120,27 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
-      {
-        path: 'dev/playground',
-        element: (
-          <Suspense fallback={<LoadingFallback />}>
-            <Playground />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'dev/coach',
-        element: (
-          <Suspense fallback={<LoadingFallback />}>
-            <CoachLab />
-          </Suspense>
-        ),
-      },
+      // development-only screens: they render sample positions, so they are left out of the real app
+      ...(import.meta.env.DEV
+        ? [
+          {
+            path: 'dev/playground',
+            element: (
+              <Suspense fallback={<LoadingFallback />}>
+                <Playground />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'dev/coach',
+            element: (
+              <Suspense fallback={<LoadingFallback />}>
+                <CoachLab />
+              </Suspense>
+            ),
+          },
+          ]
+        : []),
       { path: '*', element: <NotFound /> },
     ],
   },

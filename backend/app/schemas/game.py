@@ -164,6 +164,7 @@ class CoachGameCreate(CamelModel):
     opponent_name: str = Field(default="Coach All-Chess", max_length=64)
     opponent_rating: int = Field(default=800, ge=100, le=3500)
     user_rating: int | None = Field(default=None, ge=100, le=3500)
+    speed: Literal["bullet", "blitz", "rapid", "daily"] | None = None
     termination: str | None = Field(default=None, max_length=128)
 
 
