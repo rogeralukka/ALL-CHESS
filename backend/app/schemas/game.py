@@ -124,7 +124,7 @@ class EstimatedRating(CamelModel):
 
 class Game(CamelModel):
     id: str
-    pgn: str
+    pgn: str | None = None
     white: Player
     black: Player
     result: Literal["1-0", "0-1", "1/2-1/2", "*"]
@@ -134,7 +134,7 @@ class Game(CamelModel):
     source: Literal["online", "vs_coach"]
     platform: Literal["chesscom", "lichess", "coach"] | None = None
     opening: Opening
-    moves: list[Move]
+    moves: list[Move] | None = None
     is_user_white: bool | None = None
     accuracy: Accuracy | None = None
     estimated_rating: EstimatedRating | None = None
@@ -143,6 +143,8 @@ class Game(CamelModel):
     analysis_depth: int | None = None
     analysis_level: str | None = None
     book_end: int | None = None
+    move_count: int | None = None
+    ends_in_mate: bool | None = None
 
 
 class CoachGameCreate(CamelModel):
