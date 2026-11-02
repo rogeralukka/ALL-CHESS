@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { InlineLoader } from '@/components/LoadingScreen';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,6 +17,8 @@ import { useCurrentUser } from '@/lib/useCurrentUser';
 import { storage } from '@/lib/storage';
 import { Meter } from '@/components/Bits';
 import { StatsSections } from './StatsSections';
+import { HistoryFilter, HistoryEmpty } from './HistoryFilter';
+import { filterByHistoryTab, historyCounts, HistoryTab } from '@/lib/gameHistory';
 import { gameRepository, statsRepository, friendRepository } from '@/data/repositories';
 import { Friend, Game, RatingPoint } from '@/data/types';
 import { rankFor } from '@/lib/rank';
@@ -85,6 +87,7 @@ export const Profile: React.FC = () => {
   const navigate = useNavigate();
   const puzzleRating = storage.get<number>('all_chess_puzzle_rating', 0);
   const [tab, setTab] = useState<Tab>('overview');
+  const [histTab, setHistTab] = useState<HistoryTab>('all');
   const [speed, setSpeed] = useState<Speed>('rapid');
   const [range, setRange] = useState<'30d' | '90d' | 'all'>('all');
   const [color] = useState<'all' | 'white' | 'black'>('all');
@@ -93,6 +96,8 @@ export const Profile: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [ratings, setRatings] = useState<{ mode: string; rating: number; deltaWeekly: number }[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const histCounts = useMemo(() => historyCounts(games), [games]);
+  const shownGames = useMemo(() => filterByHistoryTab(games, histTab), [games, histTab]);
 
   useEffect(() => {
     let alive = true;
@@ -233,13 +238,20 @@ export const Profile: React.FC = () => {
             <Card className="!p-0 overflow-hidden">
               <div className="px-5 py-3.5 flex items-center">
                 <h2 className="text-[17px] font-display font-bold text-theme-text">
-                  Game History <span className="text-theme-muted">({games.length})</span>
+                  Game History <span className="text-theme-muted">({shownGames.length})</span>
                 </h2>
               </div>
-              {isPhone ? <PhoneGameRows games={games.slice(0, 5)} className="!rounded-none" /> : <GameHistoryTable games={games.slice(0, 5)} />}
-              <button type="button" onClick={() => setTab('games')} className="w-full h-11 flex items-center justify-center gap-1 text-[14px] font-semibold text-theme-muted hover:text-theme-text border-t border-theme-border">
-                See More <ChevronRight size={15} />
-              </button>
+              <HistoryFilter value={histTab} onChange={setHistTab} counts={histCounts} />
+              {shownGames.length === 0 ? (
+                <HistoryEmpty tab={histTab} chesscomLinked={!!me.chesscomUsername} lichessLinked={!!me.lichessUsername} />
+              ) : (
+                <>
+                  {isPhone ? <PhoneGameRows games={shownGames.slice(0, 5)} className="!rounded-none" /> : <GameHistoryTable games={shownGames.slice(0, 5)} />}
+                  <button type="button" onClick={() => setTab('games')} className="w-full h-11 flex items-center justify-center gap-1 text-[14px] font-semibold text-theme-muted hover:text-theme-text border-t border-theme-border">
+                    See More <ChevronRight size={15} />
+                  </button>
+                </>
+              )}
             </Card>
           </div>
 
@@ -270,10 +282,17 @@ export const Profile: React.FC = () => {
         <Card className="!p-0 overflow-hidden">
           <div className="px-5 py-3.5">
             <h2 className="text-[17px] font-display font-bold text-theme-text">
-              Game History <span className="text-theme-muted">({games.length})</span>
+              Game History <span className="text-theme-muted">({shownGames.length})</span>
             </h2>
           </div>
-          {isPhone ? <PhoneGameRows games={games} className="!rounded-none" /> : <GameHistoryTable games={games} />}
+          <HistoryFilter value={histTab} onChange={setHistTab} counts={histCounts} />
+          {shownGames.length === 0 ? (
+            <HistoryEmpty tab={histTab} chesscomLinked={!!me.chesscomUsername} lichessLinked={!!me.lichessUsername} />
+          ) : isPhone ? (
+            <PhoneGameRows games={shownGames} className="!rounded-none" />
+          ) : (
+            <GameHistoryTable games={shownGames} />
+          )}
         </Card>
       )}
 

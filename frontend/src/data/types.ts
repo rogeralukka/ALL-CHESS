@@ -104,6 +104,8 @@ export interface Game {
   timeControl: string;
   speed: 'bullet' | 'blitz' | 'rapid' | 'daily';
   source: 'online' | 'vs_coach';
+  /** Where the game was played: a linked site, or 'coach' for games played here on ALL-CHESS (older rows may have none). */
+  platform?: 'chesscom' | 'lichess' | 'coach' | null;
   isUserWhite?: boolean;
   opening: Opening;
   moves: Move[];
