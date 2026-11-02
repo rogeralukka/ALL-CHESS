@@ -9,6 +9,7 @@ import { Tabs } from '@/components/Tabs';
 import { useSettingsStore, AppTheme, MotionLevel, AnimationSpeed, CoordinateStyle, BackgroundStyle } from '@/data/settingsStore';
 import { BOARD_THEMES, PIECE_SETS, BOARD_PRESETS } from '@/data/boardThemes';
 import { storage } from '@/lib/storage';
+import { runGameSync } from '@/lib/syncGames';
 import { useMotion } from '@/lib/useMotion';
 import { sound } from '@/lib/sound';
 import {
@@ -66,11 +67,10 @@ export const SettingsShell: React.FC = () => {
   const [showKeys, setShowKeys] = useState<{ [k: string]: boolean }>({});
   const [byokSavedToast, setByokSavedToast] = useState(false);
 
-  // Accounts Sync Mock State
-  const [chesscomUser, setChesscomUser] = useState('PawnStorm22');
-  const [lichessUser, setLichessUser] = useState('TacticsKnight');
+  // Linked accounts: the usernames given at login; Sync runs the real backend sync
   const [isSyncing, setIsSyncing] = useState(false);
-  const [accountToast, setAccountToast] = useState<string | null>(null);
+  const chesscomUser = user?.chesscomUsername || '';
+  const lichessUser = user?.lichessUsername || '';
 
   // Active board object for 3x3 preview
   const previewTheme = BOARD_THEMES.find((t) => t.id === stagedBoardId) || BOARD_THEMES[0];
@@ -106,13 +106,14 @@ export const SettingsShell: React.FC = () => {
     setTimeout(() => setByokSavedToast(false), 3000);
   };
 
-  const handleMockSync = () => {
+  const handleSync = async () => {
+    if (isSyncing) return;
     setIsSyncing(true);
-    setTimeout(() => {
+    try {
+      await runGameSync();
+    } finally {
       setIsSyncing(false);
-      setAccountToast('Successfully synced 12 games from linked accounts!');
-      setTimeout(() => setAccountToast(null), 3500);
-    }, 1000);
+    }
   };
 
   // 3x3 Preview Board pieces (exactly 6 pieces with real coordinates)
@@ -735,52 +736,52 @@ export const SettingsShell: React.FC = () => {
         </Card>
       )}
 
-      {/* TAB 5: LINKED ACCOUNTS (MOCK) */}
+      {/* TAB 5: LINKED ACCOUNTS (real: the usernames given at login, real sync) */}
       {activeTab === 'accounts' && (
         <Card className="p-6 space-y-6">
-          <div className="border-b border-theme-border pb-3 flex items-center justify-between">
+          <div className="border-b border-theme-border pb-3 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-bold font-display text-theme-text">Connected Chess Platforms</h3>
-              <p className="text-xs text-theme-muted mt-0.5">Simulate game ingestion from public profiles (fictional usernames only)</p>
+              <p className="text-xs text-theme-muted mt-0.5">Your games are pulled from the public profiles you linked when you logged in</p>
             </div>
             <Button
               size="sm"
               variant="primary"
               icon={isSyncing ? <MiniHopper size={26} /> : <RefreshCw size={14} />}
-              onClick={handleMockSync}
-              disabled={isSyncing}
+              onClick={handleSync}
+              disabled={isSyncing || (!chesscomUser && !lichessUser)}
+              data-testid="sync-now"
             >
               {isSyncing ? 'Syncing...' : 'Sync Games Now'}
             </Button>
           </div>
 
-          {accountToast && (
-            <div className="p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-xs font-semibold flex items-center gap-2">
-              <CheckCircle size={16} />
-              <span>{accountToast}</span>
-            </div>
-          )}
-
           <div className="space-y-4">
-            {/* Chess.com */}
-            <div className="p-4 rounded-xl bg-theme-raised border border-theme-border space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-sm text-theme-text">Chess.com Integration (Mock)</div>
-                <span className="text-xs bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded font-bold">
-                  Connected
-                </span>
+            {([
+              ['Chess.com', chesscomUser, 'chesscom-linked'],
+              ['Lichess.org', lichessUser, 'lichess-linked'],
+            ] as const).map(([name, handle, testId]) => (
+              <div key={name} className="p-4 rounded-xl bg-theme-raised border border-theme-border space-y-1" data-testid={testId}>
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-sm text-theme-text">{name}</div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded font-bold ${handle ? 'bg-emerald-500/20 text-emerald-500' : 'bg-theme-card text-theme-muted'}`}
+                  >
+                    {handle ? 'Connected' : 'Not linked'}
+                  </span>
+                </div>
+                <div className="text-xs text-theme-muted">
+                  {handle ? (
+                    <>
+                      Username: <span className="font-mono text-amber-500 font-bold">{handle}</span>
+                    </>
+                  ) : (
+                    `No ${name} username linked.`
+                  )}
+                </div>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={chesscomUser}
-                  onChange={(e) => setChesscomUser(e.target.value)}
-                  placeholder="Fictional username..."
-                  className="flex-1 px-3 py-2 bg-theme-card border border-theme-border rounded-lg text-xs text-theme-text focus:outline-none focus:border-amber-500 font-mono"
-                />
-                <Button size="sm" variant="secondary">Update</Button>
-              </div>
-            </div>
+            ))}
+            <p className="text-xs text-theme-muted">To link or change a username, log out and log in again with the new one.</p>
 
             {/* Active Session & Logout */}
             <div className="p-4 rounded-xl bg-theme-raised border border-theme-border flex items-center justify-between">
@@ -799,26 +800,6 @@ export const SettingsShell: React.FC = () => {
               >
                 Log Out
               </Button>
-            </div>
-
-            {/* Lichess */}
-            <div className="p-4 rounded-xl bg-theme-raised border border-theme-border space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-sm text-theme-text">Lichess.org Integration (Mock)</div>
-                <span className="text-xs bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded font-bold">
-                  Connected
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={lichessUser}
-                  onChange={(e) => setLichessUser(e.target.value)}
-                  placeholder="Fictional username..."
-                  className="flex-1 px-3 py-2 bg-theme-card border border-theme-border rounded-lg text-xs text-theme-text focus:outline-none focus:border-amber-500 font-mono"
-                />
-                <Button size="sm" variant="secondary">Update</Button>
-              </div>
             </div>
           </div>
         </Card>
