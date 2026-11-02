@@ -18,10 +18,10 @@ MoveClassificationType = Literal[
 CLASSIFICATION_THRESHOLDS: Dict[str, float] = {
     "best_max_drop": 0.0,
     "excellent_max_drop": 2.0,
-    "good_max_drop": 5.5,
-    "inaccuracy_max_drop": 10.0,
-    "mistake_max_drop": 18.0,
-    "miss_min_drop": 10.0,
+    "good_max_drop": 5.0,
+    "inaccuracy_max_drop": 13.0,
+    "mistake_max_drop": 20.0,
+    "miss_min_drop": 8.0,
     "great_min_gap_win_pct": 6.0,
     "great_min_after_win_pct": 35.0,
     "great_max_before_win_pct": 90.0,
@@ -225,10 +225,24 @@ def classify_move(
         and not is_mate_drop
         and (drop < 35.0 or opponent_just_made_mistake)
     ):
-        if opponent_just_made_mistake and (best_wins_material_or_mate or (best_eval_gap is not None and best_eval_gap >= 1.2)):
+        if opponent_just_made_mistake and best_wins_material_or_mate:
             return 'miss'
-        if best_wins_material_or_mate and (best_eval_gap is not None and best_eval_gap >= 1.5):
+        if best_wins_material_or_mate and (best_eval_gap is not None and best_eval_gap >= 2.0) and mover_after <= 60.0:
             return 'miss'
+
+    # In heavily lost positions (mover_before <= 14.0):
+    # Win% drop is compressed near 0. Classify using eval loss:
+    if mover_before <= 14.0:
+        if best_eval_gap is not None:
+            if best_eval_gap <= 0.25:
+                return 'excellent'
+            elif best_eval_gap <= 0.65:
+                return 'good'
+            elif best_eval_gap <= 1.25:
+                return 'inaccuracy'
+            else:
+                return 'mistake'
+        return 'good'
 
     # 5. Excellent: drop <= excellent_max_drop AND eval gap <= 0.35 pawns
     if drop <= CLASSIFICATION_THRESHOLDS["excellent_max_drop"] and (best_eval_gap is None or best_eval_gap <= 0.35):
@@ -239,18 +253,20 @@ def classify_move(
         return 'excellent'
 
     # 6. Good: drop <= good_max_drop
-    if drop <= CLASSIFICATION_THRESHOLDS["good_max_drop"] or (drop <= 7.5 and (best_eval_gap is None or best_eval_gap <= 0.75)):
+    if drop <= CLASSIFICATION_THRESHOLDS["good_max_drop"] and (best_eval_gap is None or best_eval_gap <= 0.85):
         return 'good'
 
     # 7. Inaccuracy: drop <= inaccuracy_max_drop
+    if mover_after >= 70.0 and drop <= 14.0:
+        return 'inaccuracy'
     if drop <= CLASSIFICATION_THRESHOLDS["inaccuracy_max_drop"]:
         if best_eval_gap is not None:
-            if (best_eval_gap >= 1.35 and mover_before <= 50.0) or (best_eval_gap >= 3.0):
+            if best_eval_gap >= 2.2 and mover_after < 65.0:
                 return 'mistake'
         return 'inaccuracy'
 
     # 8. Mistake: drop <= mistake_max_drop, or player preserves winning advantage (mover_after >= 55.0)
-    if drop <= CLASSIFICATION_THRESHOLDS["mistake_max_drop"] or (mover_after >= 55.0 and drop <= 30.0):
+    if drop <= CLASSIFICATION_THRESHOLDS["mistake_max_drop"] or (mover_after >= 32.0 and drop <= 31.0) or (mover_before <= 20.0 and not is_mate_drop):
         return 'mistake'
 
     # 9. Blunder: drop > 18.0%

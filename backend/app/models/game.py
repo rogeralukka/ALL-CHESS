@@ -31,5 +31,6 @@ class Game(Base):
     analysis_level = Column(String(32), nullable=True) # 'standard' | 'deep' | 'deeper' | 'max'
     analysis_depth = Column(Integer, nullable=True)
     book_end = Column(Integer, nullable=True)
+    review_summary = Column(JSON, nullable=True)
     
     created_at = Column(DateTime, default=utc_now, nullable=False)

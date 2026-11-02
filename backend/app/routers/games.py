@@ -379,6 +379,7 @@ async def run_game_analysis_task(
             game.analysis_level = level
             game.analysis_depth = real_depth
             game.book_end = analysis_result.get("bookEnd")
+            game.review_summary = analysis_result.get("reviewSummary")
 
         job.status = "done"
         job.progress = 100
@@ -389,6 +390,9 @@ async def run_game_analysis_task(
             "analysisLevel": game.analysis_level,
             "analysisDepth": game.analysis_depth,
             "bookEnd": game.book_end,
+
+            "reviewSummary": game.review_summary,
+
         }
         db.commit()
 
