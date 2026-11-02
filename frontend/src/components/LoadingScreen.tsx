@@ -1,19 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { useMotion } from '@/lib/useMotion';
+import { LOADER_SHEET as L } from './loaderSheet';
 
-/** Sprite sheet rendered by scripts/map-art/render_loader.py + pack_loader.py */
+/** Sprite sheet rendered by scripts/map-art/render_loader.py + pack_loader.py (geometry in loaderSheet.ts) */
 const SHEET = '/assets/ui/loader_sheet.webp';
-const COLS = 12;
-const FRAMES = 96;
-const FW = 103;
-const FH = 208;
 const FPS = 24;
+/** frames per hop, as in render_loader.py */
+const SEG = 16;
 
 const LINES = ['Setting up the pieces…', 'Polishing the board…', 'Waking up the coach…', 'Counting the squares…'];
 
 /**
+ * How high the piece is (0 on the floor, 1 at the top of the jump) and how much it is squashed
+ * sideways, for one frame. Same curve the frames were rendered with, so the shadow matches the piece.
+ */
+function hopAt(frame: number): { lift: number; squash: number } {
+  const t = (frame % SEG) / SEG;
+  if (t < 0.2) return { lift: 0, squash: 1 + 0.12 * Math.sin((t / 0.2) * (Math.PI / 2)) };
+  if (t < 0.85) {
+    const k = (t - 0.2) / 0.65;
+    return { lift: 4 * k * (1 - k), squash: 1 };
+  }
+  return { lift: 0, squash: 1 + 0.1 * Math.sin(((t - 0.85) / 0.15) * Math.PI) };
+}
+
+/**
  * Game-style loader: a piece hops, backflips and turns into the next piece
- * (pawn → knight → bishop → rook → queen → king). With motion off it shows a still pawn.
+ * (pawn → knight → bishop → rook → queen → king). Its shadow is drawn here, under the piece:
+ * it narrows and fades as the piece jumps, and widens as it lands. With motion off it shows a still pawn.
  */
 export const PieceHopper: React.FC<{ size?: number }> = ({ size = 120 }) => {
   const { isOff } = useMotion();
@@ -23,25 +37,39 @@ export const PieceHopper: React.FC<{ size?: number }> = ({ size = 120 }) => {
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {
-      setFrame(Math.floor(((now - start) / 1000) * FPS) % FRAMES);
+      setFrame(Math.floor(((now - start) / 1000) * FPS) % L.frames);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [isOff]);
-  const scale = size / FH;
+  const scale = size / L.fh;
+  const { lift, squash } = hopAt(frame);
+  const shadowW = L.baseW * scale * 1.25 * (1 - 0.5 * lift) * squash;
   return (
-    <div
-      aria-hidden="true"
-      style={{
-        width: FW * scale,
-        height: size,
-        backgroundImage: `url(${SHEET})`,
-        backgroundSize: `${COLS * FW * scale}px auto`,
-        backgroundPosition: `${-(frame % COLS) * FW * scale}px ${-Math.floor(frame / COLS) * FH * scale}px`,
-        backgroundRepeat: 'no-repeat',
-      }}
-    />
+    <div aria-hidden="true" className="relative" style={{ width: L.fw * scale, height: size }}>
+      <div
+        className="absolute rounded-[50%] pointer-events-none"
+        style={{
+          left: L.groundX * scale,
+          top: L.groundY * scale,
+          width: shadowW,
+          height: Math.max(2, shadowW * 0.24),
+          transform: 'translate(-50%, -50%)',
+          background: 'radial-gradient(closest-side, rgba(0,0,0,0.5), rgba(0,0,0,0.28) 55%, rgba(0,0,0,0) 100%)',
+          opacity: 1 - 0.6 * lift,
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `url(${SHEET})`,
+          backgroundSize: `${L.sheetW * scale}px ${L.sheetH * scale}px`,
+          backgroundPosition: `${-(frame % L.cols) * (L.fw + L.gap) * scale}px ${-Math.floor(frame / L.cols) * (L.fh + L.gap) * scale}px`,
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+    </div>
   );
 };
 
@@ -79,10 +107,7 @@ export const LoadingScreen: React.FC<{ delayMs?: number; label?: string }> = ({ 
   if (!visible) return null;
   return (
     <div className="flex-1 min-h-[70vh] flex flex-col items-center justify-center gap-4 select-none" role="status" aria-live="polite" data-testid="loading-screen">
-      <div className="relative">
-        <PieceHopper size={190} />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-1 w-20 h-3 rounded-full bg-black/30 blur-[3px] -z-10" />
-      </div>
+      <PieceHopper size={190} />
       <div className="font-display font-black text-[17px] text-theme-text">{label || line}</div>
       <div className="flex gap-1.5" aria-hidden="true">
         {[0, 1, 2].map((i) => (
