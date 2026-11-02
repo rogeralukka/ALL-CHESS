@@ -392,7 +392,6 @@ def test_migration_008_backfills_existing_games(tmp_path):
     eng = sa.create_engine(f"sqlite:///{db_file}")
     assert "move_count" not in [c["name"] for c in sa.inspect(eng).get_columns("games")]
     with eng.begin() as c:
-        ucols = [x["name"] for x in sa.inspect(eng).get_columns("users")]
         vals = {"id": "u1", "username": "u"}
         for x in sa.inspect(eng).get_columns("users"):
             if x["name"] not in vals and not x["nullable"] and x["default"] is None:
