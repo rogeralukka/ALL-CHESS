@@ -27,11 +27,11 @@ def upgrade() -> None:
     with op.batch_alter_table("users") as batch_op:
         if "chesscom_backfill_done" not in user_cols:
             batch_op.add_column(
-                sa.Column("chesscom_backfill_done", sa.Boolean(), nullable=False, server_default=sa.text("0"))
+                sa.Column("chesscom_backfill_done", sa.Boolean(), nullable=False, server_default=sa.false())
             )
         if "lichess_backfill_done" not in user_cols:
             batch_op.add_column(
-                sa.Column("lichess_backfill_done", sa.Boolean(), nullable=False, server_default=sa.text("0"))
+                sa.Column("lichess_backfill_done", sa.Boolean(), nullable=False, server_default=sa.false())
             )
 
     # 2. Update analysis_jobs table
