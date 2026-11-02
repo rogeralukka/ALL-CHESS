@@ -11,7 +11,7 @@ interface Props {
 /** Game History sections: everything, only Chess.com, only Lichess, only games played here on ALL-CHESS. */
 export const HistoryFilter: React.FC<Props> = ({ value, onChange, counts }) => (
   <div className="px-4 sm:px-5 pb-3 overflow-x-auto no-scrollbar" data-testid="history-filter">
-    <div role="tablist" aria-label="Game history sections" className="flex gap-2 w-max min-w-full">
+    <div role="tablist" aria-label="Game history sections" className="flex gap-1.5 sm:gap-2 w-max min-w-full">
       {HISTORY_TABS.map((t) => {
         const on = t.value === value;
         return (
@@ -22,12 +22,12 @@ export const HistoryFilter: React.FC<Props> = ({ value, onChange, counts }) => (
             aria-selected={on}
             data-testid={`history-tab-${t.value}`}
             onClick={() => onChange(t.value)}
-            className={`h-9 px-3.5 rounded-full text-[13px] font-display font-bold whitespace-nowrap flex items-center gap-1.5 transition-colors border ${
-              on ? 'bg-theme-text text-theme-bg border-theme-text' : 'bg-theme-raised text-theme-muted border-theme-border hover:text-theme-text'
+            className={`h-9 px-2.5 sm:px-3.5 rounded-full text-[12px] sm:text-[13px] font-display font-bold whitespace-nowrap flex items-center gap-1.5 transition-colors border ${
+              on ? 'bg-theme-accent text-theme-accent-text border-theme-accent' : 'bg-theme-raised text-theme-muted border-theme-border hover:text-theme-text'
             }`}
           >
             {t.label}
-            <span className={`tabular-nums text-[12px] ${on ? 'opacity-70' : 'opacity-60'}`}>{counts[t.value]}</span>
+            <span className={`tabular-nums text-[11px] sm:text-[12px] ${on ? 'opacity-80' : 'opacity-60'}`}>{counts[t.value]}</span>
           </button>
         );
       })}
