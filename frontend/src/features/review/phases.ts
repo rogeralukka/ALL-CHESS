@@ -25,6 +25,7 @@ const WEIGHT: Record<MoveClassification, number> = {
   great: 1,
   best: 1,
   book: 1,
+  forced: 1,
   excellent: 0.95,
   good: 0.8,
   inaccuracy: 0.55,

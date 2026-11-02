@@ -35,6 +35,7 @@ describe('ALL-CHESS Step 1A: Foundation Suite', () => {
       'brilliant',
       'great',
       'book',
+      'forced',
       'best',
       'excellent',
       'good',

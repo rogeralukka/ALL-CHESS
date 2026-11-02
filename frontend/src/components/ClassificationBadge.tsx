@@ -31,6 +31,13 @@ export const CLASSIFICATION_META: Record<MoveClassification, ClassificationMeta>
     textColor: '#ffffff',
     name: 'Book',
   },
+  forced: {
+    label: '→',
+    color: '#8b8987',
+    bgColor: '#8b8987',
+    textColor: '#ffffff',
+    name: 'Forced',
+  },
   best: {
     label: '★',
     color: '#7bb661',
@@ -156,6 +163,9 @@ const Glyph: React.FC<{ classification: MoveClassification; color: string }> = (
           strokeLinejoin="round"
         />
       );
+    case 'forced':
+      // a plain right arrow: the only move there was
+      return <path d="M9 16h12M16.5 10.5L22 16l-5.5 5.5" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />;
     case 'miss':
       return <path d="M11 11l10 10M21 11L11 21" fill="none" stroke={color} strokeWidth={3.4} strokeLinecap="round" />;
     default:

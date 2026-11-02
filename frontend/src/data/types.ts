@@ -2,6 +2,7 @@ export type MoveClassification =
   | 'brilliant'
   | 'great'
   | 'book'
+  | 'forced'
   | 'best'
   | 'excellent'
   | 'good'
@@ -51,6 +52,8 @@ export interface MoveAnnotations {
   arrows?: { from: string; to: string; kind: 'best' | 'refutation' | 'threat' | 'played' | 'missed' | 'alt' }[];
   squares?: { square: string; kind: 'attacked' | 'hanging' | 'target' | 'king-danger'; reason: string; tone?: 'green' | 'orange' }[];
   bestMove?: MoveRef | null;
+  /** The engine's best move in UCI (e.g. e3e4), so the arrow needs no SAN parsing */
+  bestUci?: string | null;
   refutation?: MoveRef | null;
   pv?: string[] | null;
   /** Commentary v2: why the move was good or bad, one proven sentence each */
