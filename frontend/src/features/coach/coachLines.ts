@@ -26,6 +26,9 @@ export const COACH_LINES: Record<CoachEvent, string[]> = {
     "Good practical choice. You developed a piece and stayed safe.",
     "Quiet, constructive move that preserves your board presence."
   ],
+  forced: [
+    "That was the only legal move, so there was nothing to decide.",
+  ],
   book: [
     "Well-known theory. Following established opening principles.",
     "Standard grandmaster preparation. Developing naturally toward the center.",

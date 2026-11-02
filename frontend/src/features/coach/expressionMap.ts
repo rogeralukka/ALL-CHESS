@@ -22,6 +22,7 @@ export const EXPRESSION_MAP: Record<CoachEvent, CoachExpression> = {
   excellent: 'thumbsup',
   good: 'neutral',
   book: 'neutral',
+  forced: 'neutral',
   inaccuracy: 'thinking',
   mistake: 'embarrassed',
   miss: 'embarrassed',

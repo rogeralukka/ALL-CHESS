@@ -58,6 +58,7 @@ const getHeaderPhrase = (cls?: MoveClassification) => {
     case 'excellent': return 'is an excellent move';
     case 'good': return 'is a good move';
     case 'book': return 'is a book move';
+    case 'forced': return 'is forced';
     default: return '';
   }
 };
