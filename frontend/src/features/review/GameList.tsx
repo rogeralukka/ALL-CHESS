@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Game } from '@/data/types';
 import { gameRepository, GameFilter } from '@/data/repositories';
 import { Button } from '@/components/Button';
@@ -9,6 +9,9 @@ import { PageTitle, StatTile } from '@/components/ListUI';
 import { GameHistoryTable } from '@/components/GameHistoryTable';
 import { PhoneGameRows } from '@/components/PhoneGameRows';
 import { useMediaQuery } from '@/lib/useMediaQuery';
+import { useCurrentUser } from '@/lib/useCurrentUser';
+import { HistoryTab, filterByHistoryTab, historyCounts } from '@/lib/gameHistory';
+import { HistoryFilter, HistoryEmpty } from '@/features/profile/HistoryFilter';
 import { CoachAvatar } from '@/features/coach/CoachAvatar';
 import { Search, Swords, Trophy, Percent, Target } from 'lucide-react';
 
@@ -18,7 +21,9 @@ interface GameListProps {
 
 export const GameList: React.FC<GameListProps> = () => {
   const isPhone = useMediaQuery('(max-width: 639px)');
-  const [games, setGames] = useState<Game[]>([]);
+  const me = useCurrentUser();
+  const [histTab, setHistTab] = useState<HistoryTab>('all');
+  const [fetched, setFetched] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [speedFilter, setSpeedFilter] = useState<'all' | 'rapid' | 'blitz' | 'bullet'>('all');
@@ -31,7 +36,7 @@ export const GameList: React.FC<GameListProps> = () => {
     const filter: GameFilter = { searchQuery, speed: speedFilter, color: colorFilter, result: resultFilter };
     gameRepository.getGames(filter).then((res) => {
       if (mounted) {
-        setGames(res);
+        setFetched(res);
         setLoading(false);
       }
     });
@@ -39,6 +44,10 @@ export const GameList: React.FC<GameListProps> = () => {
       mounted = false;
     };
   }, [searchQuery, speedFilter, colorFilter, resultFilter]);
+
+  // `fetched` is what the speed / colour / result filters let through; the source tabs narrow it further
+  const histCounts = useMemo(() => historyCounts(fetched), [fetched]);
+  const games = useMemo(() => filterByHistoryTab(fetched, histTab), [fetched, histTab]);
 
   const you = (g: Game) => ((g.isUserWhite ?? g.white.username === 'You') ? 'w' : 'b');
   const wins = games.filter((g) => (you(g) === 'w' && g.result === '1-0') || (you(g) === 'b' && g.result === '0-1')).length;
@@ -50,6 +59,7 @@ export const GameList: React.FC<GameListProps> = () => {
     setSpeedFilter('all');
     setColorFilter('all');
     setResultFilter('all');
+    setHistTab('all');
   };
 
   return (
@@ -84,7 +94,10 @@ export const GameList: React.FC<GameListProps> = () => {
       )}
 
       <section className="cc-card overflow-hidden">
-        <div className="p-3 md:p-4 flex flex-col xl:flex-row xl:items-center gap-3 border-b border-theme-border">
+        <div className="pt-3 md:pt-4">
+          <HistoryFilter value={histTab} onChange={setHistTab} counts={histCounts} />
+        </div>
+        <div className="p-3 md:p-4 pt-0 md:pt-0 flex flex-col xl:flex-row xl:items-center gap-3 border-b border-theme-border">
           <div className="relative xl:w-72 flex-shrink-0">
             <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-muted pointer-events-none" />
             <input
@@ -136,7 +149,11 @@ export const GameList: React.FC<GameListProps> = () => {
           <InlineLoader label="Loading your games…" size={190} className="py-14" />
         )}
 
-        {!loading && games.length === 0 && (
+        {!loading && games.length === 0 && fetched.length > 0 && histTab !== 'all' && (
+          <HistoryEmpty tab={histTab} chesscomLinked={!!me.chesscomUsername} lichessLinked={!!me.lichessUsername} />
+        )}
+
+        {!loading && games.length === 0 && !(fetched.length > 0 && histTab !== 'all') && (
           <div className="flex flex-col items-center justify-center p-10 text-center gap-4">
             <CoachAvatar expression="thinking" mode="bust" size={88} />
             <div>
