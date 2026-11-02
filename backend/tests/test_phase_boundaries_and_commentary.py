@@ -135,7 +135,7 @@ def test_commentary_quality_and_concrete_why():
     )
     assert "mistake" in comment_mistake
     assert "Nf3" in comment_mistake
-    assert "Nf3 d5 d4" in comment_mistake
+    assert "Nf3 was better." in comment_mistake
     assert len(comment_mistake) <= 220
 
     # Blunder with refutation PV
@@ -150,7 +150,7 @@ def test_commentary_quality_and_concrete_why():
     )
     assert "blunder" in comment_blunder
     assert "fxe6" in comment_blunder
-    assert "fxe6 Qxe6 Nf3" in comment_blunder
+    assert "fxe6 was better." in comment_blunder
     assert len(comment_blunder) <= 220
 
 

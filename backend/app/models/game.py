@@ -37,6 +37,7 @@ class Game(Base):
     book_end = Column(Integer, nullable=True)
     move_count = Column(Integer, nullable=True)
     ends_in_mate = Column(Boolean, nullable=True, default=False)
+    review_summary = Column(JSON, nullable=True)
     
     created_at = Column(DateTime, default=utc_now, nullable=False)
 

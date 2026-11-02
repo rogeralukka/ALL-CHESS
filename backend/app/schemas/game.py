@@ -75,6 +75,9 @@ class MoveAnnotations(CamelModel):
     best_move: MoveRef | None = None
     refutation: MoveRef | None = None
     pv: list[str] | None = Field(default_factory=list)
+    reason_code: str | None = None
+    explain: list[str] | None = Field(default_factory=list)
+    mate_squares: list[str] | None = Field(default_factory=list)
 
 
 class Move(CamelModel):
@@ -122,6 +125,10 @@ class EstimatedRating(CamelModel):
     black: int
 
 
+class ReviewSummary(CamelModel):
+    headline: str | None = None
+
+
 class Game(CamelModel):
     id: str
     pgn: str | None = None
@@ -145,6 +152,7 @@ class Game(CamelModel):
     book_end: int | None = None
     move_count: int | None = None
     ends_in_mate: bool | None = None
+    review_summary: ReviewSummary | None = None
 
 
 class CoachGameCreate(CamelModel):

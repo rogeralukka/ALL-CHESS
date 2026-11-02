@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     # Chess.com accuracy curve settings (softer curve calibrated to reference games)
     accuracy_chesscom_scale: float = Field(default=8.0)
     accuracy_chesscom_power: float = Field(default=1.1)
-    accuracy_chesscom_weight_power: float = Field(default=0.4)
+    accuracy_chesscom_weight_power: float = Field(default=0.30)
 
     # Performance rating mapping settings
     # estimated = clamp(100, 3000, player_rating + (accuracy - expected_accuracy) * sensitivity_k)

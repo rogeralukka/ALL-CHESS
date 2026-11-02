@@ -131,9 +131,9 @@ def generate_template_comment(
     Clamped to <= 220 characters.
     """
     best_desc = f" The engine preferred {best_move}." if best_move and best_move != san else ""
-    ref_pv = ""
-    if pv and len(pv) >= 2:
-        ref_pv = f" ({' '.join(pv[:3])})"
+
+
+
 
     if classification == "brilliant":
         comment = f"{san} is a brilliant move! You found a deep, sacrifice-backed tactical shot that seized control."
@@ -152,16 +152,16 @@ def generate_template_comment(
         comment = f"{san} follows established opening theory."
     elif classification == "inaccuracy":
         alt = f" Better was {best_move}." if best_move and best_move != san else ""
-        comment = f"{san} is a small slip that slightly loosens control.{alt}"
+        comment = f"{san} is slightly inaccurate.{alt}"
     elif classification == "mistake":
-        alt = f" Best was {best_move}{ref_pv}." if best_move and best_move != san else ""
-        comment = f"{san} is a mistake that gives up real ground.{alt}"
+        alt = f" {best_move} was better." if best_move and best_move != san else ""
+        comment = f"{san} is a mistake.{alt}"
     elif classification == "miss":
-        alt = f" {best_move}{ref_pv} was winning." if best_move and best_move != san else ""
-        comment = f"A critical opportunity was missed with {san}.{alt}"
+        alt = f" {best_move} was better." if best_move and best_move != san else ""
+        comment = f"{san} misses a tactical opportunity.{alt}"
     elif classification == "blunder":
-        alt = f" {best_move}{ref_pv} was required." if best_move and best_move != san else ""
-        comment = f"{san} is a blunder that loses decisive material or control.{alt}"
+        alt = f" {best_move} was better." if best_move and best_move != san else ""
+        comment = f"{san} is a blunder.{alt}"
     else:
         comment = f"{san} was played."
 

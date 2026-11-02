@@ -7,8 +7,7 @@ Computes visual review annotations matching Chess.com:
   - Target/hanging/king-danger square highlights with plain English reasons
   - bestMove and refutation references
   - Up to 6 PV moves for the Explain stepper
-
-Does not modify classifier thresholds or accuracy math.
+  - Commentary v2: reasonCode, explain[], mateSquares[]
 """
 
 from typing import Any
@@ -203,6 +202,270 @@ def compute_squares_annotation(
     return squares[:4]
 
 
+def compute_commentary_v2(
+    san: str,
+    classification: str | None,
+    best_san: str | None = None,
+    board_before: chess.Board | None = None,
+    board_after: chess.Board | None = None,
+    played_move: chess.Move | None = None,
+    eval_before: float | None = None,
+    eval_after: float | None = None,
+    mate_before: int | None = None,
+    mate_after: int | None = None,
+    refutation_san: str | None = None,
+    squares: list[dict[str, str]] | None = None,
+    is_book: bool = False,
+) -> dict[str, Any]:
+    """
+    Computes Commentary v2 with structured reasons, exact SAN start, and lowercase pawn SANs:
+      - reason_code: e.g. "allows_mate", "loses_piece", "blunder", "mistake", "inaccuracy",
+                     "missed_tactic", "tactical_sacrifice", "only_move", "best_move",
+                     "book_move", "solid_move", "excellent_move"
+      - explain: list[str] of 1-2 concise, filler-free sentences
+      - mate_squares: list[str] of critical mating squares
+      - comment: " ".join(explain)
+    """
+    cls = (classification or "").lower()
+    mate_squares: list[str] = []
+
+    # 1. Mate allowed or delivered
+    is_mate_case = False
+    opponent_mate_in_1 = False
+    mating_move = None
+    if board_after:
+        if board_after.is_checkmate():
+            is_mate_case = True
+            k_sq = board_after.king(not board_after.turn)
+            if k_sq is not None:
+                mate_squares.append(chess.square_name(k_sq))
+            s1 = f"{san} allows checkmate."
+            reason_code = "allows_mate"
+        else:
+            for m in board_after.legal_moves:
+                board_after.push(m)
+                if board_after.is_checkmate():
+                    opponent_mate_in_1 = True
+                    mating_move = m
+                    board_after.pop()
+                    break
+                board_after.pop()
+
+            if opponent_mate_in_1 and mating_move:
+                is_mate_case = True
+                m_to = chess.square_name(mating_move.to_square)
+                # The king being mated belongs to the mover (not board_after.turn)
+                k_sq = board_after.king(not board_after.turn)
+                k_name = chess.square_name(k_sq) if k_sq is not None else None
+                if m_to not in mate_squares:
+                    mate_squares.append(m_to)
+                if k_name and k_name not in mate_squares:
+                    mate_squares.append(k_name)
+                s1 = f"{san} allows mate in 1."
+                reason_code = "allows_mate"
+
+    if (
+        not is_mate_case
+        and mate_after is not None
+        and abs(mate_after) <= 3
+        and cls in ("blunder", "mistake")
+    ):
+        is_mate_case = True
+        reason_code = "allows_mate"
+        m_count = abs(mate_after)
+        s1 = f"{san} allows mate in {m_count}."
+        if board_after:
+            k_sq = board_after.king(not board_after.turn)
+            if k_sq is not None:
+                k_name = chess.square_name(k_sq)
+                if k_name not in mate_squares:
+                    mate_squares.append(k_name)
+
+    if is_mate_case:
+        alt = f"{best_san} was better." if best_san and best_san != san else None
+        explain = [s1, alt] if alt else [s1]
+        return {
+            "reason_code": reason_code,
+            "explain": explain,
+            "mate_squares": mate_squares,
+            "comment": " ".join(explain),
+        }
+
+    # 2. Check for piece drop proven by python-chess
+    if cls in ("blunder", "mistake"):
+        hanging_piece_desc = None
+        if board_after:
+            def_color = not board_after.turn
+            att_color = board_after.turn
+            # Check the piece just played
+            if played_move:
+                moved_pc = board_after.piece_at(played_move.to_square)
+                if (
+                    moved_pc
+                    and moved_pc.color == def_color
+                    and moved_pc.piece_type != chess.KING
+                ):
+                    att = board_after.attackers(att_color, played_move.to_square)
+                    defs = board_after.attackers(def_color, played_move.to_square)
+                    if att and not defs:
+                        p_name = PIECE_NAMES.get(moved_pc.piece_type, "piece")
+                        sq_name = chess.square_name(played_move.to_square)
+                        hanging_piece_desc = f"{p_name} on {sq_name}"
+
+            # If not moved piece, check other hanging pieces
+            if not hanging_piece_desc and squares:
+                for sq_info in squares:
+                    if sq_info.get("kind") == "hanging":
+                        sq_str = sq_info.get("square")
+                        if sq_str:
+                            sq_idx = chess.parse_square(sq_str)
+                            pc = board_after.piece_at(sq_idx)
+                            if pc and pc.color == def_color and pc.piece_type != chess.KING:
+                                p_name = PIECE_NAMES.get(pc.piece_type, "piece")
+                                hanging_piece_desc = f"{p_name} on {sq_str}"
+                                break
+
+        if hanging_piece_desc:
+            s1 = f"{san} loses your {hanging_piece_desc}."
+            alt = f"{best_san} was better." if best_san and best_san != san else None
+            explain = [s1, alt] if alt else [s1]
+            return {
+                "reason_code": "loses_piece",
+                "explain": explain,
+                "mate_squares": [],
+                "comment": " ".join(explain),
+            }
+
+        # Check refutation check move (e.g. Qh4+)
+        if refutation_san and (refutation_san.endswith("+") or refutation_san.endswith("#")):
+            s1 = f"{san} allows {refutation_san}."
+            alt = f"{best_san} was better." if best_san and best_san != san else None
+            explain = [s1, alt] if alt else [s1]
+            return {
+                "reason_code": cls,
+                "explain": explain,
+                "mate_squares": [],
+                "comment": " ".join(explain),
+            }
+
+        if cls == "blunder":
+            s1 = f"{san} is a blunder."
+            alt = f"{best_san} was better." if best_san and best_san != san else None
+            explain = [s1, alt] if alt else [s1]
+            return {
+                "reason_code": "blunder",
+                "explain": explain,
+                "mate_squares": [],
+                "comment": " ".join(explain),
+            }
+
+        s1 = f"{san} is a mistake."
+        alt = f"{best_san} was better." if best_san and best_san != san else None
+        explain = [s1, alt] if alt else [s1]
+        return {
+            "reason_code": "mistake",
+            "explain": explain,
+            "mate_squares": [],
+            "comment": " ".join(explain),
+        }
+
+    # 3. Miss
+    if cls == "miss":
+        if mate_before is not None or (mate_after is not None and abs(mate_after) <= 1):
+            s1 = f"{san} misses mate."
+            alt = f"{best_san} wins mate." if best_san and best_san != san else None
+        else:
+            s1 = f"{san} misses a tactical opportunity."
+            alt = f"{best_san} wins material." if best_san and best_san != san else None
+        explain = [s1, alt] if alt else [s1]
+        return {
+            "reason_code": "missed_tactic",
+            "explain": explain,
+            "mate_squares": [],
+            "comment": " ".join(explain),
+        }
+
+    # 4. Inaccuracy
+    if cls == "inaccuracy":
+        s1 = f"{san} is slightly inaccurate."
+        alt = f"{best_san} keeps the edge." if best_san and best_san != san else None
+        explain = [s1, alt] if alt else [s1]
+        return {
+            "reason_code": "inaccuracy",
+            "explain": explain,
+            "mate_squares": [],
+            "comment": " ".join(explain),
+        }
+
+    # 5. Brilliant
+    if cls == "brilliant":
+        s1 = f"{san} is brilliant: a tactical sacrifice that seizes the initiative."
+        return {
+            "reason_code": "tactical_sacrifice",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
+
+    # 6. Great
+    if cls == "great":
+        s1 = f"{san} is a great move: the only move that maintains the advantage."
+        return {
+            "reason_code": "only_move",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
+
+    # 7. Best
+    if cls == "best":
+        s1 = f"{san} is best."
+        return {
+            "reason_code": "best_move",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
+
+    # 8. Book
+    if is_book or cls == "book":
+        s1 = f"{san} is a book move."
+        return {
+            "reason_code": "book_move",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
+
+    # 9. Excellent
+    if cls == "excellent":
+        s1 = f"{san} is an excellent move."
+        return {
+            "reason_code": "excellent_move",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
+
+    # 10. Good
+    if cls == "good":
+        s1 = f"{san} is a solid move."
+        return {
+            "reason_code": "solid_move",
+            "explain": [s1],
+            "mate_squares": [],
+            "comment": s1,
+        }
+
+    s1 = f"{san} was played."
+    return {
+        "reason_code": "normal_move",
+        "explain": [s1],
+        "mate_squares": [],
+        "comment": s1,
+    }
+
+
 def compute_move_annotations(
     board_before: chess.Board,
     board_after: chess.Board,
@@ -220,13 +483,21 @@ def compute_move_annotations(
     Computes annotations payload for a single move according to prompt rules.
     """
     tint = compute_tint(classification)
-
     cls_lower = (classification or "").lower()
 
     # Rule: book / best / excellent / good: no arrows, no squares (Chess.com shows only tints)
     # Forced move (<= 1 legal move) also emits only tint.
     is_forced = num_legal_moves <= 1
     if is_book or cls_lower in ("book", "best", "excellent", "good") or is_forced:
+        details = compute_commentary_v2(
+            san=san_move,
+            classification=classification,
+            best_san=None,
+            board_before=board_before,
+            board_after=board_after,
+            played_move=played_move,
+            is_book=is_book,
+        )
         return {
             "tint": tint,
             "arrows": [],
@@ -234,14 +505,15 @@ def compute_move_annotations(
             "bestMove": None,
             "refutation": None,
             "pv": [],
+            "reasonCode": details["reason_code"],
+            "explain": details["explain"],
+            "mateSquares": details["mate_squares"],
         }
 
     pos_before = pos_before or {}
     pos_after = pos_after or {}
     ext_pos_before = ext_pos_before or {}
     ext_pos_after = ext_pos_after or {}
-
-    cls_lower = (classification or "").lower()
 
     # Check for engine data availability
     top_lines_before = pos_before.get("top_lines") or []
@@ -258,9 +530,18 @@ def compute_move_annotations(
     )
 
     if not has_engine_data:
-        # Fall back to python-chess heuristics for squares only, and leave arrows empty
         squares = compute_squares_annotation(
             board_after, best_move_to_sq=None, is_miss=False
+        )
+        details = compute_commentary_v2(
+            san=san_move,
+            classification=classification,
+            best_san=None,
+            board_before=board_before,
+            board_after=board_after,
+            played_move=played_move,
+            squares=squares,
+            is_book=is_book,
         )
         return {
             "tint": tint,
@@ -269,6 +550,9 @@ def compute_move_annotations(
             "bestMove": None,
             "refutation": None,
             "pv": [],
+            "reasonCode": details["reason_code"],
+            "explain": details["explain"],
+            "mateSquares": details["mate_squares"],
         }
 
     # 1. Resolve PV before
@@ -369,7 +653,6 @@ def compute_move_annotations(
     squares: list[dict[str, str]] = []
 
     if cls_lower in ("brilliant", "great"):
-        # Section 3: great / brilliant: follow-up threat arrow only (kind: "threat"), max 1. No squares.
         threat_move = None
         if len(pv_moves_after) >= 2:
             threat_move = pv_moves_after[1]
@@ -385,7 +668,6 @@ def compute_move_annotations(
         squares = []
 
     elif cls_lower == "miss":
-        # Section 3: miss: exactly ONE arrow, the best move you missed (kind: "best"). No refutation arrow.
         if best_chess_move and not is_dup_played(best_chess_move):
             arrows.append({
                 "from": chess.square_name(best_chess_move.from_square),
@@ -396,8 +678,6 @@ def compute_move_annotations(
         squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=True)
 
     elif cls_lower in ("blunder", "mistake"):
-        # Section 3: blunder / mistake: refutation arrow first, best arrow second.
-        # Target square for best move destination.
         if reply_chess_move and not is_dup_played(reply_chess_move):
             arrows.append({
                 "from": chess.square_name(reply_chess_move.from_square),
@@ -414,7 +694,6 @@ def compute_move_annotations(
         squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=False)
 
     elif cls_lower == "inaccuracy":
-        # Inaccuracy: best arrow
         if best_chess_move and not is_dup_played(best_chess_move):
             arrows.append({
                 "from": chess.square_name(best_chess_move.from_square),
@@ -424,7 +703,22 @@ def compute_move_annotations(
         best_target_sq = best_chess_move.to_square if best_chess_move else None
         squares = compute_squares_annotation(board_after, best_move_to_sq=best_target_sq, is_miss=False)
 
-    # Section 3: Max 2 arrows and 4 squares per move
+    details = compute_commentary_v2(
+        san=san_move,
+        classification=classification,
+        best_san=best_san,
+        board_before=board_before,
+        board_after=board_after,
+        played_move=played_move,
+        eval_before=pos_before.get("eval") if pos_before else None,
+        eval_after=pos_after.get("eval") if pos_after else None,
+        mate_before=pos_before.get("mate") if pos_before else None,
+        mate_after=pos_after.get("mate") if pos_after else None,
+        refutation_san=reply_san,
+        squares=squares,
+        is_book=is_book,
+    )
+
     return {
         "tint": tint,
         "arrows": arrows[:2],
@@ -432,6 +726,9 @@ def compute_move_annotations(
         "bestMove": best_move_obj,
         "refutation": refutation_obj,
         "pv": pv_sans,
+        "reasonCode": details["reason_code"],
+        "explain": details["explain"],
+        "mateSquares": details["mate_squares"],
     }
 
 
@@ -448,6 +745,10 @@ def generate_improved_commentary(
     squares: list[dict[str, str]] | None = None,
     is_sacrifice: bool = False,
     best_wins_material_or_mate: bool = False,
+    board_before: chess.Board | None = None,
+    board_after: chess.Board | None = None,
+    played_move: chess.Move | None = None,
+    is_book: bool = False,
 ) -> str:
     """
     Concise, specific commentary matching Chess.com:
@@ -455,79 +756,21 @@ def generate_improved_commentary(
       - miss: "<SAN> misses <tactic>. <Best SAN> wins <material|mate>."
       - inaccuracy: "<SAN> is slightly inaccurate. <Best SAN> keeps the edge."
       - brilliant/great: "<SAN> is <brilliant|a great move>: <reason>."
-      - Never says a piece "hangs" unless the python-chess check proves it.
+      - Starts with exact SAN, pawn SAN lowercase.
     """
-    cls = (classification or "").lower()
-
-    if cls in ("blunder", "mistake"):
-        if mate_after == 0 or (mate_after is not None and abs(mate_after) <= 3):
-            verb = "allows"
-            what = "mate"
-        else:
-            hanging_piece = None
-            if squares:
-                for sq in squares:
-                    if sq.get("kind") == "hanging" and "undefended" in sq.get(
-                        "reason", ""
-                    ):
-                        parts = sq["reason"].split("undefended ")
-                        if len(parts) > 1:
-                            hanging_piece = f"the {parts[1]}"
-                            break
-
-            if hanging_piece:
-                verb = "loses"
-                what = hanging_piece
-            elif refutation_san:
-                verb = "allows"
-                what = refutation_san
-            elif (
-                eval_before is not None
-                and eval_after is not None
-                and abs(eval_before - eval_after) > 1.5
-            ):
-                verb = "loses"
-                what = "a decisive advantage" if cls == "blunder" else "the advantage"
-            else:
-                verb = "loses"
-                what = "material or control"
-
-        best_part = f" {best_san} was better." if best_san and best_san != san else ""
-        return f"{san} {verb} {what}.{best_part}".strip()
-
-    elif cls == "miss":
-        if mate_before is not None or mate_after is not None:
-            tactic = "mate"
-            wins_desc = "mate"
-        else:
-            tactic = "a tactical opportunity"
-            wins_desc = "material"
-
-        best_part = (
-            f" {best_san} wins {wins_desc}." if best_san and best_san != san else ""
-        )
-        return f"{san} misses {tactic}.{best_part}".strip()
-
-    elif cls == "inaccuracy":
-        best_part = (
-            f" {best_san} keeps the edge." if best_san and best_san != san else ""
-        )
-        return f"{san} is slightly inaccurate.{best_part}".strip()
-
-    elif cls == "brilliant":
-        reason = "a tactical sacrifice that seizes the initiative"
-        return f"{san} is brilliant: {reason}."
-
-    elif cls == "great":
-        return f"{san} is a great move: the only move that maintains the advantage."
-
-    elif cls == "best":
-        return f"{san} is best."
-
-    elif cls == "book":
-        return f"{san} is a book move."
-
-    elif cls in ("good", "excellent"):
-        return f"{san} is a solid move."
-
-    return f"{san} was played."
+    details = compute_commentary_v2(
+        san=san,
+        classification=classification,
+        best_san=best_san,
+        board_before=board_before,
+        board_after=board_after,
+        played_move=played_move,
+        eval_before=eval_before,
+        eval_after=eval_after,
+        mate_before=mate_before,
+        mate_after=mate_after,
+        refutation_san=refutation_san,
+        squares=squares,
+        is_book=is_book,
+    )
+    return details["comment"]
