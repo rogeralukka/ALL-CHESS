@@ -24,7 +24,8 @@ export interface TopEngineLine {
   eval: number;
   mate?: number | null;
   depth: number;
-  why: string;
+  /** One proven sentence about the move, or null when there is nothing concrete to say */
+  why?: string | null;
   pv: string[];
 }
 

@@ -432,7 +432,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
 
   // --- COACH EXPRESSION & DIALOGUE ---
   let coachExpression: CoachExpression = getExpressionForEvent(classification);
-  let coachText = currentMove?.coachComment || currentMove?.eval?.why || 'Solid positional continuation.';
+  let coachText = currentMove?.coachComment || currentMove?.eval?.why || '';
   let bubbleClassification = classification;
   let bubbleMoveSan = currentMove?.san;
   let bubbleEvalText = formatEval(currentMove?.eval?.eval, currentMove?.eval?.mateIn);
@@ -1105,7 +1105,7 @@ export const ReviewBoard: React.FC<ReviewBoardProps> = ({ game, onBackToSummary 
                         {formatEval(line.eval)}
                       </span>
                     </div>
-                    <p className="text-xs text-theme-muted">{line.why}</p>
+                    {line.why && <p className="text-xs text-theme-muted">{line.why}</p>}
                   </div>
                 )) || (
                   <div className="text-theme-muted text-xs">Calculating lines...</div>
