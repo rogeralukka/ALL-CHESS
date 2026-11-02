@@ -27,6 +27,8 @@ export interface BoardProps {
   threats?: string[];
   /** Squares painted green: where the better move would land (Chess.com style) */
   targets?: string[];
+  /** Squares painted orange: the piece a punishing reply takes (Chess.com mistake) */
+  orangeTargets?: string[];
   successSquares?: string[];
   legalTargets?: string[];
   interactive?: boolean;
@@ -107,6 +109,7 @@ export const Board: React.FC<BoardProps> = ({
   highlights = EMPTY_ARRAY,
   threats = EMPTY_ARRAY,
   targets = EMPTY_ARRAY,
+  orangeTargets = EMPTY_ARRAY,
   successSquares = EMPTY_ARRAY,
   legalTargets = EMPTY_ARRAY,
   interactive = true,
@@ -706,6 +709,9 @@ export const Board: React.FC<BoardProps> = ({
     }
     if (threats.includes(sq)) {
       return 'bg-[rgba(248,85,63,0.7)]';
+    }
+    if (orangeTargets.includes(sq)) {
+      return 'bg-[rgba(255,170,0,0.7)]';
     }
     if (targets.includes(sq)) {
       return 'bg-[rgba(159,207,63,0.7)]';
