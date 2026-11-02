@@ -762,7 +762,7 @@ export const SettingsShell: React.FC = () => {
       {/* TAB 5: LINKED ACCOUNTS (real: the usernames given at login, real sync) */}
       {activeTab === 'accounts' && (
         <Card className="p-6 space-y-6">
-          <div className="border-b border-theme-border pb-3 flex items-center justify-between gap-3">
+          <div className="border-b border-theme-border pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h3 className="text-base font-bold font-display text-theme-text">Connected Chess Platforms</h3>
               <p className="text-xs text-theme-muted mt-0.5">Your games are pulled from the public profiles you linked when you logged in</p>
@@ -773,6 +773,7 @@ export const SettingsShell: React.FC = () => {
               icon={isSyncing ? <MiniHopper size={26} /> : <RefreshCw size={14} />}
               onClick={handleSync}
               disabled={isSyncing || (!chesscomUser && !lichessUser)}
+              className="whitespace-nowrap self-start sm:self-auto"
               data-testid="sync-now"
             >
               {isSyncing ? 'Syncing...' : 'Sync Games Now'}
