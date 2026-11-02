@@ -1,9 +1,11 @@
+import asyncio
 import logging
+import os
 import time
 from typing import List, Literal, Optional, Dict, Tuple, Any
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from app.database import get_db
 from app.models.user import User
 from app.models.game import Game as GameModel
@@ -28,6 +30,8 @@ _STATS_CACHE_TTL_SECS = 600.0
 
 
 async def get_cached_live_stats(platform: str, username: str) -> Optional[Dict[str, Any]]:
+    if os.environ.get("TESTING") == "1":
+        return None
     key = (platform, username.lower())
     now = time.time()
     if key in _LIVE_STATS_CACHE:
@@ -39,10 +43,12 @@ async def get_cached_live_stats(platform: str, username: str) -> Optional[Dict[s
     try:
         if platform == "chesscom":
             client = ChesscomClient()
-            data = await client.fetch_player_stats(username)
+            client.timeout = 2.0
+            data = await asyncio.wait_for(client.fetch_player_stats(username), timeout=2.0)
         elif platform == "lichess":
             client = LichessClient()
-            data = await client.fetch_player_stats(username)
+            client.timeout = 2.0
+            data = await asyncio.wait_for(client.fetch_player_stats(username), timeout=2.0)
     except Exception as e:
         logger.warning(f"Could not fetch live {platform} stats for {username}: {e}")
 
@@ -72,6 +78,7 @@ def get_rating_history(
 
     games = (
         db.query(GameModel)
+        .options(defer(GameModel.moves), defer(GameModel.pgn))
         .filter(GameModel.user_id == current_user.id, GameModel.platform == target_platform)
         .order_by(GameModel.date.asc())
         .all()
@@ -179,6 +186,7 @@ async def get_ratings(
     # 2. Query user's games on this platform sorted by date asc for delta calculation
     games = (
         db.query(GameModel)
+        .options(defer(GameModel.moves), defer(GameModel.pgn))
         .filter(GameModel.user_id == current_user.id, GameModel.platform == target_platform)
         .order_by(GameModel.date.asc())
         .all()
@@ -244,6 +252,7 @@ def get_opening_stats(
 
     games = (
         db.query(GameModel)
+        .options(defer(GameModel.moves), defer(GameModel.pgn))
         .filter(GameModel.user_id == current_user.id, GameModel.platform == target_platform)
         .all()
     )
@@ -392,7 +401,7 @@ def get_phase_points_lost(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    games = db.query(GameModel).filter(GameModel.user_id == current_user.id).all()
+    games = db.query(GameModel).options(defer(GameModel.pgn)).filter(GameModel.user_id == current_user.id).all()
     metrics = compute_analyzed_game_metrics(games)
     return PhasePointsLost(
         opening=metrics["opening_loss"],
@@ -406,7 +415,7 @@ def get_insights(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    games = db.query(GameModel).filter(GameModel.user_id == current_user.id).all()
+    games = db.query(GameModel).options(defer(GameModel.pgn)).filter(GameModel.user_id == current_user.id).all()
     metrics = compute_analyzed_game_metrics(games)
 
     if metrics["total_analyzed"] == 0:

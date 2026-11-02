@@ -103,14 +103,19 @@ def get_daily_puzzle(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    seed_puzzles(db)
-    puzzles = db.query(Puzzle).order_by(Puzzle.id.asc()).all()
-    if not puzzles:
+    total = db.query(Puzzle).count()
+    if total == 0:
+        seed_puzzles(db)
+        total = db.query(Puzzle).count()
+    if total == 0:
         raise HTTPException(status_code=404, detail="No puzzles available")
 
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    idx = int(hashlib.md5(today_str.encode()).hexdigest(), 16) % len(puzzles)
-    return puzzles[idx]
+    idx = int(hashlib.md5(today_str.encode()).hexdigest(), 16) % total
+    puzzle = db.query(Puzzle).order_by(Puzzle.id.asc()).offset(idx).limit(1).first()
+    if not puzzle:
+        raise HTTPException(status_code=404, detail="No puzzles available")
+    return puzzle
 
 
 @router.get("/rating", response_model=UserPuzzleRatingOut)

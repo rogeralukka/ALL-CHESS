@@ -17,11 +17,18 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 STAGES_FILE = DATA_DIR / "stages.json"
 
 
+_CACHED_STAGES: Optional[List[Dict[str, Any]]] = None
+
+
 def load_raw_stages() -> List[Dict[str, Any]]:
+    global _CACHED_STAGES
+    if _CACHED_STAGES is not None:
+        return _CACHED_STAGES
     if not STAGES_FILE.exists():
         return []
     with open(STAGES_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        _CACHED_STAGES = json.load(f)
+    return _CACHED_STAGES
 
 
 class CompleteStageIn(BaseModel):
