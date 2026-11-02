@@ -21,8 +21,12 @@ SEG = 16                      # frames per hop
 ORDER = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
 BUILD = {'pawn': U.pawn, 'knight': U.knight, 'bishop': U.bishop, 'rook': U.rook, 'queen': U.queen, 'king': U.king}
 
-sc = U.scene(res_x=220, res_y=260, cam_loc=(4.2, -6.4, 3.0), cam_target=(0, 0, 1.0), lens=88, sun_dir=(-0.5, 0.8, -1.3))
-sc.cycles.samples = int(os.environ.get('UI_SAMPLES', '24'))
+# Rendered at 2x for sharp edges on high-DPI screens. No shadow catcher: a baked shadow gets
+# clipped by the sprite crop (a visible square edge); the UI draws a soft shadow that follows the hop.
+SCALE = float(os.environ.get('LOADER_SCALE', '2'))
+sc = U.scene(res_x=round(220 * SCALE), res_y=round(260 * SCALE), cam_loc=(4.2, -6.4, 3.0), cam_target=(0, 0, 1.0),
+             lens=88, sun_dir=(-0.5, 0.8, -1.3), catcher=False)
+sc.cycles.samples = int(os.environ.get('UI_SAMPLES', '48'))
 
 roots = {}
 for kind in ORDER:
@@ -52,6 +56,8 @@ def ease_out(t):
 
 
 frame = 0
+ONLY = os.environ.get('LOADER_ONLY')  # render just these frame numbers (comma list), for quick checks
+only = {int(x) for x in ONLY.split(',')} if ONLY else None
 for i, kind in enumerate(ORDER):
     nxt = ORDER[(i + 1) % len(ORDER)]
     for f in range(SEG):
@@ -80,7 +86,8 @@ for i, kind in enumerate(ORDER):
         pivot = Vector((0, 0, 0.45))
         offset = pivot - (r.matrix_basis.to_3x3() @ pivot) if rot else Vector((0, 0, 0))
         r.location = Vector((0, 0, z)) + offset
-        sc.render.filepath = os.path.join(OUT, f'f{frame:03d}.png')
-        bpy.ops.render.render(write_still=True)
+        if only is None or frame in only:
+            sc.render.filepath = os.path.join(OUT, f'f{frame:03d}.png')
+            bpy.ops.render.render(write_still=True)
         frame += 1
 print('frames', frame, flush=True)
