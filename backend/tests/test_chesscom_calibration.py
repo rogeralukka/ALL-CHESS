@@ -106,3 +106,27 @@ def test_d12_vs_d18_accuracy_stability():
         shift_b = abs(b18 - b12)
         assert shift_w <= 3.5, f"Game {gid} White shifted by {shift_w:.2f} (> 3.5) between d12 and d18"
         assert shift_b <= 3.5, f"Game {gid} Black shifted by {shift_b:.2f} (> 3.5) between d12 and d18"
+
+
+def test_real_deeper_searches_never_score_higher_than_standard():
+    """The saved-evals check above re-grades the same depth-18 data, which only tests the level scale. This one grades
+    the Max_2404 game with the evaluations real searches produced at depth 12, 18, 20 and 24 (browser Stockfish).
+    Deeper search has less evaluation noise, which pushes accuracy UP; the level scale has to outweigh that."""
+    import json
+
+    from app.services.engine_service import _run_single_pass_review_sync
+
+    game = json.load(open(os.path.join(cal.FIXTURE, "games.json")))[MAX_GAME]
+    runs = [("evals_d18", "standard"), ("evals_d20_max_game", "deep"), ("evals_d24_max_game", "max")]
+    prev = None
+    for folder, level in runs:
+        evals = json.load(open(os.path.join(cal.FIXTURE, folder, f"search-{MAX_GAME}.json")))
+        review = _run_single_pass_review_sync(
+            None, [dict(m) for m in game["moves"]], external_evals=[{"lines": e["lines"]} for e in evals], level=level
+        )
+        acc = calculate_game_accuracy(copy.deepcopy(review["moves"]), level=level)
+        cur = (acc["white"], acc["black"], estimate_game_rating(acc["white"]), estimate_game_rating(acc["black"]))
+        if prev is not None:
+            assert all(c <= p for c, p in zip(cur, prev)), f"{level} {cur} scored higher than the level below {prev}"
+        prev = cur
+    assert prev[0] < 84.9 and prev[1] < 72.8  # Max is strictly stricter than Standard, not just tied
