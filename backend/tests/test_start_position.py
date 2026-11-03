@@ -46,3 +46,31 @@ def test_odds_game_is_reviewed_from_its_real_start():
     # every position the server graded is the real one, including after 32. Ka2
     for m_in, m_out in zip(moves, out):
         assert m_out["_fen_after"] == m_in["fen"]
+
+
+def test_a_game_reviewed_without_a_rating_does_not_break_the_games_list(auth_client, test_user, db_session):
+    """Odds games are saved with estimatedRating {white: null, black: null}. That one row used to make GET /games
+    answer 500, so the player saw no games at all."""
+    from app.models.game import Game as GameModel
+
+    def row(game_id, rating):
+        return GameModel(
+            id=game_id, user_id=test_user.id, source="online", platform="chesscom", pgn="1. e4 e5",
+            white={"username": test_user.username, "rating": 888}, black={"username": "Opp", "rating": 900},
+            result="1-0", date="2026-10-28T10:00:00Z", time_control="600", speed="rapid",
+            opening={"eco": "C20", "name": "King's Pawn"}, moves=[], is_user_white=True,
+            accuracy={"white": 80.0, "black": 70.0}, estimated_rating=rating,
+        )
+
+    db_session.add(row("odds-game", {"white": None, "black": None}))
+    db_session.add(row("normal-game", {"white": 1500, "black": 1200}))
+    db_session.commit()
+
+    for url in ("/api/v1/games?lite=true", "/api/v1/games"):
+        res = auth_client.get(url)
+        assert res.status_code == 200, res.text
+        games = {g["id"]: g for g in res.json()}
+        assert set(games) == {"odds-game", "normal-game"}
+        assert "estimatedRating" not in games["odds-game"]
+        assert games["normal-game"]["estimatedRating"] == {"white": 1500, "black": 1200}
+    assert auth_client.get("/api/v1/games/odds-game").status_code == 200

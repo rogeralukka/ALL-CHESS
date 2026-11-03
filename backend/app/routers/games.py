@@ -201,67 +201,72 @@ def get_games(
             if q not in white_user and q not in black_user and q not in op_name:
                 continue
 
-        # Convert to Pydantic Game schema
-        if lite:
-            mc = dg.move_count
-            em = dg.ends_in_mate
-            if mc is None:
-                raw_moves = dg.moves or []
-                mc = len(raw_moves)
-                em = bool(raw_moves and raw_moves[-1].get("san", "").endswith("#"))
-            results.append(
-                Game(
-                    id=dg.id,
-                    pgn=None,
-                    white=dg.white,
-                    black=dg.black,
-                    result=dg.result,
-                    date=dg.date,
-                    time_control=dg.time_control,
-                    speed=dg.speed,
-                    source=dg.source,
-                    platform=dg.platform,
-                    opening=ensure_opening_name(dg.opening),
-                    moves=None,
-                    is_user_white=dg.is_user_white,
-                    accuracy=dg.accuracy,
-                    estimated_rating=dg.estimated_rating,
-                    phase_grades=dg.phase_grades,
-                    termination=extract_termination(dg, lite=True),
-                    analysis_level=dg.analysis_level
-                    or ("standard" if dg.accuracy else None),
-                    analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
-                    book_end=getattr(dg, "book_end", None),
-                    move_count=mc,
-                    ends_in_mate=em,
+        try:
+            # Convert to Pydantic Game schema
+            if lite:
+                mc = dg.move_count
+                em = dg.ends_in_mate
+                if mc is None:
+                    raw_moves = dg.moves or []
+                    mc = len(raw_moves)
+                    em = bool(raw_moves and raw_moves[-1].get("san", "").endswith("#"))
+                results.append(
+                    Game(
+                        id=dg.id,
+                        pgn=None,
+                        white=dg.white,
+                        black=dg.black,
+                        result=dg.result,
+                        date=dg.date,
+                        time_control=dg.time_control,
+                        speed=dg.speed,
+                        source=dg.source,
+                        platform=dg.platform,
+                        opening=ensure_opening_name(dg.opening),
+                        moves=None,
+                        is_user_white=dg.is_user_white,
+                        accuracy=dg.accuracy,
+                        estimated_rating=dg.estimated_rating,
+                        phase_grades=dg.phase_grades,
+                        termination=extract_termination(dg, lite=True),
+                        analysis_level=dg.analysis_level
+                        or ("standard" if dg.accuracy else None),
+                        analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
+                        book_end=getattr(dg, "book_end", None),
+                        move_count=mc,
+                        ends_in_mate=em,
+                    )
                 )
-            )
-        else:
-            results.append(
-                Game(
-                    id=dg.id,
-                    pgn=dg.pgn,
-                    white=dg.white,
-                    black=dg.black,
-                    result=dg.result,
-                    date=dg.date,
-                    time_control=dg.time_control,
-                    speed=dg.speed,
-                    source=dg.source,
-                    platform=dg.platform,
-                    opening=ensure_opening_name(dg.opening),
-                    moves=dg.moves,
-                    is_user_white=dg.is_user_white,
-                    accuracy=dg.accuracy,
-                    estimated_rating=dg.estimated_rating,
-                    phase_grades=dg.phase_grades,
-                    termination=extract_termination(dg, lite=False),
-                    analysis_level=dg.analysis_level
-                    or ("standard" if dg.accuracy else None),
-                    analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
-                    book_end=getattr(dg, "book_end", None) if getattr(dg, "book_end", None) is not None else (last_book_index(dg.moves) if getattr(dg, "moves", None) and last_book_index(dg.moves) >= 0 else None),
+            else:
+                results.append(
+                    Game(
+                        id=dg.id,
+                        pgn=dg.pgn,
+                        white=dg.white,
+                        black=dg.black,
+                        result=dg.result,
+                        date=dg.date,
+                        time_control=dg.time_control,
+                        speed=dg.speed,
+                        source=dg.source,
+                        platform=dg.platform,
+                        opening=ensure_opening_name(dg.opening),
+                        moves=dg.moves,
+                        is_user_white=dg.is_user_white,
+                        accuracy=dg.accuracy,
+                        estimated_rating=dg.estimated_rating,
+                        phase_grades=dg.phase_grades,
+                        termination=extract_termination(dg, lite=False),
+                        analysis_level=dg.analysis_level
+                        or ("standard" if dg.accuracy else None),
+                        analysis_depth=dg.analysis_depth or (18 if dg.accuracy else None),
+                        book_end=getattr(dg, "book_end", None) if getattr(dg, "book_end", None) is not None else (last_book_index(dg.moves) if getattr(dg, "moves", None) and last_book_index(dg.moves) >= 0 else None),
+                    )
                 )
-            )
+
+        except Exception:  # one unreadable row must not hide every other game
+            logger.exception("Skipping game %s in the list: it could not be read", dg.id)
+            continue
 
         if limit is not None and len(results) >= limit:
             break
