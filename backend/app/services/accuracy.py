@@ -233,11 +233,26 @@ def estimate_game_rating(accuracy: Optional[float]) -> Optional[int]:
 def estimate_performance_ratings(
     accuracy: Dict[str, Optional[float]],
     white_base_rating: Optional[int] = None,
-    black_base_rating: Optional[int] = None
+    black_base_rating: Optional[int] = None,
+    level: str = "standard",
+    standard_accuracy: Optional[Dict[str, Optional[float]]] = None,
 ) -> Dict[str, Optional[int]]:
     """
     Maps game accuracy to Chess.com monotone estimated rating.
+
+    At Standard the rating comes straight from the accuracy. At the stricter levels (Deep/Deeper/Max) the rating is the
+    Standard rating of the same game minus a fixed penalty per level, the same for both players: the accuracy-to-rating
+    table is steep for weaker play and flat for stronger play, so running the stricter accuracy through it would make
+    the weaker player lose far more rating than the stronger one and exaggerate the gap between them.
     """
+    offset = LEVEL_SCALE_OFFSETS.get((level or "standard").lower(), 0)
+    if offset and standard_accuracy is not None:
+        penalty = offset * int(getattr(settings, "rating_level_penalty_step", 60))
+        out: Dict[str, Optional[int]] = {}
+        for color in ("white", "black"):
+            base = estimate_game_rating(standard_accuracy.get(color))
+            out[color] = None if base is None else max(100, base - penalty)
+        return out
     return {
         "white": estimate_game_rating(accuracy.get("white")),
         "black": estimate_game_rating(accuracy.get("black")),
