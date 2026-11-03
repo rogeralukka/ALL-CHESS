@@ -6,6 +6,11 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   server: {
+    // cross-origin isolation, so the multi-threaded Stockfish (SharedArrayBuffer) can run; same headers as vercel.json
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

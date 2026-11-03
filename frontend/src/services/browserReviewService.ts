@@ -82,13 +82,27 @@ export interface SearchOptions {
   isCancelled?: () => boolean;
   /** Extra time allowed beyond the movetime before a single position counts as hung. */
   graceMs?: number;
+  /** Search threads; defaults to engineThreads() */
+  threads?: number;
 }
 
-function defaultWorker(): EngineWorkerLike {
+/**
+ * How many search threads this device can use. The multi-threaded engine needs a cross-origin isolated page
+ * (SharedArrayBuffer); browsers without that (e.g. Safari) get the single-threaded engine. One core is left free
+ * so the page stays responsive.
+ */
+export function engineThreads(): number {
+  if (typeof window === 'undefined' || !(window as { crossOriginIsolated?: boolean }).crossOriginIsolated) return 1;
+  const cores = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 1;
+  return Math.max(1, Math.min(8, cores - 1));
+}
+
+function defaultWorker(threads: number): EngineWorkerLike {
   if (typeof window === 'undefined' || typeof Worker === 'undefined') {
     throw new Error('Web Workers are not available in this browser');
   }
-  return new Worker(new URL('/stockfish/stockfish-19-lite-single.js', window.location.origin).href) as unknown as EngineWorkerLike;
+  const file = threads > 1 ? 'stockfish-19-lite.js' : 'stockfish-19-lite-single.js';
+  return new Worker(new URL(`/stockfish/${file}`, window.location.origin).href) as unknown as EngineWorkerLike;
 }
 
 function waitFor(worker: EngineWorkerLike, expected: string, timeoutMs: number): Promise<void> {
@@ -165,13 +179,15 @@ function searchOne(worker: EngineWorkerLike, fen: string, limits: SearchLimits, 
  * Throws if the engine cannot start or hangs, so the caller can fall back to the server.
  */
 export async function searchPositions(fens: string[], limits: SearchLimits, opts: SearchOptions = {}): Promise<BrowserPosition[]> {
-  const worker = (opts.createWorker ?? defaultWorker)();
+  const threads = opts.threads ?? (opts.createWorker ? 1 : engineThreads());
+  const worker = opts.createWorker ? opts.createWorker() : defaultWorker(threads);
   const grace = opts.graceMs ?? 15000;
   try {
     const uciok = waitFor(worker, 'uciok', 20000);
     worker.postMessage('uci');
     await uciok;
-    worker.postMessage('setoption name Hash value 16');
+    if (threads > 1) worker.postMessage(`setoption name Threads value ${threads}`);
+    worker.postMessage(`setoption name Hash value ${threads > 1 ? 64 : 16}`);
     worker.postMessage(`setoption name MultiPV value ${limits.multipv}`);
     const ready = waitFor(worker, 'readyok', 20000);
     worker.postMessage('isready');
