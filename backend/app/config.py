@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     accuracy_chesscom_power: float = Field(default=1.1)
     accuracy_chesscom_weight_power: float = Field(default=0.30)
     accuracy_level_scale_step: float = Field(default=1.0)
+    # Game rating at Deep/Deeper/Max = the Standard rating minus this many points per level, the same for both players.
+    # (Accuracy gets stricter per level; pushing that through the steep accuracy->rating table would cost the weaker
+    # player far more rating than the stronger one and blow the gap between them up.)
+    rating_level_penalty_step: int = Field(default=60)
 
     # Performance rating mapping settings
     # estimated = clamp(100, 3000, player_rating + (accuracy - expected_accuracy) * sensitivity_k)

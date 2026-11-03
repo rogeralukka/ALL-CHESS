@@ -110,23 +110,39 @@ def test_d12_vs_d18_accuracy_stability():
 
 def test_real_deeper_searches_never_score_higher_than_standard():
     """The saved-evals check above re-grades the same depth-18 data, which only tests the level scale. This one grades
-    the Max_2404 game with the evaluations real searches produced at depth 12, 18, 20 and 24 (browser Stockfish).
-    Deeper search has less evaluation noise, which pushes accuracy UP; the level scale has to outweigh that."""
+    the Max_2404 game with the evaluations real searches produced at depth 18, 20 and 24 (browser Stockfish), through
+    the same code the app runs, and checks what the player sees: accuracy and game rating never go up with the level,
+    Max is strictly lower, and the rating gap between the two players stays close to Standard's (the weaker player must
+    not lose far more rating than the stronger one just because the level is stricter)."""
     import json
 
     from app.services.engine_service import _run_single_pass_review_sync
 
     game = json.load(open(os.path.join(cal.FIXTURE, "games.json")))[MAX_GAME]
     runs = [("evals_d18", "standard"), ("evals_d20_max_game", "deep"), ("evals_d24_max_game", "max")]
-    prev = None
+    shown = []
     for folder, level in runs:
         evals = json.load(open(os.path.join(cal.FIXTURE, folder, f"search-{MAX_GAME}.json")))
         review = _run_single_pass_review_sync(
             None, [dict(m) for m in game["moves"]], external_evals=[{"lines": e["lines"]} for e in evals], level=level
         )
-        acc = calculate_game_accuracy(copy.deepcopy(review["moves"]), level=level)
-        cur = (acc["white"], acc["black"], estimate_game_rating(acc["white"]), estimate_game_rating(acc["black"]))
-        if prev is not None:
-            assert all(c <= p for c, p in zip(cur, prev)), f"{level} {cur} scored higher than the level below {prev}"
-        prev = cur
-    assert prev[0] < 84.9 and prev[1] < 72.8  # Max is strictly stricter than Standard, not just tied
+        acc, rat = review["accuracy"], review["estimatedRating"]
+        shown.append((acc["white"], acc["black"], rat["white"], rat["black"]))
+    for lower, higher in zip(shown[1:], shown):
+        assert all(c <= p for c, p in zip(lower, higher)), f"{lower} scored higher than the level below {higher}"
+    standard, top = shown[0], shown[-1]
+    assert top[0] < standard[0] and top[1] < standard[1] and top[2] < standard[2] and top[3] < standard[3]
+    gap_standard, gap_top = standard[2] - standard[3], top[2] - top[3]
+    assert abs(gap_top - gap_standard) <= 60, f"rating gap {gap_standard} at Standard but {gap_top} at Max"
+
+
+def test_stricter_levels_lower_both_ratings_by_the_same_amount():
+    from app.services.accuracy import estimate_performance_ratings as est
+
+    std = {"white": 83.3, "black": 70.0}
+    base = est(std)
+    for level, offset in (("deep", 1), ("deeper", 2), ("max", 3)):
+        out = est({"white": 1.0, "black": 1.0}, level=level, standard_accuracy=std)  # strict accuracy is ignored
+        assert base["white"] - out["white"] == base["black"] - out["black"] == 60 * offset
+    assert est({"white": 50.0, "black": None}, level="max", standard_accuracy={"white": 50.0, "black": None}) == {"white": 100, "black": None}
+    assert est(std, level="standard", standard_accuracy=std) == base
