@@ -3,12 +3,35 @@ from typing import List, Dict, Any, Optional, Tuple
 from app.services.win_pct import eval_to_win_pct
 from app.config import settings
 
-def move_accuracy(win_pct_drop: float, method: str = "chesscom") -> float:
+LEVEL_SCALE_OFFSETS = {
+    "standard": 0,
+    "deep": 1,
+    "deeper": 2,
+    "max": 3,
+}
+
+
+def get_level_scale(level: str = "standard") -> float:
+    base_scale = getattr(settings, "accuracy_chesscom_scale", 8.0)
+    step = getattr(settings, "accuracy_level_scale_step", 0.50)
+    offset_idx = LEVEL_SCALE_OFFSETS.get(level.lower() if level else "standard", 0)
+    return max(1.0, base_scale - offset_idx * step)
+
+
+def move_accuracy(
+    win_pct_drop: float,
+    method: str = "chesscom",
+    level: str = "standard",
+    scale: Optional[float] = None,
+    power: Optional[float] = None,
+) -> float:
     """
     Computes per-move accuracy from win% drop.
     Supports:
       - 'chesscom': Softer power-exponential curve (default)
         acc = 100 * exp(- (win_pct_drop / scale) ** power)
+        scale is level-aware: standard (d18) targets Chess.com; deep/deeper/max use
+        progressively smaller scales so accuracy never increases at higher search depths.
       - 'lichess': Classical Lichess exponential formula
         acc = 103.1668 * exp(-0.04354 * win_pct_drop) - 3.1669
     Clamped to [0.0, 100.0].
@@ -20,10 +43,11 @@ def move_accuracy(win_pct_drop: float, method: str = "chesscom") -> float:
         acc = 103.1668 * math.exp(-0.04354 * win_pct_drop) - 3.1669
         return min(100.0, max(0.0, round(acc, 1)))
 
-    # Chess.com CAPS-style soft curve
-    scale = getattr(settings, "accuracy_chesscom_scale", 8.0)
-    power = getattr(settings, "accuracy_chesscom_power", 1.1)
-    
+    if scale is None:
+        scale = get_level_scale(level)
+    if power is None:
+        power = getattr(settings, "accuracy_chesscom_power", 1.1)
+
     acc = 100.0 * math.exp(-((win_pct_drop / scale) ** power))
     return min(100.0, max(0.0, round(acc, 1)))
 
@@ -31,7 +55,8 @@ def move_accuracy(win_pct_drop: float, method: str = "chesscom") -> float:
 def calculate_player_accuracy(
     move_accuracies: List[float],
     win_pct_drops: List[float],
-    method: str = "chesscom"
+    method: str = "chesscom",
+    weight_power: Optional[float] = None,
 ) -> Optional[float]:
     """
     Calculates overall player accuracy for a game.
@@ -43,7 +68,10 @@ def calculate_player_accuracy(
         return None
 
     if method == "chesscom":
-        w_power = getattr(settings, "accuracy_chesscom_weight_power", 0.4)
+        if weight_power is None:
+            w_power = getattr(settings, "accuracy_chesscom_weight_power", 0.30)
+        else:
+            w_power = weight_power
         weights = [(1.0 + drop / 5.0) ** w_power for drop in win_pct_drops]
         total_weight = sum(weights)
         if total_weight <= 0:
@@ -65,7 +93,11 @@ def calculate_player_accuracy(
 
 def calculate_game_accuracy(
     moves: List[Dict[str, Any]],
-    method: str = "chesscom"
+    method: str = "chesscom",
+    level: str = "standard",
+    scale: Optional[float] = None,
+    power: Optional[float] = None,
+    weight_power: Optional[float] = None,
 ) -> Dict[str, Optional[float]]:
     """
     Calculates overall game accuracy for White and Black.
@@ -82,35 +114,64 @@ def calculate_game_accuracy(
     for m in moves:
         color = m.get("color", "w")
         eval_obj = m.get("eval") or {}
-        curr_eval = eval_obj.get("eval", last_eval)
-        curr_mate = eval_obj.get("mate", last_mate)
 
-        white_before = eval_to_win_pct(last_eval, last_mate)
-        white_after = eval_to_win_pct(curr_eval, curr_mate)
+        # Prefer recorded before/after evaluations if present
+        if "evalBefore" in eval_obj and "evalAfter" in eval_obj:
+            curr_eval_before = eval_obj.get("evalBefore", last_eval)
+            curr_mate_before = eval_obj.get("mateBefore", last_mate)
+            curr_eval_after = eval_obj.get("evalAfter", curr_eval_before)
+            curr_mate_after = eval_obj.get("mateAfter", curr_mate_before)
+        else:
+            curr_eval_before = last_eval
+            curr_mate_before = last_mate
+            curr_eval_after = eval_obj.get("eval", last_eval)
+            curr_mate_after = eval_obj.get("mate", last_mate)
+
+        white_before = eval_to_win_pct(curr_eval_before, curr_mate_before)
+        white_after = eval_to_win_pct(curr_eval_after, curr_mate_after)
 
         if color == 'w':
             mover_before = white_before
             mover_after = white_after
-            drop = 0.0 if m.get("classification") in ("book", "forced") else max(0.0, mover_before - mover_after)
-            acc = move_accuracy(drop, method=method)
-            white_accuracies.append(acc)
-            white_drops.append(drop)
-            m["accuracy"] = acc
+            raw_drop = max(0.0, mover_before - mover_after)
         else:
             mover_before = 100.0 - white_before
             mover_after = 100.0 - white_after
-            drop = 0.0 if m.get("classification") in ("book", "forced") else max(0.0, mover_before - mover_after)
-            acc = move_accuracy(drop, method=method)
+            raw_drop = max(0.0, mover_before - mover_after)
+
+        # Enforce consistency between classification and accuracy drop
+        cls_ = m.get("classification")
+        if cls_ in ("book", "forced", "best", "great"):
+            drop = min(raw_drop, 0.5)
+        elif cls_ in ("brilliant", "excellent"):
+            drop = min(raw_drop, 2.0)
+        elif cls_ == "good":
+            drop = min(max(raw_drop, 0.5), 5.0)
+        elif cls_ == "inaccuracy":
+            drop = min(max(raw_drop, 4.5), 14.0)
+        elif cls_ in ("mistake", "miss"):
+            drop = min(max(raw_drop, 7.0), 25.0)
+        elif cls_ == "blunder":
+            drop = max(raw_drop, 18.0)
+        else:
+            drop = raw_drop
+
+        acc = move_accuracy(drop, method=method, level=level, scale=scale, power=power)
+        m["accuracy"] = acc
+
+        if color == 'w':
+            white_accuracies.append(acc)
+            white_drops.append(drop)
+        else:
             black_accuracies.append(acc)
             black_drops.append(drop)
-            m["accuracy"] = acc
 
-        last_eval = curr_eval
-        last_mate = curr_mate
+        last_eval = curr_eval_after
+        last_mate = curr_mate_after
 
     return {
-        "white": calculate_player_accuracy(white_accuracies, white_drops, method=method),
-        "black": calculate_player_accuracy(black_accuracies, black_drops, method=method)
+        "white": calculate_player_accuracy(white_accuracies, white_drops, method=method, weight_power=weight_power),
+        "black": calculate_player_accuracy(black_accuracies, black_drops, method=method, weight_power=weight_power)
     }
 
 

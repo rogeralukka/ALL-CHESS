@@ -712,7 +712,7 @@ def _run_single_pass_review_sync(
         analyzed_moves.append(updated_m)
 
     # Compute game-level accuracy using the Chess.com calibrated method
-    accuracy = calculate_game_accuracy(analyzed_moves, method="chesscom")
+    accuracy = calculate_game_accuracy(analyzed_moves, method="chesscom", level=level)
     est_ratings = estimate_performance_ratings(
         accuracy, white_base_rating=white_rating, black_base_rating=black_rating
     )
