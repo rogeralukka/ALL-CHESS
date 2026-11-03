@@ -1,7 +1,7 @@
 from typing import Literal
 
 from app.schemas.common import CamelModel
-from pydantic import Field
+from pydantic import Field, field_validator
 
 MoveClassification = Literal[
     "brilliant",
@@ -124,8 +124,8 @@ class Accuracy(CamelModel):
 
 
 class EstimatedRating(CamelModel):
-    white: int
-    black: int
+    white: int | None = None
+    black: int | None = None
 
 
 class ClassCounts(CamelModel):
@@ -173,6 +173,14 @@ class Game(CamelModel):
     move_count: int | None = None
     ends_in_mate: bool | None = None
     review_summary: ReviewSummary | None = None
+
+    @field_validator("estimated_rating", mode="before")
+    @classmethod
+    def _no_rating_when_neither_side_has_one(cls, v):
+        # odds / set-up games are reviewed without a game rating: stored as {white: null, black: null}
+        if isinstance(v, dict) and v and all(x is None for x in v.values()):
+            return None
+        return v
 
 
 class CoachGameCreate(CamelModel):
