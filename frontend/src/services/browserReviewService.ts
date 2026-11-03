@@ -24,12 +24,16 @@ export interface SearchLimits {
   multipv: number;
 }
 
-/** Same depth/time budget per level as the backend's own engine uses. */
+/**
+ * Every position is searched to a real depth. `movetimeMs` is only a safety cap for a pathological position:
+ * a short time cap used to decide the depth instead (Standard "d18" reached ~15, Max "d32" ~17-23), and a review
+ * in a background tab, which the browser slows down, came out shallower. Now it only takes longer.
+ */
 export const BROWSER_LIMITS: Record<AnalysisLevel['id'], SearchLimits> = {
-  standard: { depth: 18, movetimeMs: 350, multipv: 3 },
-  deep: { depth: 22, movetimeMs: 600, multipv: 3 },
-  deeper: { depth: 26, movetimeMs: 1000, multipv: 3 },
-  max: { depth: 32, movetimeMs: 2000, multipv: 3 },
+  standard: { depth: 18, movetimeMs: 20000, multipv: 3 },
+  deep: { depth: 20, movetimeMs: 30000, multipv: 3 },
+  deeper: { depth: 22, movetimeMs: 45000, multipv: 3 },
+  max: { depth: 24, movetimeMs: 60000, multipv: 3 },
 };
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -82,27 +86,26 @@ export interface SearchOptions {
   isCancelled?: () => boolean;
   /** Extra time allowed beyond the movetime before a single position counts as hung. */
   graceMs?: number;
-  /** Search threads; defaults to engineThreads() */
-  threads?: number;
+  /** Engines run side by side; defaults to enginePoolSize() (1 when a test supplies createWorker) */
+  workers?: number;
 }
 
 /**
- * How many search threads this device can use. The multi-threaded engine needs a cross-origin isolated page
- * (SharedArrayBuffer); browsers without that (e.g. Safari) get the single-threaded engine. One core is left free
- * so the page stays responsive.
+ * How many engines to run side by side. Positions are independent, so several single-threaded engines each
+ * take their own positions (measured on a 20-thread laptop at depth 18: 1 engine 2.97 s per position,
+ * 4 engines 0.64 s, 8 engines 0.50 s). The multi-threaded Stockfish build was measured too and was ~6x slower.
+ * About half the cores, capped at 8, so the page and the rest of the machine stay responsive.
  */
-export function engineThreads(): number {
-  if (typeof window === 'undefined' || !(window as { crossOriginIsolated?: boolean }).crossOriginIsolated) return 1;
-  const cores = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 1;
-  return Math.max(1, Math.min(8, cores - 1));
+export function enginePoolSize(): number {
+  const cores = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 2;
+  return Math.max(1, Math.min(8, Math.floor(cores / 2)));
 }
 
-function defaultWorker(threads: number): EngineWorkerLike {
+function defaultWorker(): EngineWorkerLike {
   if (typeof window === 'undefined' || typeof Worker === 'undefined') {
     throw new Error('Web Workers are not available in this browser');
   }
-  const file = threads > 1 ? 'stockfish-19-lite.js' : 'stockfish-19-lite-single.js';
-  return new Worker(new URL(`/stockfish/${file}`, window.location.origin).href) as unknown as EngineWorkerLike;
+  return new Worker(new URL('/stockfish/stockfish-19-lite-single.js', window.location.origin).href) as unknown as EngineWorkerLike;
 }
 
 function waitFor(worker: EngineWorkerLike, expected: string, timeoutMs: number): Promise<void> {
@@ -173,39 +176,69 @@ function searchOne(worker: EngineWorkerLike, fen: string, limits: SearchLimits, 
   });
 }
 
+async function startEngine(worker: EngineWorkerLike, multipv: number): Promise<void> {
+  const uciok = waitFor(worker, 'uciok', 20000);
+  worker.postMessage('uci');
+  await uciok;
+  worker.postMessage('setoption name Hash value 16');
+  worker.postMessage(`setoption name MultiPV value ${multipv}`);
+  const ready = waitFor(worker, 'readyok', 20000);
+  worker.postMessage('isready');
+  await ready;
+}
+
 /**
- * Searches every FEN in order with a dedicated worker and returns one entry per FEN.
+ * Searches every FEN and returns one entry per FEN, in order. Several engines share the work: each takes the next
+ * block of consecutive positions (neighbouring positions reuse each other's search in the hash).
  * Checkmate/stalemate positions come back with no lines, which the backend recognises on its own.
- * Throws if the engine cannot start or hangs, so the caller can fall back to the server.
+ * Throws if an engine cannot start or hangs, so the caller can fall back to the server.
  */
 export async function searchPositions(fens: string[], limits: SearchLimits, opts: SearchOptions = {}): Promise<BrowserPosition[]> {
-  const threads = opts.threads ?? (opts.createWorker ? 1 : engineThreads());
-  const worker = opts.createWorker ? opts.createWorker() : defaultWorker(threads);
   const grace = opts.graceMs ?? 15000;
-  try {
-    const uciok = waitFor(worker, 'uciok', 20000);
-    worker.postMessage('uci');
-    await uciok;
-    if (threads > 1) worker.postMessage(`setoption name Threads value ${threads}`);
-    worker.postMessage(`setoption name Hash value ${threads > 1 ? 64 : 16}`);
-    worker.postMessage(`setoption name MultiPV value ${limits.multipv}`);
-    const ready = waitFor(worker, 'readyok', 20000);
-    worker.postMessage('isready');
-    await ready;
+  const make = opts.createWorker ?? defaultWorker;
+  const count = Math.max(1, Math.min(opts.workers ?? (opts.createWorker ? 1 : enginePoolSize()), fens.length || 1));
+  const BLOCK = 4;
+  const out: BrowserPosition[] = new Array(fens.length);
+  let next = 0;
+  let done = 0;
+  let failed: unknown = null;
+  const workers: EngineWorkerLike[] = [];
 
-    const out: BrowserPosition[] = [];
-    for (let i = 0; i < fens.length; i++) {
-      if (opts.isCancelled?.()) throw new Error('cancelled');
-      out.push(await searchOne(worker, fens[i], limits, limits.movetimeMs + grace));
-      opts.onProgress?.(Math.round(((i + 1) / fens.length) * 100));
+  const runOne = async (worker: EngineWorkerLike) => {
+    await startEngine(worker, limits.multipv);
+    while (next < fens.length && !failed) {
+      // claim a block; `to` is this engine's own end (the shared `next` moves on as other engines claim theirs)
+      const from = next;
+      const to = Math.min(fens.length, from + BLOCK);
+      next = to;
+      for (let i = from; i < to && !failed; i++) {
+        if (opts.isCancelled?.()) throw new Error('cancelled');
+        out[i] = await searchOne(worker, fens[i], limits, limits.movetimeMs + grace);
+        done++;
+        opts.onProgress?.(Math.round((done / fens.length) * 100));
+      }
     }
+  };
+
+  try {
+    for (let k = 0; k < count; k++) workers.push(make());
+    await Promise.all(
+      workers.map((w) =>
+        runOne(w).catch((err) => {
+          failed = failed ?? err;
+          throw err;
+        }),
+      ),
+    );
     return out;
   } finally {
-    try {
-      worker.postMessage('quit');
-    } catch {
-      // ignore
+    for (const w of workers) {
+      try {
+        w.postMessage('quit');
+      } catch {
+        // ignore
+      }
+      w.terminate();
     }
-    worker.terminate();
   }
 }

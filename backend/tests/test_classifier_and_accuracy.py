@@ -112,4 +112,4 @@ def test_estimate_performance_ratings_calibration():
         assert abs(res["black"] - expected) <= 50, f"At acc {acc}, got {res['black']}, expected {expected}"
 
     # Clamping
-    assert estimate_performance_ratings({"white": 30.0, "black": 100.0}) == {"white": 100, "black": 3000}
+    assert estimate_performance_ratings({"white": 30.0, "black": 100.0}) == {"white": 100, "black": 2500}

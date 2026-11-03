@@ -255,11 +255,14 @@ class EnginePool:
 
 
 _GLOBAL_ENGINE_POOL = EnginePool(size=settings.engine_pool_size)
+# Same depths as the browser levels (frontend BROWSER_LIMITS). The server engine is only the fallback when the
+# browser cannot search; its time cap keeps a free-tier server from running for minutes, so the depth it really
+# reaches is reported as analysisDepth.
 ANALYSIS_LEVELS: dict[str, dict[str, Any]] = {
-    "standard": {"depth": 18, "time_per_move": 0.35, "multipv": 3},
-    "deep": {"depth": 22, "time_per_move": 0.6, "multipv": 3},
-    "deeper": {"depth": 26, "time_per_move": 1.0, "multipv": 3},
-    "max": {"depth": 32, "time_per_move": 2.0, "multipv": 3},
+    "standard": {"depth": 18, "time_per_move": 1.0, "multipv": 3},
+    "deep": {"depth": 20, "time_per_move": 1.5, "multipv": 3},
+    "deeper": {"depth": 22, "time_per_move": 2.5, "multipv": 3},
+    "max": {"depth": 24, "time_per_move": 4.0, "multipv": 3},
 }
 
 LEVEL_ORDER: dict[str, int] = {

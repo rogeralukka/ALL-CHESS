@@ -114,8 +114,11 @@ def calculate_game_accuracy(
     }
 
 
-# Chess.com calibrated accuracy-to-rating monotone anchors:
-# Data points: 53.0 -> 150, 63.9 -> 650, 68.0 -> 900, 72.1 -> 1200, 75.3 -> 1300, 81.3 -> 1500
+# Accuracy -> game rating, from Chess.com's own reviews (accuracy shown -> "Game Rating" shown):
+#   53.0 -> 150, 63.9 -> 650, 68.0 -> 900, 72.1 -> 1200, 74.2 -> 1250, 75.3 -> 1300, 81.3 -> 1500, 83.3 -> 1550.
+# Above 83.3 there is no measured point yet, so the curve keeps rising at a measured-like rate (~30-75 per
+# point) instead of the old guess (88 -> 2000, 94 -> 2500), which put an 85.8% game at 1836 vs Chess.com's
+# ~1600. Add real points here as more Chess.com reviews come in.
 RATING_ACCURACY_ANCHORS: list[tuple[float, int]] = [
     (0.0, 100),
     (52.0, 100),
@@ -123,12 +126,14 @@ RATING_ACCURACY_ANCHORS: list[tuple[float, int]] = [
     (63.9, 650),
     (68.0, 900),
     (72.1, 1200),
+    (74.2, 1250),
     (75.3, 1300),
     (81.3, 1500),
-    (88.0, 2000),
-    (94.0, 2500),
-    (98.0, 2800),
-    (100.0, 3000),
+    (83.3, 1550),
+    (88.0, 1700),
+    (92.0, 1900),
+    (96.0, 2200),
+    (100.0, 2500),
 ]
 
 
@@ -142,7 +147,7 @@ def estimate_game_rating(accuracy: Optional[float]) -> Optional[int]:
       72.1 -> 1200
       75.3 -> 1300
       81.3 -> 1500
-    Clamped to [100, 3000]. Extrapolates gently above 81.3.
+    Clamped to [100, 2500]. Rises gently above the last measured point (83.3).
     """
     if accuracy is None:
         return None
@@ -159,7 +164,7 @@ def estimate_game_rating(accuracy: Optional[float]) -> Optional[int]:
         if a0 <= acc <= a1:
             t = (acc - a0) / (a1 - a0)
             rating = r0 + t * (r1 - r0)
-            return max(100, min(3000, int(round(rating))))
+            return max(100, min(2500, int(round(rating))))
 
     return 1500
 

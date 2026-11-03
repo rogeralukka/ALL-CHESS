@@ -1,7 +1,7 @@
 /**
- * Review depth levels. `id` is what the backend receives as `level`; `depth` is only the
- * frontend's expectation for labelling (the backend reports the real depth as `analysisDepth`).
- * "standard" is meant to match what Chess.com's Game Review searches to; each step goes deeper.
+ * Review depth levels. `id` is what the backend receives as `level`; `depth` is the depth every position is
+ * searched to (browserReviewService BROWSER_LIMITS), and the backend reports the depth actually reached as
+ * `analysisDepth`.
  */
 export interface AnalysisLevel {
   id: 'standard' | 'deep' | 'deeper' | 'max';
@@ -11,10 +11,10 @@ export interface AnalysisLevel {
 }
 
 export const ANALYSIS_LEVELS: AnalysisLevel[] = [
-  { id: 'standard', name: 'Standard', depth: 18, blurb: 'Same depth as Chess.com Game Review. Fastest.' },
-  { id: 'deep', name: 'Deep', depth: 22, blurb: 'Catches quieter mistakes Standard calls fine.' },
-  { id: 'deeper', name: 'Deeper', depth: 26, blurb: 'Long calculations and subtle positional errors.' },
-  { id: 'max', name: 'Max', depth: 32, blurb: 'Strongest Stockfish search. Brutal and slow.' },
+  { id: 'standard', name: 'Standard', depth: 18, blurb: 'Every move searched to depth 18. Fastest.' },
+  { id: 'deep', name: 'Deep', depth: 20, blurb: 'Depth 20: catches quieter mistakes. About twice as long.' },
+  { id: 'deeper', name: 'Deeper', depth: 22, blurb: 'Depth 22: long calculations. A few minutes on a laptop.' },
+  { id: 'max', name: 'Max', depth: 24, blurb: 'Depth 24: the deepest search. Slow, especially on a phone.' },
 ];
 
 export const DEFAULT_LEVEL: AnalysisLevel['id'] = 'standard';

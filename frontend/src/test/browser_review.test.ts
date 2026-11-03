@@ -60,7 +60,8 @@ describe('searchPositions', () => {
       { pv: ['d2d4'], cp: 5, mate: null, depth: 12 },
     ]);
     expect(progress).toEqual([50, 100]);
-    expect(f.sent).toContain('go depth 18 movetime 350');
+    // a real depth target; the time is only a safety cap
+    expect(f.sent).toContain('go depth 18 movetime 20000');
     expect(f.sent).toContain('setoption name MultiPV value 3');
     expect(f.isTerminated()).toBe(true);
   });
@@ -93,4 +94,30 @@ describe('searchPositions', () => {
   it('fails clearly when Workers are unavailable', async () => {
     await expect(searchPositions(['a'], BROWSER_LIMITS.standard, { createWorker: () => { throw new Error('no worker'); } })).rejects.toThrow('no worker');
   });
+
+  it('splits the positions over several engines and keeps the results in game order', async () => {
+    // each fake engine answers with a line naming the position it searched
+    const engines = [0, 1, 2].map(() => fakeWorker((fen) => [`info depth 18 multipv 1 score cp 0 pv ${fen}`]));
+    let made = 0;
+    const fens = Array.from({ length: 10 }, (_, i) => `p${i}`);
+    const progress: number[] = [];
+    const out = await searchPositions(fens, BROWSER_LIMITS.standard, { createWorker: () => engines[made++].worker, workers: 3, onProgress: (p) => progress.push(p) });
+    expect(made).toBe(3);
+    expect(out.map((o) => o.lines[0].pv[0])).toEqual(fens);
+    // every engine did some of the work, and all of them were shut down
+    for (const e of engines) {
+      expect(e.sent.some((m) => m.startsWith('go depth 18'))).toBe(true);
+      expect(e.isTerminated()).toBe(true);
+    }
+    expect(progress[progress.length - 1]).toBe(100);
+  });
+
+  it('every level searches to a real depth that matches its label', () => {
+    expect(BROWSER_LIMITS.standard.depth).toBe(18);
+    expect(BROWSER_LIMITS.deep.depth).toBe(20);
+    expect(BROWSER_LIMITS.deeper.depth).toBe(22);
+    expect(BROWSER_LIMITS.max.depth).toBe(24);
+    for (const l of Object.values(BROWSER_LIMITS)) expect(l.movetimeMs).toBeGreaterThanOrEqual(20000);
+  });
 });
+
