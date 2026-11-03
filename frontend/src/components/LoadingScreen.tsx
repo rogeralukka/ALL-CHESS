@@ -36,8 +36,14 @@ export const PieceHopper: React.FC<{ size?: number }> = ({ size = 120 }) => {
     if (isOff) return;
     let raf = 0;
     const start = performance.now();
+    let shown = -1;
     const tick = (now: number) => {
-      setFrame(Math.floor(((now - start) / 1000) * FPS) % L.frames);
+      // the sprite changes 24 times a second, so only touch React when the frame really changes
+      const f = Math.floor(((now - start) / 1000) * FPS) % L.frames;
+      if (f !== shown) {
+        shown = f;
+        setFrame(f);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

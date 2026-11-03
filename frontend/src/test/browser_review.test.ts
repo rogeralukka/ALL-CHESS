@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseInfoLine, searchPositions, BROWSER_LIMITS, EngineWorkerLike } from '@/services/browserReviewService';
+import { parseInfoLine, searchPositions, BROWSER_LIMITS, EngineWorkerLike, enginePoolSize, isJanky } from '@/services/browserReviewService';
 
 describe('parseInfoLine', () => {
   it('reads depth, multipv, centipawn score and the pv', () => {
@@ -110,6 +110,70 @@ describe('searchPositions', () => {
       expect(e.isTerminated()).toBe(true);
     }
     expect(progress[progress.length - 1]).toBe(100);
+  });
+
+  it('engines stand down one by one when the page starts to stutter, and the rest finish the work', async () => {
+    const engines = [0, 1, 2].map(() => fakeWorker((fen) => [`info depth 18 multipv 1 score cp 0 pv ${fen}`]));
+    let made = 0;
+    const fens = Array.from({ length: 12 }, (_, i) => `p${i}`);
+    let stopped = false;
+    const out = await searchPositions(fens, BROWSER_LIMITS.standard, {
+      createWorker: () => engines[made++].worker,
+      workers: 3,
+      frameMonitor: (onJank) => {
+        onJank(); // two stutters before any work starts: 3 engines -> 1
+        onJank();
+        return () => {
+          stopped = true;
+        };
+      },
+    });
+    expect(out.map((o) => o.lines[0].pv[0])).toEqual(fens);
+    expect(engines[0].sent.filter((m) => m.startsWith('go depth 18')).length).toBe(12);
+    expect(engines[1].sent.some((m) => m.startsWith('go depth'))).toBe(false);
+    expect(engines[2].sent.some((m) => m.startsWith('go depth'))).toBe(false);
+    for (const e of engines) expect(e.isTerminated()).toBe(true);
+    expect(stopped).toBe(true);
+  });
+
+  it('never stands the last engine down', async () => {
+    const engines = [0, 1].map(() => fakeWorker((fen) => [`info depth 18 multipv 1 score cp 0 pv ${fen}`]));
+    let made = 0;
+    const fens = ['a', 'b', 'c', 'd', 'e'];
+    const out = await searchPositions(fens, BROWSER_LIMITS.standard, {
+      createWorker: () => engines[made++].worker,
+      workers: 2,
+      frameMonitor: (onJank) => {
+        for (let i = 0; i < 10; i++) onJank();
+        return () => {};
+      },
+    });
+    expect(out.map((o) => o.lines[0].pv[0])).toEqual(fens);
+    expect(engines[0].sent.filter((m) => m.startsWith('go depth')).length).toBe(5);
+  });
+
+  it('detects stutter from frame gaps', () => {
+    expect(isJanky(Array(30).fill(17))).toBe(false);
+    expect(isJanky(Array(10).fill(120))).toBe(false); // too few frames to judge
+    expect(isJanky([...Array(12).fill(17), ...Array(8).fill(90)])).toBe(true);
+    expect(isJanky([...Array(17).fill(17), ...Array(3).fill(90)])).toBe(false); // one hiccup is not stutter
+  });
+
+  it('keeps the engine pool small enough that the page stays smooth', () => {
+    const real = Object.getOwnPropertyDescriptor(Navigator.prototype, 'hardwareConcurrency');
+    const set = (n: number) => Object.defineProperty(navigator, 'hardwareConcurrency', { value: n, configurable: true });
+    try {
+      set(4);
+      expect(enginePoolSize()).toBe(1);
+      set(8);
+      expect(enginePoolSize()).toBe(2);
+      set(16);
+      expect(enginePoolSize()).toBe(4);
+      set(32);
+      expect(enginePoolSize()).toBe(4);
+    } finally {
+      if (real) Object.defineProperty(navigator, 'hardwareConcurrency', real);
+    }
   });
 
   it('every level searches to a real depth that matches its label', () => {
