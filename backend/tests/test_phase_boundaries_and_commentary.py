@@ -23,9 +23,9 @@ def test_analysis_levels_mapping_and_order():
     assert "max" in ANALYSIS_LEVELS
 
     assert ANALYSIS_LEVELS["standard"]["depth"] == 18
-    assert ANALYSIS_LEVELS["deep"]["depth"] == 22
-    assert ANALYSIS_LEVELS["deeper"]["depth"] == 26
-    assert ANALYSIS_LEVELS["max"]["depth"] == 32
+    assert ANALYSIS_LEVELS["deep"]["depth"] == 20
+    assert ANALYSIS_LEVELS["deeper"]["depth"] == 22
+    assert ANALYSIS_LEVELS["max"]["depth"] == 24
 
     # Verify monotonic increasing depth and time
     assert LEVEL_ORDER["standard"] < LEVEL_ORDER["deep"] < LEVEL_ORDER["deeper"] < LEVEL_ORDER["max"]

@@ -4,6 +4,7 @@ import { CLASSIFICATION_META, ClassificationBadge } from '@/components/Classific
 import { PlayerAvatar } from '@/components/Bits';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { gameOpening, phaseRows } from './phases';
+import { START_FEN, startFenOf } from '@/services/browserReviewService';
 
 /** Order and wording follow the reference review table. */
 const ORDER: MoveClassification[] = ['brilliant', 'great', 'book', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'miss', 'blunder'];
@@ -33,6 +34,7 @@ interface ReviewTableProps {
 
 export const ReviewTable: React.FC<ReviewTableProps> = ({ game }) => {
   const me = useCurrentUser();
+  const isOddsGame = startFenOf(game.pgn) !== START_FEN;
   const counts = Object.fromEntries(ORDER.map((c) => [c, { w: 0, b: 0 }])) as Record<MoveClassification, { w: number; b: number }>;
   game.moves.forEach((m) => {
     if (m.classification && counts[m.classification]) counts[m.classification][m.color === 'w' ? 'w' : 'b'] += 1;
@@ -69,7 +71,13 @@ export const ReviewTable: React.FC<ReviewTableProps> = ({ game }) => {
         </div>
       )}
 
-      {game.estimatedRating && (
+      {isOddsGame && (
+        <p className="px-1 py-1.5 text-[12px] leading-snug text-theme-muted" data-testid="odds-note">
+          Odds game: one side started with extra material, so accuracy runs high and there is no game rating.
+        </p>
+      )}
+
+      {game.estimatedRating && game.estimatedRating.white != null && game.estimatedRating.black != null && !isOddsGame && (
         <div className={`${GRID} py-2`}>
           <RowLabel>Game Rating</RowLabel>
           <div className="flex justify-center"><ValueBox value={game.estimatedRating.white} tone="white" /></div>

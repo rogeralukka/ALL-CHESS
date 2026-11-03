@@ -320,9 +320,9 @@ def test_analysis_levels_configuration():
     assert "max" in ANALYSIS_LEVELS
 
     assert ANALYSIS_LEVELS["standard"]["depth"] == 18
-    assert ANALYSIS_LEVELS["deep"]["depth"] == 22
-    assert ANALYSIS_LEVELS["deeper"]["depth"] == 26
-    assert ANALYSIS_LEVELS["max"]["depth"] == 32
+    assert ANALYSIS_LEVELS["deep"]["depth"] == 20
+    assert ANALYSIS_LEVELS["deeper"]["depth"] == 22
+    assert ANALYSIS_LEVELS["max"]["depth"] == 24
 
     assert LEVEL_ORDER["standard"] < LEVEL_ORDER["deep"] < LEVEL_ORDER["deeper"] < LEVEL_ORDER["max"]
 
@@ -427,3 +427,11 @@ def test_analyze_game_depth_levels_and_cache(auth_client, test_user, db_session,
     game_resp4 = auth_client.get(f"/api/v1/games/{g.id}")
     assert game_resp4.json()["analysisLevel"] == "deep"
     assert game_resp4.json()["analysisDepth"] == 22
+
+    # 5. Request 'standard' WITH force (the person pressed "Re-run review at Standard") -> replaces the deeper review
+    resp5 = auth_client.post(f"/api/v1/games/{g.id}/analyze", json={"level": "standard", "force": True})
+    assert resp5.status_code == 200
+    assert called_levels == ["standard", "deep", "standard"]
+    game_resp5 = auth_client.get(f"/api/v1/games/{g.id}")
+    assert game_resp5.json()["analysisLevel"] == "standard"
+    assert game_resp5.json()["analysisDepth"] == 18

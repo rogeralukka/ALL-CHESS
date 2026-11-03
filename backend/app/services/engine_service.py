@@ -255,11 +255,14 @@ class EnginePool:
 
 
 _GLOBAL_ENGINE_POOL = EnginePool(size=settings.engine_pool_size)
+# Same depths as the browser levels (frontend BROWSER_LIMITS). The server engine is only the fallback when the
+# browser cannot search; its time cap keeps a free-tier server from running for minutes, so the depth it really
+# reaches is reported as analysisDepth.
 ANALYSIS_LEVELS: dict[str, dict[str, Any]] = {
-    "standard": {"depth": 18, "time_per_move": 0.35, "multipv": 3},
-    "deep": {"depth": 22, "time_per_move": 0.6, "multipv": 3},
-    "deeper": {"depth": 26, "time_per_move": 1.0, "multipv": 3},
-    "max": {"depth": 32, "time_per_move": 2.0, "multipv": 3},
+    "standard": {"depth": 18, "time_per_move": 1.0, "multipv": 3},
+    "deep": {"depth": 20, "time_per_move": 1.5, "multipv": 3},
+    "deeper": {"depth": 22, "time_per_move": 2.5, "multipv": 3},
+    "max": {"depth": 24, "time_per_move": 4.0, "multipv": 3},
 }
 
 LEVEL_ORDER: dict[str, int] = {
@@ -330,6 +333,7 @@ def _run_single_pass_review_sync(
     db: Session | None = None,
     level: str = "standard",
     external_evals: list[dict[str, Any]] | None = None,
+    start_fen: str | None = None,
 ) -> dict[str, Any]:
     """
     ONE EVAL PER POSITION (searched here, or supplied by the browser through external_evals):
@@ -351,8 +355,9 @@ def _run_single_pass_review_sync(
             },
         }
 
-    # 1. Step through positions and evaluate each position ONCE
-    board = chess.Board()
+    # 1. Step through positions and evaluate each position ONCE.
+    # Odds games and games from a set-up position do not start from the normal position.
+    board = chess.Board(start_fen) if start_fen else chess.Board()
     positions: list[chess.Board] = [board.copy()]
     played_chess_moves: list[chess.Move | None] = []
     is_sacrifice_flags: list[bool] = []
@@ -711,6 +716,10 @@ def _run_single_pass_review_sync(
     est_ratings = estimate_performance_ratings(
         accuracy, white_base_rating=white_rating, black_base_rating=black_rating
     )
+    if start_fen:
+        # Odds / set-up games: one side starts with extra material, so the winning chances sit near 0% or 100%
+        # and accuracy runs high. The accuracy-to-rating map was calibrated on normal games only: no rating.
+        est_ratings = {"white": None, "black": None}
     phase_grades = calculate_phase_grades(analyzed_moves, is_user_white=is_user_white)
 
     all_classes = [
@@ -812,6 +821,7 @@ async def analyze_game_moves_full(
     on_progress: Callable[[int], None] | None = None,
     db: Session | None = None,
     external_evals: list[dict[str, Any]] | None = None,
+    start_fen: str | None = None,
 ) -> dict[str, Any]:
     """
     Performs game review across every position in a game according to specified analysis level.
@@ -839,13 +849,13 @@ async def analyze_game_moves_full(
     )
     if external_evals is not None:
         review_data = await asyncio.to_thread(
-            _run_single_pass_review_sync, None, *args, external_evals
+            _run_single_pass_review_sync, None, *args, external_evals, start_fen=start_fen
         )
     else:
         pool = get_global_engine_pool()
         async with pool.acquire() as engine:
             review_data = await asyncio.to_thread(
-                _run_single_pass_review_sync, engine, *args
+                _run_single_pass_review_sync, engine, *args, start_fen=start_fen
             )
 
     # Scale turning points comment limit with depth level

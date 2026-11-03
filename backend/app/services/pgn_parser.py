@@ -264,3 +264,19 @@ def parse_pgn_game(
         "termination": termination
     }
     return game_dict
+
+
+def start_fen_from_pgn(pgn: str | None) -> str | None:
+    """The position a game starts from when it is not the normal one (odds chess, set-up positions),
+    taken from the PGN's [SetUp "1"] / [FEN "..."] headers. None for a normal game."""
+    if not pgn:
+        return None
+    m = re.search(r'\[FEN\s+"([^"]+)"\]', pgn)
+    if not m:
+        return None
+    fen = m.group(1).strip()
+    try:
+        board = chess.Board(fen)
+    except ValueError:
+        return None
+    return None if board.fen() == chess.STARTING_FEN else board.fen()

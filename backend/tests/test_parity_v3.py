@@ -42,8 +42,10 @@ def test_estimate_game_rating_calibration():
         (63.9, 650),
         (68.0, 900),
         (72.1, 1200),
+        (74.2, 1250),
         (75.3, 1300),
         (81.3, 1500),
+        (83.3, 1550),  # Chess.com, game 186073066724 re-reviewed (rogeralukka 83.3 -> 1550, Max_2404 74.2 -> 1250)
     ]
     for acc, expected in points:
         est = estimate_game_rating(acc)
@@ -58,7 +60,9 @@ def test_estimate_game_rating_calibration():
         r_prev = r_curr
 
     assert estimate_game_rating(0.0) == 100
-    assert estimate_game_rating(100.0) == 3000
+    assert estimate_game_rating(100.0) == 2500
+    # no more runaway extrapolation above the last measured point (85.8% used to give 1836)
+    assert estimate_game_rating(85.8) <= 1650
 
     # estimate_performance_ratings uses estimate_game_rating
     perf = estimate_performance_ratings({"white": 68.0, "black": 75.3})
