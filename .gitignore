@@ -34,6 +34,10 @@ backend/bin/
 *.sqlite
 *.sqlite3
 
+# Local evaluation cache and calibration data
+.cache/
+.eval_cache/
+
 # Local chat exports
 Chess_Coach_Conversation_History.pdf
 chat_history.html
