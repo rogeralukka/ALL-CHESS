@@ -88,17 +88,60 @@ export interface SearchOptions {
   graceMs?: number;
   /** Engines run side by side; defaults to enginePoolSize() (1 when a test supplies createWorker) */
   workers?: number;
+  /** Starts watching how smoothly the page draws; calls `onJank` when it stutters and returns a stop function. Defaults to a real requestAnimationFrame monitor. */
+  frameMonitor?: (onJank: () => void) => () => void;
 }
 
 /**
  * How many engines to run side by side. Positions are independent, so several single-threaded engines each
  * take their own positions (measured on a 20-thread laptop at depth 18: 1 engine 2.97 s per position,
  * 4 engines 0.64 s, 8 engines 0.50 s). The multi-threaded Stockfish build was measured too and was ~6x slower.
- * About half the cores, capped at 8, so the page and the rest of the machine stay responsive.
+ * A quarter of the cores, at most 4 (8 engines were only ~25% faster than 4 but made the page and the whole
+ * machine stutter), so the page and the rest of the machine stay responsive.
  */
 export function enginePoolSize(): number {
   const cores = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 2;
-  return Math.max(1, Math.min(8, Math.floor(cores / 2)));
+  return Math.max(1, Math.min(4, Math.floor(cores / 4)));
+}
+
+/** True when the page is stuttering: at least 40% of the recent frames took longer than 50 ms (a smooth page is ~17 ms). */
+export function isJanky(frameGapsMs: number[]): boolean {
+  if (frameGapsMs.length < 20) return false;
+  const recent = frameGapsMs.slice(-20);
+  return recent.filter((g) => g > 50).length >= 8;
+}
+
+/** Watches frame timing with requestAnimationFrame; calls onJank (at most every 4 s) while the page stutters. */
+export function watchFrameRate(onJank: () => void): () => void {
+  if (typeof requestAnimationFrame !== 'function' || typeof document === 'undefined') return () => {};
+  let raf = 0;
+  let last = 0;
+  let lastJank = 0;
+  let stopped = false;
+  const gaps: number[] = [];
+  const tick = (now: number) => {
+    if (stopped) return;
+    // a hidden tab pauses drawing; that is not stutter, so start the measurement again when it returns
+    if (document.hidden) {
+      last = 0;
+      gaps.length = 0;
+    } else {
+      if (last) gaps.push(now - last);
+      if (gaps.length > 40) gaps.shift();
+      last = now;
+      if (isJanky(gaps) && now - lastJank > 4000) {
+        lastJank = now;
+        gaps.length = 0;
+        onJank();
+      }
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => {
+    stopped = true;
+    cancelAnimationFrame(raf);
+  };
 }
 
 function defaultWorker(): EngineWorkerLike {
@@ -203,10 +246,13 @@ export async function searchPositions(fens: string[], limits: SearchLimits, opts
   let done = 0;
   let failed: unknown = null;
   const workers: EngineWorkerLike[] = [];
+  // engines allowed to keep working; drops by one (never below 1) whenever the page starts to stutter
+  let allowed = count;
 
-  const runOne = async (worker: EngineWorkerLike) => {
+  const runOne = async (worker: EngineWorkerLike, index: number) => {
     await startEngine(worker, limits.multipv);
     while (next < fens.length && !failed) {
+      if (index >= allowed) return; // the page is struggling: this engine stands down, the others finish the work
       // claim a block; `to` is this engine's own end (the shared `next` moves on as other engines claim theirs)
       const from = next;
       const to = Math.min(fens.length, from + BLOCK);
@@ -216,15 +262,23 @@ export async function searchPositions(fens: string[], limits: SearchLimits, opts
         out[i] = await searchOne(worker, fens[i], limits, limits.movetimeMs + grace);
         done++;
         opts.onProgress?.(Math.round((done / fens.length) * 100));
+        await new Promise((r) => setTimeout(r, 0)); // let the page draw between positions
       }
     }
   };
 
+  let stopWatching = () => {};
   try {
     for (let k = 0; k < count; k++) workers.push(make());
+    if (count > 1) {
+      const monitor = opts.frameMonitor ?? (opts.createWorker ? undefined : watchFrameRate);
+      stopWatching = monitor?.(() => {
+        if (allowed > 1) allowed--;
+      }) ?? (() => {});
+    }
     await Promise.all(
-      workers.map((w) =>
-        runOne(w).catch((err) => {
+      workers.map((w, k) =>
+        runOne(w, k).catch((err) => {
           failed = failed ?? err;
           throw err;
         }),
@@ -232,6 +286,7 @@ export async function searchPositions(fens: string[], limits: SearchLimits, opts
     );
     return out;
   } finally {
+    stopWatching();
     for (const w of workers) {
       try {
         w.postMessage('quit');
