@@ -14,7 +14,7 @@ export const ANALYSIS_LEVELS: AnalysisLevel[] = [
   { id: 'standard', name: 'Standard', depth: 18, blurb: 'Every move searched to depth 18. Fastest.' },
   { id: 'deep', name: 'Deep', depth: 20, blurb: 'Depth 20: catches quieter mistakes. About twice as long.' },
   { id: 'deeper', name: 'Deeper', depth: 22, blurb: 'Depth 22: long calculations. A few minutes on a laptop.' },
-  { id: 'max', name: 'Max', depth: 24, blurb: 'Depth 24: the deepest search. Slow, especially on a phone.' },
+  { id: 'max', name: 'Max', depth: 24, blurb: 'Depth 24 and the harshest scoring (Lichess accuracy formula). Slow, especially on a phone.' },
 ];
 
 export const DEFAULT_LEVEL: AnalysisLevel['id'] = 'standard';

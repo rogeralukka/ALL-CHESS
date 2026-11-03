@@ -146,3 +146,30 @@ def test_stricter_levels_lower_both_ratings_by_the_same_amount():
         assert base["white"] - out["white"] == base["black"] - out["black"] == 60 * offset
     assert est({"white": 50.0, "black": None}, level="max", standard_accuracy={"white": 50.0, "black": None}) == {"white": 100, "black": None}
     assert est(std, level="standard", standard_accuracy=std) == base
+
+
+def test_max_level_uses_lichess_accuracy_and_can_be_switched_back(monkeypatch):
+    import json
+
+    from app.config import settings
+    from app.services.engine_service import _run_single_pass_review_sync
+
+    game = json.load(open(os.path.join(cal.FIXTURE, "games.json")))[MAX_GAME]
+    evals = json.load(open(os.path.join(cal.FIXTURE, "evals_d24_max_game", f"search-{MAX_GAME}.json")))
+
+    def grade():
+        review = _run_single_pass_review_sync(
+            None, [dict(m) for m in game["moves"]], external_evals=[{"lines": e["lines"]} for e in evals], level="max"
+        )
+        return review, calculate_game_accuracy(copy.deepcopy(review["moves"]), method=settings.max_level_accuracy_method, level="max")
+
+    review, expected = grade()
+    assert settings.max_level_accuracy_method == "lichess"
+    assert review["accuracy"] == expected  # what the app shows is the Lichess formula's number
+    lichess_acc = review["accuracy"]
+
+    monkeypatch.setattr(settings, "max_level_accuracy_method", "chesscom")
+    review, _ = grade()
+    assert review["accuracy"] != lichess_acc  # switching the setting back restores the Chess.com-fitted formula
+    # either way the game rating is anchored to Standard minus the same penalty, so it does not depend on the formula
+    assert review["estimatedRating"]["white"] == estimate_game_rating(calculate_game_accuracy(copy.deepcopy(review["moves"]), level="standard")["white"]) - 180
