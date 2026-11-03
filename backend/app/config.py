@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     # (Accuracy gets stricter per level; pushing that through the steep accuracy->rating table would cost the weaker
     # player far more rating than the stronger one and blow the gap between them up.)
     rating_level_penalty_step: int = Field(default=60)
+    # Accuracy formula used at the Max level: "lichess" (Lichess's open formula, the harshest) or "chesscom" (the
+    # Chess.com-fitted formula every other level uses). Set MAX_LEVEL_ACCURACY_METHOD=chesscom to go back.
+    max_level_accuracy_method: str = Field(default="lichess")
 
     # Performance rating mapping settings
     # estimated = clamp(100, 3000, player_rating + (accuracy - expected_accuracy) * sensitivity_k)
