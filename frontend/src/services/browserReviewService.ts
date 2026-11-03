@@ -34,6 +34,12 @@ export const BROWSER_LIMITS: Record<AnalysisLevel['id'], SearchLimits> = {
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
+/** Where a game starts: the PGN's [FEN "..."] header for odds games and set-up positions, else the normal start. */
+export function startFenOf(pgn?: string | null): string {
+  const m = pgn?.match(/\[FEN\s+"([^"]+)"\]/);
+  return m ? m[1].trim() : START_FEN;
+}
+
 export interface ParsedInfo {
   multipv: number;
   depth: number;

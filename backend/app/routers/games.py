@@ -23,6 +23,7 @@ from app.schemas.game import (
 )
 from app.schemas.job import JobResponse
 from app.services.engine_service import LEVEL_ORDER, analyze_game_moves_full
+from app.services.pgn_parser import start_fen_from_pgn
 from app.services.accuracy import last_book_index
 
 logger = logging.getLogger("all_chess.games_router")
@@ -385,6 +386,7 @@ async def run_game_analysis_task(
     user_id: str,
     level: str = "standard",
     external_evals: list[dict[str, Any]] | None = None,
+    force: bool = False,
 ) -> None:
     db = app.database.SessionLocal()
     try:
@@ -417,6 +419,7 @@ async def run_game_analysis_task(
             on_progress=update_progress,
             db=db,
             external_evals=external_evals,
+            start_fen=start_fen_from_pgn(game.pgn),
         )
 
         real_depth = analysis_result.get("analysisDepth", 18)
@@ -442,7 +445,9 @@ async def run_game_analysis_task(
         )
         new_level_rank = LEVEL_ORDER.get(level, 1)
 
-        if new_level_rank >= current_level_rank:
+        # A re-run the person asked for (force) always replaces the review, even at a shallower level;
+        # otherwise an automatic run never overwrites a deeper review.
+        if force or new_level_rank >= current_level_rank:
             game.moves = analysis_result["moves"]
             game.accuracy = analysis_result["accuracy"]
             game.estimated_rating = analysis_result["estimatedRating"]
@@ -576,7 +581,7 @@ def analyze_game(
     db.refresh(job)
 
     background_tasks.add_task(
-        run_game_analysis_task, job.id, game.id, current_user.id, req_level
+        run_game_analysis_task, job.id, game.id, current_user.id, req_level, None, force
     )
     return JobResponse(job_id=job.id)
 
@@ -633,5 +638,6 @@ def submit_browser_evaluations(
         current_user.id,
         payload.level,
         external,
+        payload.force,
     )
     return JobResponse(job_id=job.id)

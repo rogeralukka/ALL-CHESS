@@ -9,7 +9,8 @@ import { GameSummary } from './GameSummary';
 import { ReviewBoard } from './ReviewBoard';
 import { PieceHopper } from '@/components/LoadingScreen';
 import { AnalysisLevel, loadLevel, saveLevel } from './analysisLevels';
-import { BROWSER_LIMITS, START_FEN, searchPositions } from '@/services/browserReviewService';
+import { BROWSER_LIMITS, searchPositions, startFenOf } from '@/services/browserReviewService';
+import { toast } from '@/components/Toast';
 import { needsAnnotationRefresh } from '@/lib/annotations';
 
 export const ReviewRouter: React.FC = () => {
@@ -67,11 +68,12 @@ export const ReviewRouter: React.FC = () => {
    * Preferred path: Stockfish runs in this browser (the person's own CPU), then the backend only grades the moves.
    * Returns undefined when the browser can't do it (no Worker, engine error), so the caller falls back to the server.
    */
-  const analyzeOnDevice = async (game: Game, lvl: AnalysisLevel['id'], isActive: () => boolean): Promise<Game | null | undefined> => {
+  const analyzeOnDevice = async (game: Game, lvl: AnalysisLevel['id'], isActive: () => boolean, force = false): Promise<Game | null | undefined> => {
     if (!game.moves?.length || game.moves.some((m) => !m.fen)) return undefined;
     let positions;
     try {
-      positions = await searchPositions([START_FEN, ...game.moves.map((m) => m.fen)], BROWSER_LIMITS[lvl], {
+      // position 0 is where the game really started (odds games and set-up positions are not the normal start)
+      positions = await searchPositions([startFenOf(game.pgn), ...game.moves.map((m) => m.fen)], BROWSER_LIMITS[lvl], {
         isCancelled: () => !isActive(),
         onProgress: (pct) => {
           if (isActive()) setAnalysisProgress(Math.round(pct * 0.9));
@@ -83,7 +85,7 @@ export const ReviewRouter: React.FC = () => {
     }
     if (!isActive()) return null;
     try {
-      const res = await api.post<{ jobId: string }>(`/games/${game.id}/evaluations`, { level: lvl, positions });
+      const res = await api.post<{ jobId: string }>(`/games/${game.id}/evaluations`, { level: lvl, positions, force });
       if (!res?.jobId) return undefined;
       return await waitForJob(game.id, res.jobId, isActive, 90, 100);
     } catch (err) {
@@ -96,7 +98,7 @@ export const ReviewRouter: React.FC = () => {
   const analyzeGame = async (id: string, lvl: AnalysisLevel['id'], force: boolean, isActive: () => boolean, known?: Game | null): Promise<Game | null> => {
     const current = known ?? (await gameRepository.getGameById(id));
     if (current) {
-      const local = await analyzeOnDevice(current, lvl, isActive);
+      const local = await analyzeOnDevice(current, lvl, isActive, force);
       if (local !== undefined) return local;
     }
     const analyzeRes = await api.post<{ jobId: string }>(`/games/${id}/analyze`, { level: lvl, force });
@@ -113,8 +115,10 @@ export const ReviewRouter: React.FC = () => {
     try {
       const fresh = await analyzeGame(gameId, lvl, true, () => true, currentGame);
       if (fresh) setCurrentGame(fresh);
+      else toast.error('Review failed', 'The re-run did not finish. Your previous review is unchanged; try again.');
     } catch (err) {
       console.error('Failed to re-analyze game:', err);
+      toast.error('Review failed', 'The re-run did not finish. Your previous review is unchanged; try again.');
     } finally {
       setLoading(false);
     }

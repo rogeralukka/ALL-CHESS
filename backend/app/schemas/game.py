@@ -219,6 +219,8 @@ class BrowserEvaluationsRequest(CamelModel):
     move i, and the last entry is the final position, so there are len(moves) + 1 of them."""
 
     level: Literal["standard", "deep", "deeper", "max"] = "standard"
+    # True when the person asked for this re-run: the result replaces the stored review even if it is shallower
+    force: bool = False
     positions: list[BrowserPosition] = Field(..., min_length=1, max_length=1201)
 
 
