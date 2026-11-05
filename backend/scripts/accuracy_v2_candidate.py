@@ -6,23 +6,23 @@ Empirically fitted and validated across 1,226 games (2,452 evaluations, 91,480 p
 spanning from 100 Elo beginners to 3300 Elo Super Grandmasters.
 
 KEY FORMULA IMPROVEMENTS:
-1. Piecewise Move Accuracy (Dual Scale):
-   - Small positional drops (d <= 3.0%): scale=12.0, power=1.25
+1. Dual-Scale Move Accuracy:
+   - Small positional drops (d <= 2.5%): scale=14.0, power=1.25
      Prevents solid master moves from being unfairly penalized (e.g. 1-2% drops score 94-98%
      instead of 81-90%), boosting master games to their true 85-90% range.
-   - Larger tactical drops (d > 3.0%): scale=9.5, power=1.15
+   - Larger tactical drops (d > 2.5%): scale=10.0, power=1.15
      Steeply penalizes inaccuracies, mistakes, and blunders.
 
 2. Classification-Aware Move Weighting:
-   - Blunders & Misses: 2.2x weight
-   - Mistakes: 1.5x weight
-   - Other moves: (1.0 + drop / 5.0) ** 0.22
+   - Book moves: 100.0% accuracy, weight 1.0
+   - Blunders: 2.0x weight
+   - Mistakes & Misses: 1.4x weight
+   - Other moves: (1.0 + drop / 5.0) ** 0.20
 
-3. Progressive Blunder Rate Dampener:
-   Games with blunder rate > 5% apply:
-     acc = base_acc * (1.0 - (blunder_rate - 0.05) * 0.40)
-   Prevents long games with 40+ trivial moves from hiding multiple endgame blunders
-   (e.g. Game 173509136108 White rating error slashed from 111 -> 10 points).
+3. Multi-Blunder Progressive Deductions:
+   Games with multiple blunders receive a progressive deduction:
+     if n_blunders >= 2: accuracy -= (n_blunders - 1) * 1.5
+   Prevents long games with 40+ trivial moves from hiding multiple endgame blunders.
 """
 
 import math
@@ -50,15 +50,15 @@ RATING_ACCURACY_ANCHORS: List[Tuple[float, int]] = [
 def move_accuracy_v2(win_pct_drop: float) -> float:
     """
     Computes per-move accuracy from win% drop using dual-scale power-exponential curve:
-      - d <= 3.0%: scale=12.0, power=1.25 (generous for solid master play)
-      - d > 3.0%:  scale=9.5,  power=1.15 (punishes mistakes and blunders)
+      - d <= 2.5%: scale=14.0, power=1.25 (generous for solid master play)
+      - d > 2.5%:  scale=10.0, power=1.15 (punishes mistakes and blunders)
     """
     if win_pct_drop <= 0.0:
         return 100.0
-    if win_pct_drop <= 3.0:
-        acc = 100.0 * math.exp(-((win_pct_drop / 12.0) ** 1.25))
+    if win_pct_drop <= 2.5:
+        acc = 100.0 * math.exp(-((win_pct_drop / 14.0) ** 1.25))
     else:
-        acc = 100.0 * math.exp(-((win_pct_drop / 9.5) ** 1.15))
+        acc = 100.0 * math.exp(-((win_pct_drop / 10.0) ** 1.15))
     return min(100.0, max(0.0, round(acc, 1)))
 
 
@@ -78,31 +78,37 @@ def calculate_player_accuracy_v2(
         classifications = ["good"] * len(move_accuracies)
 
     weights = []
+    accs = []
     n_blunders = 0
 
-    for d, cls_ in zip(win_pct_drops, classifications):
-        if cls_ in ("blunder", "miss"):
-            weights.append(2.20)
-            n_blunders += 1
-        elif cls_ == "mistake":
-            weights.append(1.50)
+    for m_acc, d, cls_ in zip(move_accuracies, win_pct_drops, classifications):
+        if cls_ == "book":
+            accs.append(100.0)
+            weights.append(1.0)
+        elif d <= 2.5:
+            accs.append(m_acc)
+            weights.append(1.0)
         else:
-            weights.append((1.0 + d / 5.0) ** 0.22)
+            accs.append(m_acc)
+            if cls_ == "blunder":
+                weights.append(2.0)
+                n_blunders += 1
+            elif cls_ in ("mistake", "miss"):
+                weights.append(1.4)
+            else:
+                weights.append((1.0 + d / 5.0) ** 0.20)
 
     total_weight = sum(weights)
     if total_weight <= 0:
         return 100.0
 
-    base_accuracy = sum(w * a for w, a in zip(weights, move_accuracies)) / total_weight
+    base_accuracy = sum(w * a for w, a in zip(weights, accs)) / total_weight
 
-    # Progressive blunder dampening for high-blunder disaster games
-    blunder_rate = n_blunders / len(move_accuracies)
-    if blunder_rate > 0.05:
-        adjusted_accuracy = base_accuracy * (1.0 - (blunder_rate - 0.05) * 0.40)
-    else:
-        adjusted_accuracy = base_accuracy
+    # Progressive blunder deduction for multiple blunder disaster games
+    if n_blunders >= 2:
+        base_accuracy -= (n_blunders - 1) * 1.5
 
-    return round(max(15.0, min(100.0, adjusted_accuracy)), 1)
+    return round(max(15.0, min(100.0, base_accuracy)), 1)
 
 
 def estimate_game_rating_v2(accuracy: Optional[float]) -> Optional[int]:
