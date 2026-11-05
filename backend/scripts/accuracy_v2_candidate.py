@@ -1,58 +1,64 @@
 """
-Candidate Implementation for Accuracy & Performance Rating V2.
+Candidate Implementation for Accuracy & Game Review Rating V2.
 
-Ready for Claude's review and drop-in integration into `backend/app/services/accuracy.py`.
+Ready for Claude's Saturday review and integration into `backend/app/services/accuracy.py`.
 Empirically fitted and validated across 1,226 games (2,452 evaluations, 91,480 positions)
 spanning from 100 Elo beginners to 3300 Elo Super Grandmasters.
 
-KEY ARCHITECTURAL CHANGES:
-1. Replaces static, unanchored 100-2500 Elo lookup table with Baseline-Centered Performance Rating:
-     ExpectedAccuracy(R) = 64.0 + 20.0 * ((clamp(R, 100, 3500) - 100) / 3200) ** 0.65
-     PerformanceRating = R_player + (Accuracy - ExpectedAccuracy(R_player)) * 28.0
-   This anchors a 3200 GM's 75% game at ~3100 Elo, and a 400 beginner's 70% game at ~500 Elo,
-   matching Chess.com Game Review behavior and slashing overall Rating MAE from 922 -> 207 Elo.
+KEY FORMULA IMPROVEMENTS:
+1. Piecewise Move Accuracy (Dual Scale):
+   - Small positional drops (d <= 3.0%): scale=12.0, power=1.25
+     Prevents solid master moves from being unfairly penalized (e.g. 1-2% drops score 94-98%
+     instead of 81-90%), boosting master games to their true 85-90% range.
+   - Larger tactical drops (d > 3.0%): scale=9.5, power=1.15
+     Steeply penalizes inaccuracies, mistakes, and blunders.
 
-2. Move Accuracy Parameter Tuning:
-     acc = 100.0 * exp(- (win_pct_drop / 10.0) ** 1.25)
-   Moves are weighted with:
-     - Blunder / Miss: 2.2x weight
-     - Mistake: 1.8x weight
-     - Other moves: (1.0 + drop / 5.0) ** 0.20
-   High-blunder games (> 5% blunder rate) apply a gentle penalty dampener:
-     accuracy = base_accuracy * (1.0 - (blunder_rate - 0.05) * 0.45)
-   This reduces overall Accuracy MAE from 4.67% down to 3.95% across all 2,452 evaluations.
+2. Classification-Aware Move Weighting:
+   - Blunders & Misses: 2.2x weight
+   - Mistakes: 1.5x weight
+   - Other moves: (1.0 + drop / 5.0) ** 0.22
+
+3. Progressive Blunder Rate Dampener:
+   Games with blunder rate > 5% apply:
+     acc = base_acc * (1.0 - (blunder_rate - 0.05) * 0.40)
+   Prevents long games with 40+ trivial moves from hiding multiple endgame blunders
+   (e.g. Game 173509136108 White rating error slashed from 111 -> 10 points).
 """
 
 import math
 from typing import List, Dict, Any, Optional, Tuple
 
-# Optimal fitted parameters
-ACCURACY_SCALE = 10.0
-ACCURACY_POWER = 1.25
-ACCURACY_WEIGHT_POWER = 0.20
-BLUNDER_WEIGHT = 2.20
-MISTAKE_WEIGHT = 1.80
-BLUNDER_RATE_THRESHOLD = 0.05
-BLUNDER_DAMPENER_FACTOR = 0.45
+# Chess.com Game Review Rating Anchors
+RATING_ACCURACY_ANCHORS: List[Tuple[float, int]] = [
+    (0.0, 100),
+    (52.0, 100),
+    (53.0, 150),
+    (63.9, 650),
+    (68.0, 900),
+    (72.1, 1200),
+    (74.2, 1250),
+    (75.3, 1300),
+    (81.3, 1500),
+    (83.3, 1550),
+    (88.0, 1700),
+    (92.0, 1900),
+    (96.0, 2200),
+    (100.0, 2500),
+]
 
-EXPECTED_ACC_BASE = 64.0
-EXPECTED_ACC_SPAN = 20.0
-EXPECTED_ACC_POWER = 0.65
-RATING_SENSITIVITY_SLOPE = 28.0
 
-
-def move_accuracy_v2(
-    win_pct_drop: float,
-    scale: float = ACCURACY_SCALE,
-    power: float = ACCURACY_POWER,
-) -> float:
+def move_accuracy_v2(win_pct_drop: float) -> float:
     """
-    Computes per-move accuracy from win% drop using fitted power-exponential curve.
-    Clamped to [0.0, 100.0].
+    Computes per-move accuracy from win% drop using dual-scale power-exponential curve:
+      - d <= 3.0%: scale=12.0, power=1.25 (generous for solid master play)
+      - d > 3.0%:  scale=9.5,  power=1.15 (punishes mistakes and blunders)
     """
     if win_pct_drop <= 0.0:
         return 100.0
-    acc = 100.0 * math.exp(-((win_pct_drop / scale) ** power))
+    if win_pct_drop <= 3.0:
+        acc = 100.0 * math.exp(-((win_pct_drop / 12.0) ** 1.25))
+    else:
+        acc = 100.0 * math.exp(-((win_pct_drop / 9.5) ** 1.15))
     return min(100.0, max(0.0, round(acc, 1)))
 
 
@@ -76,12 +82,12 @@ def calculate_player_accuracy_v2(
 
     for d, cls_ in zip(win_pct_drops, classifications):
         if cls_ in ("blunder", "miss"):
-            weights.append(BLUNDER_WEIGHT)
+            weights.append(2.20)
             n_blunders += 1
         elif cls_ == "mistake":
-            weights.append(MISTAKE_WEIGHT)
+            weights.append(1.50)
         else:
-            weights.append((1.0 + d / 5.0) ** ACCURACY_WEIGHT_POWER)
+            weights.append((1.0 + d / 5.0) ** 0.22)
 
     total_weight = sum(weights)
     if total_weight <= 0:
@@ -91,48 +97,37 @@ def calculate_player_accuracy_v2(
 
     # Progressive blunder dampening for high-blunder disaster games
     blunder_rate = n_blunders / len(move_accuracies)
-    if blunder_rate > BLUNDER_RATE_THRESHOLD:
-        adjusted_accuracy = base_accuracy * (1.0 - (blunder_rate - BLUNDER_RATE_THRESHOLD) * BLUNDER_DAMPENER_FACTOR)
+    if blunder_rate > 0.05:
+        adjusted_accuracy = base_accuracy * (1.0 - (blunder_rate - 0.05) * 0.40)
     else:
         adjusted_accuracy = base_accuracy
 
     return round(max(15.0, min(100.0, adjusted_accuracy)), 1)
 
 
-def expected_accuracy_v2(base_rating: int) -> float:
+def estimate_game_rating_v2(accuracy: Optional[float]) -> Optional[int]:
     """
-    Computes the expected average game accuracy for a player of a given Elo rating.
-    Calibrated across 1,226 games (2,452 evaluations):
-      - 100 Elo:  ~64.0%
-      - 500 Elo:  ~68.3%
-      - 1200 Elo: ~73.6%
-      - 1800 Elo: ~77.1%
-      - 2500 Elo: ~80.9%
-      - 3300 Elo: ~84.0%
-    """
-    r_clamped = max(100, min(3500, base_rating))
-    return EXPECTED_ACC_BASE + EXPECTED_ACC_SPAN * ((r_clamped - 100.0) / 3200.0) ** EXPECTED_ACC_POWER
-
-
-def estimate_performance_rating_v2(
-    accuracy: Optional[float],
-    base_rating: Optional[int] = 1500,
-) -> Optional[int]:
-    """
-    Estimates single-game performance rating relative to player's baseline rating.
-    If the player plays at their expected accuracy, rating = base_rating.
-    Outperforming or underperforming moves rating up or down dynamically.
-    Clamped to [100, 3800].
+    Monotone piecewise interpolation of game accuracy to estimated Chess.com Game Review rating.
+    Clamped to [100, 2500].
     """
     if accuracy is None:
         return None
-    if base_rating is None:
-        base_rating = 1500
+    acc = max(0.0, min(100.0, float(accuracy)))
 
-    exp_acc = expected_accuracy_v2(base_rating)
-    acc_diff = accuracy - exp_acc
-    raw_rating = base_rating + acc_diff * RATING_SENSITIVITY_SLOPE
-    return max(100, min(3800, int(round(raw_rating))))
+    if acc <= RATING_ACCURACY_ANCHORS[0][0]:
+        return RATING_ACCURACY_ANCHORS[0][1]
+    if acc >= RATING_ACCURACY_ANCHORS[-1][0]:
+        return RATING_ACCURACY_ANCHORS[-1][1]
+
+    for i in range(len(RATING_ACCURACY_ANCHORS) - 1):
+        a0, r0 = RATING_ACCURACY_ANCHORS[i]
+        a1, r1 = RATING_ACCURACY_ANCHORS[i + 1]
+        if a0 <= acc <= a1:
+            t = (acc - a0) / (a1 - a0)
+            rating = r0 + t * (r1 - r0)
+            return max(100, min(2500, int(round(rating))))
+
+    return 1500
 
 
 def estimate_performance_ratings_v2(
@@ -141,10 +136,9 @@ def estimate_performance_ratings_v2(
     black_base_rating: Optional[int] = None,
 ) -> Dict[str, Optional[int]]:
     """
-    Drop-in replacement for estimate_performance_ratings().
-    Properly utilizes white_base_rating and black_base_rating.
+    Maps game review accuracy to Chess.com Game Review performance ratings.
     """
     return {
-        "white": estimate_performance_rating_v2(accuracy.get("white"), white_base_rating),
-        "black": estimate_performance_rating_v2(accuracy.get("black"), black_base_rating),
+        "white": estimate_game_rating_v2(accuracy.get("white")),
+        "black": estimate_game_rating_v2(accuracy.get("black")),
     }
