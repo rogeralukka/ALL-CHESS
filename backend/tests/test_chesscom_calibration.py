@@ -148,28 +148,46 @@ def test_stricter_levels_lower_both_ratings_by_the_same_amount():
     assert est(std, level="standard", standard_accuracy=std) == base
 
 
-def test_max_level_uses_lichess_accuracy_and_can_be_switched_back(monkeypatch):
+def test_every_level_shows_lichess_accuracy_and_the_setting_switches_it_back(monkeypatch):
+    """The accuracy shown at every level uses the Lichess formula (the Chess.com-fitted formula could not get closer than
+    ~4 points per game on 2,843 reviewed games). The game RATING must not follow it: it is anchored to the
+    Chess.com-fitted Standard accuracy at every level, because the rating table was measured on Chess.com's accuracies."""
     import json
 
     from app.config import settings
     from app.services.engine_service import _run_single_pass_review_sync
 
     game = json.load(open(os.path.join(cal.FIXTURE, "games.json")))[MAX_GAME]
-    evals = json.load(open(os.path.join(cal.FIXTURE, "evals_d24_max_game", f"search-{MAX_GAME}.json")))
+    evals = json.load(open(os.path.join(cal.FIXTURE, "evals_d18", f"search-{MAX_GAME}.json")))
 
-    def grade():
-        review = _run_single_pass_review_sync(
-            None, [dict(m) for m in game["moves"]], external_evals=[{"lines": e["lines"]} for e in evals], level="max"
+    def grade(level):
+        return _run_single_pass_review_sync(
+            None, [dict(m) for m in game["moves"]], external_evals=[{"lines": e["lines"]} for e in evals], level=level
         )
-        return review, calculate_game_accuracy(copy.deepcopy(review["moves"]), method=settings.max_level_accuracy_method, level="max")
 
-    review, expected = grade()
-    assert settings.max_level_accuracy_method == "lichess"
-    assert review["accuracy"] == expected  # what the app shows is the Lichess formula's number
-    lichess_acc = review["accuracy"]
+    assert settings.accuracy_method == "lichess"
+    standard_chesscom = None
+    for level, offset in (("standard", 0), ("deep", 1), ("deeper", 2), ("max", 3)):
+        review = grade(level)
+        expected = calculate_game_accuracy(copy.deepcopy(review["moves"]), method="lichess", level=level)
+        assert review["accuracy"] == expected  # what the app shows is the Lichess number for this level
+        if standard_chesscom is None:
+            standard_chesscom = calculate_game_accuracy(copy.deepcopy(review["moves"]), method="chesscom", level="standard")
+        for color in ("white", "black"):
+            assert review["estimatedRating"][color] == estimate_game_rating(standard_chesscom[color]) - 60 * offset
 
-    monkeypatch.setattr(settings, "max_level_accuracy_method", "chesscom")
-    review, _ = grade()
-    assert review["accuracy"] != lichess_acc  # switching the setting back restores the Chess.com-fitted formula
-    # either way the game rating is anchored to Standard minus the same penalty, so it does not depend on the formula
-    assert review["estimatedRating"]["white"] == estimate_game_rating(calculate_game_accuracy(copy.deepcopy(review["moves"]), level="standard")["white"]) - 180
+    monkeypatch.setattr(settings, "accuracy_method", "chesscom")
+    review = grade("max")
+    assert review["accuracy"] != expected  # switching the setting back restores the Chess.com-fitted formula
+
+
+def test_lichess_levels_are_ordered_by_strictness():
+    """Pure Lichess has no strictness knob and deeper search alone can RAISE the score, so the rate is level-aware.
+    On the same evaluations every level must score no higher than the one below it, for every long fixture game."""
+    games = cal.load_games("evals_d18")
+    for gid in cal.long_ids(games):
+        prev = (100.0, 100.0)
+        for lvl in ("standard", "deep", "deeper", "max"):
+            res = calculate_game_accuracy(copy.deepcopy(games[gid]["moves"]), method="lichess", level=lvl)
+            assert res["white"] <= prev[0] and res["black"] <= prev[1], f"{gid} {lvl}: {res} above {prev}"
+            prev = (res["white"], res["black"])
