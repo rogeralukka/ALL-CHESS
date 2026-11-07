@@ -716,7 +716,7 @@ def _run_single_pass_review_sync(
     # the Standard-level accuracy of the same moves anchors the game rating at every level (computed first on a copy,
     # because grading writes each move's accuracy and the moves must end up carrying the chosen level's values)
     standard_accuracy = calculate_game_accuracy(copy.deepcopy(analyzed_moves), method="chesscom", level="standard")
-    accuracy_method = settings.max_level_accuracy_method if level == "max" else "chesscom"
+    accuracy_method = settings.accuracy_method
     if accuracy_method not in ("chesscom", "lichess"):
         accuracy_method = "chesscom"
     accuracy = calculate_game_accuracy(analyzed_moves, method=accuracy_method, level=level)

@@ -18,6 +18,15 @@ def get_level_scale(level: str = "standard") -> float:
     return max(1.0, base_scale - offset_idx * step)
 
 
+def get_lichess_rate(level: str = "standard") -> float:
+    """Lichess's decay rate 0.04354, made level-aware: each stricter level multiplies it by (1 + step * offset).
+    The pure Lichess formula has no strictness knob, and a deeper search alone does not reliably lower the score
+    (the same game scored 74.9 at depth 18 but 77.9 at depth 20 under pure Lichess), so the levels would not be ordered."""
+    step = getattr(settings, "lichess_level_rate_step", 0.0)
+    offset_idx = LEVEL_SCALE_OFFSETS.get(level.lower() if level else "standard", 0)
+    return 0.04354 * (1.0 + offset_idx * step)
+
+
 def move_accuracy(
     win_pct_drop: float,
     method: str = "chesscom",
@@ -40,7 +49,7 @@ def move_accuracy(
         return 100.0
 
     if method == "lichess":
-        acc = 103.1668 * math.exp(-0.04354 * win_pct_drop) - 3.1669
+        acc = 103.1668 * math.exp(-get_lichess_rate(level) * win_pct_drop) - 3.1669
         return min(100.0, max(0.0, round(acc, 1)))
 
     if scale is None:
@@ -240,13 +249,15 @@ def estimate_performance_ratings(
     """
     Maps game accuracy to Chess.com monotone estimated rating.
 
-    At Standard the rating comes straight from the accuracy. At the stricter levels (Deep/Deeper/Max) the rating is the
-    Standard rating of the same game minus a fixed penalty per level, the same for both players: the accuracy-to-rating
+    The rating is always anchored to `standard_accuracy` (the Chess.com-fitted Standard accuracy of the same moves) when
+    it is given, because the table was measured on Chess.com's accuracies; the accuracy SHOWN may use a different
+    formula (Lichess's) and must not be run through it. At Standard the rating is that map; at the stricter levels
+    (Deep/Deeper/Max) it is the Standard rating minus a fixed penalty per level, the same for both players: the accuracy-to-rating
     table is steep for weaker play and flat for stronger play, so running the stricter accuracy through it would make
     the weaker player lose far more rating than the stronger one and exaggerate the gap between them.
     """
     offset = LEVEL_SCALE_OFFSETS.get((level or "standard").lower(), 0)
-    if offset and standard_accuracy is not None:
+    if standard_accuracy is not None:
         penalty = offset * int(getattr(settings, "rating_level_penalty_step", 60))
         out: Dict[str, Optional[int]] = {}
         for color in ("white", "black"):
