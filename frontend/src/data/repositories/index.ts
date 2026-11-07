@@ -38,10 +38,46 @@ export interface IStatsRepository {
   getStrengthsAndWeaknesses(): Promise<Insights>;
 }
 
+export interface PuzzleThemeCount {
+  theme: string;
+  count: number;
+}
+
+export interface PuzzleRatingState {
+  rating: number;
+  streak: number;
+  bestStreak: number;
+  lastAttemptDate: string | null;
+}
+
+export interface PuzzleAttemptInput {
+  solved: boolean;
+  timeSeconds: number;
+  usedHint: boolean;
+}
+
+export interface PuzzleAttemptResult {
+  solved: boolean;
+  rating: number;
+  ratingDelta: number;
+  streak: number;
+  bestStreak: number;
+  /** true when this puzzle was already attempted before: stored, but rating and streak do not change. */
+  isRepeat: boolean;
+  message: string | null;
+}
+
 export interface IPuzzleRepository {
   getPuzzles(): Promise<Puzzle[]>;
   getPuzzleById(id: string): Promise<Puzzle | null>;
   getDailyPuzzle(): Promise<Puzzle>;
+  /** One unsolved puzzle near the player's rating (optionally of one theme). null when the server can't be used. */
+  getNextPuzzle(theme?: string): Promise<Puzzle | null>;
+  /** One unsolved puzzle inside a rating band (used by the level map). null when none / unavailable. */
+  getPuzzleInRange(minRating: number, maxRating: number, theme?: string): Promise<Puzzle | null>;
+  getThemes(): Promise<PuzzleThemeCount[]>;
+  getRating(): Promise<PuzzleRatingState | null>;
+  submitAttempt(id: string, input: PuzzleAttemptInput): Promise<PuzzleAttemptResult | null>;
 }
 
 export interface ILearnRepository {
@@ -274,6 +310,51 @@ export const puzzleRepository: IPuzzleRepository = {
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return MOCK_PUZZLES[0];
       return MOCK_PUZZLES[0];
+    }
+  },
+  async getNextPuzzle(theme?: string) {
+    if (isMockMode()) return null;
+    try {
+      const q = theme ? `?theme=${encodeURIComponent(theme)}` : '';
+      return await api.get<Puzzle>(`/puzzles/next${q}`);
+    } catch {
+      return null;
+    }
+  },
+  async getPuzzleInRange(minRating: number, maxRating: number, theme?: string) {
+    if (isMockMode()) return null;
+    try {
+      const q = new URLSearchParams({ min_rating: String(minRating), max_rating: String(maxRating), limit: '1' });
+      if (theme) q.set('theme', theme);
+      const list = await api.get<Puzzle[]>(`/puzzles?${q.toString()}`);
+      return Array.isArray(list) && list.length > 0 ? list[0] : null;
+    } catch {
+      return null;
+    }
+  },
+  async getThemes() {
+    if (isMockMode()) return [];
+    try {
+      const list = await api.get<PuzzleThemeCount[]>('/puzzles/themes');
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  },
+  async getRating() {
+    if (isMockMode()) return null;
+    try {
+      return await api.get<PuzzleRatingState>('/puzzles/rating');
+    } catch {
+      return null;
+    }
+  },
+  async submitAttempt(id: string, input: PuzzleAttemptInput) {
+    if (isMockMode()) return null;
+    try {
+      return await api.post<PuzzleAttemptResult>(`/puzzles/${encodeURIComponent(id)}/attempt`, input);
+    } catch {
+      return null;
     }
   },
 };

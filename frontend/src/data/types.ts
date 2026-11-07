@@ -181,6 +181,14 @@ export interface Puzzle {
   rating: number;
   theme: string[];
   goal: string;
+  /** Present on puzzles served by the API (Lichess set). UCI is safer than SAN for promotions. */
+  solutionUci?: string[];
+  /** The opponent's move that was already played to reach `fen` (highlight it as the last move). */
+  setupMoveUci?: string | null;
+  popularity?: number | null;
+  nbPlays?: number | null;
+  gameUrl?: string | null;
+  openingTags?: string[] | null;
 }
 
 export interface LessonStep {
