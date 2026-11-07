@@ -20,6 +20,7 @@ import { gameRepository, statsRepository, friendRepository, learnRepository, puz
 import { Game, Friend, LessonStage, Puzzle } from '@/data/types';
 import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
 import { storage } from '@/lib/storage';
+import { levelForRating, levelProgress } from '@/lib/puzzleLevel';
 import { useMotion } from '@/lib/useMotion';
 import { Flame, ChevronRight, Sparkles, Users } from 'lucide-react';
 import { useMediaQuery } from '@/lib/useMediaQuery';
@@ -125,8 +126,9 @@ export const Home: React.FC = () => {
 
   const puzzleRating = storage.get('all_chess_puzzle_rating', 1200);
   const puzzleStreak = storage.get('all_chess_puzzle_streak', 0);
-  const puzzleIndex = storage.get('all_chess_puzzle_index', 0);
-  const puzzleLevel = Math.floor(puzzleIndex / 5) + 1;
+  // puzzle levels follow the puzzle rating (one level per 100 points)
+  const puzzleLevel = levelForRating(puzzleRating);
+  const puzzleLevelPct = Math.round(levelProgress(puzzleRating) * 100);
   const stageNo = currentStage ? Math.max(1, MOCK_LEARN_STAGES.filter((s) => s.category === currentStage.category).findIndex((s) => s.id === currentStage.id) + 1) : 1;
 
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -150,7 +152,7 @@ export const Home: React.FC = () => {
         friends={friends}
         currentStage={currentStage}
         stageNo={stageNo}
-        puzzle={{ rating: puzzleRating, streak: puzzleStreak, level: puzzleLevel, solvedInLevel: puzzleIndex % 5, perLevel: 5 }}
+        puzzle={{ rating: puzzleRating, streak: puzzleStreak, level: puzzleLevel, solvedInLevel: puzzleLevelPct, perLevel: 100 }}
       />
     );
   }

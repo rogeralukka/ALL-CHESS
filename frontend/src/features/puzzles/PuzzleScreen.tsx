@@ -17,7 +17,9 @@ import { formatTime } from '@/lib/formatters';
 import { MOCK_PUZZLES } from '@/data/mock/mockPuzzles';
 import { SidebarHeader, HeaderIconButton } from '@/components/SidebarPanel';
 import { PuzzlePieceBadge } from './PuzzlePieceBadge';
-import { BoardBadge, CoachExpression } from '@/data/types';
+import { BoardBadge, CoachExpression, Puzzle } from '@/data/types';
+import { puzzleRepository, PuzzleThemeCount, PuzzleAttemptResult } from '@/data/repositories';
+import { levelForRating, levelBand, levelProgress, PUZZLE_LEVELS, PUZZLE_MIN_RATING } from '@/lib/puzzleLevel';
 import { sound } from '@/lib/sound';
 import { useMotion } from '@/lib/useMotion';
 import { LeaveGuard } from '@/components/LeaveGuard';
@@ -36,8 +38,11 @@ import {
   Eye,
 } from 'lucide-react';
 
-const PUZZLES_PER_LEVEL = 5;
-const MAP_LEVELS = 20;
+const MAP_LEVELS = PUZZLE_LEVELS;
+const THEME_STORAGE_KEY = 'all_chess_puzzle_theme';
+
+/** "e2e4" -> { from: 'e2', to: 'e4' } */
+const uciToMove = (uci?: string | null) => (uci && uci.length >= 4 ? { from: uci.slice(0, 2), to: uci.slice(2, 4) } : null);
 
 function animateCountUp(start: number, end: number, duration: number, callback: (v: number) => void) {
   const startTime = performance.now();
@@ -67,7 +72,17 @@ const THEME_LABELS: Record<string, string> = {
   mateIn1: 'Mate in 1',
   mateIn2: 'Mate in 2',
   mateIn3: 'Mate in 3',
+  mateIn4: 'Mate in 4',
+  mateIn5: 'Mate in 5',
   backRank: 'Back rank',
+  backRankMate: 'Back rank mate',
+  oneMove: 'One move',
+  veryLong: 'Very long',
+  masterVsMaster: 'Master vs master',
+  superGM: 'Super GM games',
+  attackingF2F7: 'Attacking f2/f7',
+  xRayAttack: 'X-ray attack',
+  enPassant: 'En passant',
 };
 const themeLabel = (t: string) =>
   THEME_LABELS[t] || t.replace(/([a-z])([A-Z0-9])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
@@ -79,8 +94,19 @@ export const PuzzleScreen: React.FC = () => {
   const currentPieceSet = PIECE_SETS.find((p) => p.id === pieceSetId) || PIECE_SETS[0];
   const { isFull, isOff } = useMotion();
 
-  const [puzzleIndex, setPuzzleIndex] = useState<number>(() => storage.get('all_chess_puzzle_index', 0) % MOCK_PUZZLES.length);
-  const currentPuzzle = MOCK_PUZZLES[puzzleIndex] || MOCK_PUZZLES[0];
+  // Puzzles come from the server (the Lichess puzzle set). If it cannot be reached, the built-in set keeps the screen working.
+  const [localIndex, setLocalIndex] = useState<number>(() => storage.get('all_chess_puzzle_index', 0) % MOCK_PUZZLES.length);
+  const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle>(() => MOCK_PUZZLES[storage.get('all_chess_puzzle_index', 0) % MOCK_PUZZLES.length] || MOCK_PUZZLES[0]);
+  const [source, setSource] = useState<'local' | 'server'>('local');
+  const [sessionCount, setSessionCount] = useState<number>(1);
+  const [loadingNext, setLoadingNext] = useState<boolean>(false);
+  const [themes, setThemes] = useState<PuzzleThemeCount[]>([]);
+  const [theme, setTheme] = useState<string>(() => storage.get<string>(THEME_STORAGE_KEY, ''));
+  const historyRef = useRef<Puzzle[]>([]);
+  const [historyLen, setHistoryLen] = useState<number>(0);
+  const requestIdRef = useRef(0);
+  const hintUsedIdRef = useRef<string | null>(null);
+  const failReportedIdRef = useRef<string | null>(null);
 
   const [chess] = useState(() => new Chess(currentPuzzle.fen));
   const [fen, setFen] = useState<string>(currentPuzzle.fen);
@@ -97,14 +123,19 @@ export const PuzzleScreen: React.FC = () => {
   // The panel opens on the level map with a "Solve puzzles" button, like the reference's puzzle home.
   // Making a move on the board also starts.
   const [started, setStarted] = useState<boolean>(false);
+  const startedRef = useRef(false);
+  useEffect(() => {
+    startedRef.current = started;
+  }, [started]);
   const isPhone = usePhoneLayout();
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
   const [puzzleRating, setPuzzleRating] = useState<number>(() => storage.get('all_chess_puzzle_rating', 1200));
   const [displayedRating, setDisplayedRating] = useState<number>(puzzleRating);
+  const ratingRef = useRef(puzzleRating);
+  const displayedRef = useRef(puzzleRating);
   const [ratingDelta, setRatingDelta] = useState<number | null>(null);
   const [streak, setStreak] = useState<number>(() => storage.get('all_chess_puzzle_streak', 0));
-  const [solvedInLevel, setSolvedInLevel] = useState<number>(puzzleIndex % PUZZLES_PER_LEVEL);
 
   const [coachExp, setCoachExp] = useState<CoachExpression>('thinking');
   const [bubbleText, setBubbleText] = useState<string>(stripSideToMove(currentPuzzle.goal));
@@ -116,7 +147,8 @@ export const PuzzleScreen: React.FC = () => {
   };
   useEffect(() => () => timeoutsRef.current.forEach((t) => window.clearTimeout(t)), []);
 
-  const level = Math.floor(puzzleIndex / PUZZLES_PER_LEVEL) + 1;
+  // Levels follow the puzzle rating: one level per 100 points (400 to 2800).
+  const level = levelForRating(puzzleRating);
 
   useEffect(() => {
     timeoutsRef.current.forEach((t) => window.clearTimeout(t));
@@ -131,13 +163,12 @@ export const PuzzleScreen: React.FC = () => {
     setShowRewardCascade(false);
     setHintSquare(null);
     setHintArrow(null);
-    setLastMove(null);
+    // the opponent's move that led to this position, so the player sees what just happened
+    setLastMove(uciToMove(currentPuzzle.setupMoveUci));
     setRatingDelta(null);
-    setSolvedInLevel(puzzleIndex % PUZZLES_PER_LEVEL);
     setCoachExp('thinking');
     setBubbleText(stripSideToMove(currentPuzzle.goal));
-    storage.set('all_chess_puzzle_index', puzzleIndex);
-  }, [currentPuzzle, chess, puzzleIndex]);
+  }, [currentPuzzle, chess]);
 
   useEffect(() => {
     if (status === 'solving' && started) {
@@ -151,12 +182,44 @@ export const PuzzleScreen: React.FC = () => {
   const [wrongSquare, setWrongSquare] = useState<string | null>(null);
   const [penalisedPuzzleId, setPenalisedPuzzleId] = useState<string | null>(null);
 
-  const changeRating = (delta: number) => {
-    const target = Math.max(100, puzzleRating + delta);
-    setPuzzleRating(target);
-    storage.set('all_chess_puzzle_rating', target);
-    setRatingDelta(target - puzzleRating);
-    animateCountUp(displayedRating, target, isOff ? 0 : 700, setDisplayedRating);
+  /** Moves the rating to `target` (count-up animation, saved copy for Home/Profile) and, on a level-up, opens the map. */
+  const setRatingTo = (target: number, opts: { animate?: boolean; celebrate?: boolean } = {}) => {
+    const prev = ratingRef.current;
+    const next = Math.max(PUZZLE_MIN_RATING, Math.round(target));
+    ratingRef.current = next;
+    setPuzzleRating(next);
+    storage.set('all_chess_puzzle_rating', next);
+    if (opts.animate === false) {
+      displayedRef.current = next;
+      setDisplayedRating(next);
+    } else {
+      setRatingDelta(next - prev);
+      animateCountUp(displayedRef.current, next, isOff ? 0 : 700, (v) => {
+        displayedRef.current = v;
+        setDisplayedRating(v);
+      });
+    }
+    const prevLevel = levelForRating(prev);
+    if (opts.celebrate && levelForRating(next) > prevLevel) {
+      // a new level: open the map and let the coach hop to the next tile
+      later(() => {
+        setMapHopFrom(prevLevel - 1);
+        setShowLevelMap(true);
+      }, isOff ? 300 : 1400);
+      later(() => setShowRewardCascade(true), isOff ? 600 : 2600);
+    }
+  };
+
+  /** Applies the server's answer to an attempt: rating, streak, the +N chip. */
+  const applyAttemptResult = (res: PuzzleAttemptResult) => {
+    setStreak(res.streak);
+    storage.set('all_chess_puzzle_streak', res.streak);
+    const delay = isOff ? 0 : 450;
+    later(() => {
+      if (res.ratingDelta > 0) setFloatingChip(res.ratingDelta);
+      setRatingTo(res.rating, { celebrate: res.ratingDelta > 0 });
+    }, delay);
+    later(() => setFloatingChip(null), delay + 1200);
   };
 
   const handleMove = (_from: string, _to: string, promotion?: string) => {
@@ -174,9 +237,11 @@ export const PuzzleScreen: React.FC = () => {
       const beforeFen = chess.fen();
       chess.move(matchingMove);
       const givesMate = chess.isCheckmate();
-      const correct = isCorrectPuzzleMove(matchingMove.san, expectedMoveSan, givesMate);
+      const playedUci = `${matchingMove.from}${matchingMove.to}${matchingMove.promotion || ''}`;
+      const expectedUci = currentPuzzle.solutionUci?.[solutionStep];
+      const correct = (!!expectedUci && playedUci === expectedUci) || isCorrectPuzzleMove(matchingMove.san, expectedMoveSan, givesMate);
       setHintSquare(null);
-    setHintArrow(null);
+      setHintArrow(null);
       setLastMove({ from: matchingMove.from, to: matchingMove.to });
 
       if (correct) {
@@ -188,11 +253,15 @@ export const PuzzleScreen: React.FC = () => {
           setLastSolvedSquare(_to);
           setStatus('solved');
           setCoachExp('brilliant');
-          const nextStreak = streak + 1;
-          setStreak(nextStreak);
-          storage.set('all_chess_puzzle_streak', nextStreak);
+          // a hint means no rating and no streak for this solve (the streak is not broken either)
+          const hintUsed = hintUsedIdRef.current === currentPuzzle.id;
+          const nextStreak = hintUsed ? streak : streak + 1;
+          if (!hintUsed) {
+            setStreak(nextStreak);
+            storage.set('all_chess_puzzle_streak', nextStreak);
+          }
           setBubbleText(
-            nextStreak >= 3
+            nextStreak >= 3 && !hintUsed
               ? `${nextStreak} in a row! Keep that rhythm going.`
               : givesMate
               ? 'Checkmate. Clean and precise.'
@@ -200,32 +269,32 @@ export const PuzzleScreen: React.FC = () => {
           );
           sound.puzzleCorrect();
 
-          // Beat 2 (~450ms, after the mate effects start): points chip, rating counts up, bar fills
-          const alreadyFailed = penalisedPuzzleId === currentPuzzle.id;
-          later(() => {
-            if (!alreadyFailed) {
-              setFloatingChip(15);
-              changeRating(15);
-            }
-            setSolvedInLevel((n) => Math.min(PUZZLES_PER_LEVEL, n + 1));
-          }, isOff ? 0 : 450);
-          later(() => setFloatingChip(null), 1600);
-
-          // Beat 3: a finished level opens the map and the coach hops to the next tile
-          if ((puzzleIndex + 1) % PUZZLES_PER_LEVEL === 0) {
+          // Beat 2 (~450ms): points chip, rating counts up, bar fills (rating is decided by the server for served puzzles)
+          if (source === 'server') {
+            void puzzleRepository
+              .submitAttempt(currentPuzzle.id, { solved: true, timeSeconds: timerSeconds, usedHint: hintUsed })
+              .then((res) => {
+                if (res) applyAttemptResult(res);
+              });
+          } else {
+            const alreadyFailed = penalisedPuzzleId === currentPuzzle.id;
             later(() => {
-              setMapHopFrom(level - 1);
-              setShowLevelMap(true);
-            }, isOff ? 300 : 1400);
-            later(() => setShowRewardCascade(true), isOff ? 600 : 2600);
+              if (!alreadyFailed) {
+                setFloatingChip(15);
+                setRatingTo(ratingRef.current + 15, { celebrate: true });
+              }
+            }, isOff ? 0 : 450);
+            later(() => setFloatingChip(null), 1600);
           }
         } else {
           setSolutionStep(nextStep);
           setCoachExp('thumbsup');
           setBubbleText('Good. Keep going, there is more.');
           later(() => {
-            const oppMove = currentPuzzle.solution[nextStep];
-            const played = chess.move(oppMove);
+            const oppUci = currentPuzzle.solutionUci?.[nextStep];
+            const played = oppUci
+              ? chess.move({ from: oppUci.slice(0, 2), to: oppUci.slice(2, 4), promotion: oppUci.slice(4) || undefined })
+              : chess.move(currentPuzzle.solution[nextStep]);
             setLastMove({ from: played.from, to: played.to });
             setFen(chess.fen());
             setSolutionStep(nextStep + 1);
@@ -240,8 +309,6 @@ export const PuzzleScreen: React.FC = () => {
       setWrongSquare(_to);
       setStatus('failed');
       setCoachExp('embarrassed');
-      setStreak(0);
-      storage.set('all_chess_puzzle_streak', 0);
       setBubbleText(
         givesMate
           ? 'That mates too, but not the way this puzzle is built. Try the main line.'
@@ -250,9 +317,24 @@ export const PuzzleScreen: React.FC = () => {
           : 'Not quite. That gives the opponent time. Look for checks, captures and threats first.'
       );
       sound.puzzleWrong();
-      if (penalisedPuzzleId !== currentPuzzle.id) {
-        changeRating(-10);
+      if (source === 'server') {
+        // the server counts the first attempt only; report it once per puzzle
+        if (failReportedIdRef.current !== currentPuzzle.id) {
+          failReportedIdRef.current = currentPuzzle.id;
+          void puzzleRepository
+            .submitAttempt(currentPuzzle.id, { solved: false, timeSeconds: timerSeconds, usedHint: hintUsedIdRef.current === currentPuzzle.id })
+            .then((res) => {
+              if (res) applyAttemptResult(res);
+            });
+        }
         setPenalisedPuzzleId(currentPuzzle.id);
+      } else {
+        setStreak(0);
+        storage.set('all_chess_puzzle_streak', 0);
+        if (penalisedPuzzleId !== currentPuzzle.id) {
+          setRatingTo(ratingRef.current - 10);
+          setPenalisedPuzzleId(currentPuzzle.id);
+        }
       }
       later(() => {
         chess.load(beforeFen);
@@ -278,16 +360,26 @@ export const PuzzleScreen: React.FC = () => {
     setSolutionStep(0);
     setHintSquare(null);
     setHintArrow(null);
-    setLastMove(null);
+    setLastMove(uciToMove(currentPuzzle.setupMoveUci));
     setCoachExp('thinking');
     setBubbleText(stripSideToMove(currentPuzzle.goal));
   };
 
+  /** The move the puzzle expects next, as a legal move in the given position (UCI when we have it, else SAN). */
+  const findExpectedMove = (fenNow: string) => {
+    const moves = new Chess(fenNow).moves({ verbose: true });
+    const uci = currentPuzzle.solutionUci?.[solutionStep];
+    if (uci) {
+      const byUci = moves.find((m) => m.from === uci.slice(0, 2) && m.to === uci.slice(2, 4) && (m.promotion || '') === uci.slice(4));
+      if (byUci) return byUci;
+    }
+    const san = currentPuzzle.solution[solutionStep];
+    return moves.find((m) => m.san === san || m.san.replace(/[+#]/g, '') === san.replace(/[+#]/g, ''));
+  };
+
   // Hint, first press: light up the piece to move. Second press: draw the move.
   const handleHint = () => {
-    const san = currentPuzzle.solution[solutionStep];
-    const probe = new Chess(chess.fen());
-    const mv = probe.moves({ verbose: true }).find((m) => m.san === san || m.san.replace(/[+#]/g, '') === san.replace(/[+#]/g, ''));
+    const mv = findExpectedMove(chess.fen());
     setCoachExp('thinking');
     if (!mv) {
       setBubbleText('Look for checks first.');
@@ -300,28 +392,160 @@ export const PuzzleScreen: React.FC = () => {
       setHintArrow({ from: mv.from, to: mv.to });
       setBubbleText('There it is. Play the move on the board.');
     }
-    // a hint means this solve no longer earns rating
+    // a hint means this solve no longer earns rating (or streak)
+    hintUsedIdRef.current = currentPuzzle.id;
     setPenalisedPuzzleId(currentPuzzle.id);
   };
 
   const handleShowSolution = () => {
     const san = currentPuzzle.solution[solutionStep];
-    const probe = new Chess(chess.fen());
-    const mv = probe.moves({ verbose: true }).find((m) => m.san.replace(/[+#]/g, '') === san.replace(/[+#]/g, ''));
+    const mv = findExpectedMove(chess.fen());
     if (!mv) return;
     handleRetry();
     setHintSquare(mv.from);
+    hintUsedIdRef.current = currentPuzzle.id;
     setBubbleText(`The move is ${san}. Play it on the board.`);
   };
 
-  const goTo = (index: number) => {
+  // ---- getting puzzles: server first, built-in set only as a fallback ----
+  const closeOverlays = () => {
     setShowLevelMap(false);
     setShowRewardCascade(false);
     setMapHopFrom(null);
-    setPuzzleIndex(((index % MOCK_PUZZLES.length) + MOCK_PUZZLES.length) % MOCK_PUZZLES.length);
   };
-  const handleNext = () => goTo(puzzleIndex + 1);
-  const handlePrev = () => goTo(puzzleIndex - 1);
+
+  const showPuzzle = (p: Puzzle, from: 'server' | 'local') => {
+    if (from === 'server' && source === 'server') {
+      historyRef.current.push(currentPuzzle);
+      if (historyRef.current.length > 30) historyRef.current.shift();
+      setHistoryLen(historyRef.current.length);
+    }
+    closeOverlays();
+    setSource(from);
+    setCurrentPuzzle(p);
+    // only puzzles the player is actually working through are counted, not the one preloaded behind the map
+    if (startedRef.current) setSessionCount((n) => n + 1);
+  };
+
+  const goToLocal = (index: number) => {
+    const i = ((index % MOCK_PUZZLES.length) + MOCK_PUZZLES.length) % MOCK_PUZZLES.length;
+    setLocalIndex(i);
+    storage.set('all_chess_puzzle_index', i);
+    showPuzzle(MOCK_PUZZLES[i], 'local');
+  };
+
+  const fetchNext = async (themeId: string): Promise<'ok' | 'stale' | 'fail'> => {
+    const myId = ++requestIdRef.current;
+    setLoadingNext(true);
+    const p = await puzzleRepository.getNextPuzzle(themeId || undefined);
+    if (myId !== requestIdRef.current) return 'stale';
+    setLoadingNext(false);
+    if (!p) return 'fail';
+    showPuzzle(p, 'server');
+    return 'ok';
+  };
+
+  // On open: load the saved rating/streak and the theme list, then a first puzzle near that rating.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [state, list] = await Promise.all([puzzleRepository.getRating(), puzzleRepository.getThemes()]);
+      if (!alive) return;
+      if (state) {
+        setRatingTo(state.rating, { animate: false });
+        setStreak(state.streak);
+        storage.set('all_chess_puzzle_streak', state.streak);
+      }
+      setThemes(list);
+      if (!startedRef.current) await fetchNext(theme);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleNext = async () => {
+    if (loadingNext) return;
+    const result = await fetchNext(theme);
+    if (result === 'ok' || result === 'stale') return;
+    if (source === 'server') {
+      closeOverlays();
+      setCoachExp('thinking');
+      setBubbleText('I could not load the next puzzle. Check your connection and try again.');
+      return;
+    }
+    goToLocal(localIndex + 1);
+  };
+
+  const handlePrev = () => {
+    if (source === 'server') {
+      const prev = historyRef.current.pop();
+      setHistoryLen(historyRef.current.length);
+      if (prev) {
+        closeOverlays();
+        setCurrentPuzzle(prev);
+        setSessionCount((n) => Math.max(1, n - 1));
+      }
+      return;
+    }
+    goToLocal(localIndex - 1);
+  };
+
+  // A tile on the level map: a puzzle from that level's rating band
+  const handleSelectLevel = async (index: number) => {
+    const band = levelBand(index + 1);
+    setStarted(true);
+    const myId = ++requestIdRef.current;
+    setLoadingNext(true);
+    const p = await puzzleRepository.getPuzzleInRange(band.min, band.max, theme || undefined);
+    if (myId !== requestIdRef.current) return;
+    setLoadingNext(false);
+    if (p) {
+      showPuzzle(p, 'server');
+      return;
+    }
+    if (source === 'local') {
+      goToLocal(index);
+      return;
+    }
+    closeOverlays();
+    setBubbleText('No new puzzles for that level right now. Try another level or theme.');
+  };
+
+  const handleThemeChange = (value: string) => {
+    setTheme(value);
+    storage.set(THEME_STORAGE_KEY, value);
+    void fetchNext(value);
+  };
+
+  const themeOptions = useMemo(
+    () => [...themes].sort((a, b) => themeLabel(a.theme).localeCompare(themeLabel(b.theme))),
+    [themes]
+  );
+  const themePicker = (onDark: boolean) =>
+    themes.length === 0 ? null : (
+      <label className={`flex items-center gap-2 text-[13px] font-semibold ${onDark ? 'text-white/90' : 'text-theme-muted'}`}>
+        <span className="flex-shrink-0">Theme</span>
+        <select
+          value={theme}
+          onChange={(e) => handleThemeChange(e.target.value)}
+          className={`flex-1 min-w-0 rounded-md px-2 py-1.5 text-[14px] font-semibold border ${
+            onDark ? 'bg-black/50 text-white border-white/25' : 'bg-theme-raised text-theme-text border-theme-border'
+          }`}
+          style={{ colorScheme: 'dark' }}
+          aria-label="Puzzle theme"
+          data-testid="theme-select"
+        >
+          <option value="">Any theme</option>
+          {themeOptions.map((t) => (
+            <option key={t.theme} value={t.theme}>
+              {themeLabel(t.theme)} ({t.count.toLocaleString()})
+            </option>
+          ))}
+        </select>
+      </label>
+    );
 
   const isWhiteToMove = currentPuzzle.fen.split(' ')[1] === 'w';
   const orientation = isWhiteToMove ? 'white' : 'black';
@@ -329,13 +553,13 @@ export const PuzzleScreen: React.FC = () => {
   const bubbleMessages: BubbleMessage[] = useMemo(
     () => [
       {
-        id: `puzzle-${puzzleIndex}-${status}-${bubbleText.slice(0, 16)}`,
+        id: `puzzle-${currentPuzzle.id}-${status}-${bubbleText.slice(0, 16)}`,
         text: bubbleText,
         icon: status === 'solved' ? 'solved' : status === 'failed' ? 'incorrect' : isWhiteToMove ? 'white-to-move' : 'black-to-move',
         title: status === 'solved' ? 'Solved' : status === 'failed' ? 'Incorrect' : `${isWhiteToMove ? 'White' : 'Black'} to move`,
       },
     ],
-    [puzzleIndex, status, bubbleText, isWhiteToMove]
+    [currentPuzzle.id, status, bubbleText, isWhiteToMove]
   );
 
   const puzzleBadges: BoardBadge[] = useMemo(
@@ -348,7 +572,7 @@ export const PuzzleScreen: React.FC = () => {
     [status, lastSolvedSquare, wrongSquare]
   );
 
-  const progressPct = (solvedInLevel / PUZZLES_PER_LEVEL) * 100;
+  const progressPct = levelProgress(puzzleRating) * 100;
 
   // rating, change, streak and level progress (also drawn over the map on the puzzle home)
   const ratingBlock = (onDark: boolean) => (
@@ -360,7 +584,7 @@ export const PuzzleScreen: React.FC = () => {
         <AnimatePresence>
           {ratingDelta !== null && ratingDelta !== 0 && (
             <motion.span
-              key={`d-${ratingDelta}-${puzzleIndex}`}
+              key={`d-${ratingDelta}-${currentPuzzle.id}`}
               initial={isOff ? false : { opacity: 0, x: -4 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0 }}
@@ -379,7 +603,7 @@ export const PuzzleScreen: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className={`relative flex-1 h-[14px] rounded-full overflow-hidden ${onDark ? 'bg-black/45' : 'bg-white/[0.14] dark:bg-white/[0.14]'}`} role="progressbar" aria-valuenow={solvedInLevel} aria-valuemax={PUZZLES_PER_LEVEL} aria-label={`Level ${level} progress`}>
+        <div className={`relative flex-1 h-[14px] rounded-full overflow-hidden ${onDark ? 'bg-black/45' : 'bg-white/[0.14] dark:bg-white/[0.14]'}`} role="progressbar" aria-valuenow={Math.round(progressPct)} aria-valuemax={100} aria-label={`Level ${level} progress`}>
           <motion.div
             className="absolute inset-y-0 left-0 rounded-full"
             style={{ background: 'var(--color-orange)' }}
@@ -418,13 +642,13 @@ export const PuzzleScreen: React.FC = () => {
                       Retry
                     </Button>
                     <Button variant="secondary" size="lg" className="!px-4" icon={<Eye size={18} />} onClick={handleShowSolution} aria-label="Show the solution" title="Show the solution" />
-                    <Button variant="primary" size="lg" className="!px-5" icon={<NextIcon size={20} />} onClick={handleNext} aria-label="Next puzzle" title="Next puzzle" />
+                    <Button variant="primary" size="lg" className="!px-5" icon={<NextIcon size={20} />} onClick={handleNext} disabled={loadingNext} aria-label="Next puzzle" title="Next puzzle" />
                   </div>
                 )}
                 {status === 'solved' && (
                   <div className="flex gap-2">
                     <Button variant="secondary" size="lg" className="!px-4" icon={<RotateCcw size={18} />} onClick={handleRetry} aria-label="Try this puzzle again" title="Try again" />
-                    <Button variant="primary" size="lg" className="flex-1" onClick={handleNext} data-testid="next-puzzle">
+                    <Button variant="primary" size="lg" className="flex-1" onClick={handleNext} disabled={loadingNext} data-testid="next-puzzle">
                       Next puzzle <NextIcon size={20} />
                     </Button>
                   </div>
@@ -440,11 +664,11 @@ export const PuzzleScreen: React.FC = () => {
                     <SettingsIcon size={16} />
                   </button>
                   <div className="flex items-center">
-                    <button type="button" onClick={handlePrev} className="p-2 rounded hover:text-theme-text hover:bg-theme-raised" title="Previous puzzle" aria-label="Previous puzzle">
+                    <button type="button" onClick={handlePrev} disabled={source === 'server' && historyLen === 0} className="p-2 rounded hover:text-theme-text hover:bg-theme-raised disabled:opacity-30 disabled:hover:bg-transparent" title="Previous puzzle" aria-label="Previous puzzle">
                       <ChevronLeft size={18} />
                     </button>
                     <span className="text-xs font-semibold tabular-nums px-1">
-                      {puzzleIndex + 1} / {MOCK_PUZZLES.length}
+                      {source === 'server' ? `Puzzle ${sessionCount}` : `${localIndex + 1} / ${MOCK_PUZZLES.length}`}
                     </span>
                     <button type="button" onClick={handleNext} className="p-2 -mr-2 rounded hover:text-theme-text hover:bg-theme-raised" title="Next puzzle" aria-label="Next puzzle">
                       <ChevronRight size={18} />
@@ -516,7 +740,7 @@ export const PuzzleScreen: React.FC = () => {
             </div>
           )}
 
-          <RewardCascade isOpen={showRewardCascade} levelNumber={level} pointsEarned={15} onNextPuzzle={handleNext} />
+          <RewardCascade isOpen={showRewardCascade} levelNumber={Math.max(1, level - 1)} pointsEarned={ratingDelta && ratingDelta > 0 ? ratingDelta : 15} onNextPuzzle={handleNext} />
         </div>
   );
 
@@ -543,10 +767,7 @@ export const PuzzleScreen: React.FC = () => {
                 levelCount={MAP_LEVELS}
                 currentIndex={Math.min(MAP_LEVELS - 1, level - 1)}
                 onSelect={(i) => {
-                  if (i <= level - 1) {
-                    goTo(i * PUZZLES_PER_LEVEL);
-                    setStarted(true);
-                  }
+                  if (i <= level - 1) void handleSelectLevel(i);
                 }}
                 className="absolute inset-0"
               />
@@ -556,18 +777,27 @@ export const PuzzleScreen: React.FC = () => {
                     expression="wave"
                     size={80}
                     text={
-                      level === 1 && solvedInLevel === 0
+                      puzzleRating === 1200 && streak === 0
                         ? 'Puzzles train the patterns you will meet in your own games. Ready when you are!'
-                        : `Welcome back! Level ${level}, puzzle ${solvedInLevel + 1} of ${PUZZLES_PER_LEVEL}. Let's keep climbing.`
+                        : `Welcome back! You are on level ${level}. Solve puzzles to raise your rating and climb.`
                     }
                   />
                 </div>
               </div>
               <div className="absolute bottom-0 inset-x-0 px-4 pb-4 pt-16 bg-gradient-to-t from-black/75 via-black/45 to-transparent space-y-3">
                 {ratingBlock(true)}
+                {themePicker(true)}
                 <Button variant="primary" size="lg" fullWidth className="!h-14 !text-[22px] !font-extrabold font-display" onClick={() => setStarted(true)} data-testid="solve-puzzles">
                   Solve puzzles
                 </Button>
+                {source === 'server' && (
+                  <p className="text-[11px] text-white/70 text-center">
+                    Puzzles from the{' '}
+                    <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener noreferrer" className="underline">
+                      Lichess puzzle database
+                    </a>
+                  </p>
+                )}
               </div>
             </motion.div>
           ) : showLevelMap ? (
@@ -581,10 +811,10 @@ export const PuzzleScreen: React.FC = () => {
             >
               <IsoLevelMap
                 levelCount={MAP_LEVELS}
-                currentIndex={Math.min(MAP_LEVELS - 1, mapHopFrom !== null ? level : level - 1)}
+                currentIndex={Math.min(MAP_LEVELS - 1, mapHopFrom !== null ? mapHopFrom + 1 : level - 1)}
                 hopFrom={mapHopFrom}
                 onSelect={(i) => {
-                  if (i <= level - 1) goTo(i * PUZZLES_PER_LEVEL);
+                  if (i <= level - 1) void handleSelectLevel(i);
                 }}
                 className="absolute inset-0"
               />
@@ -602,6 +832,7 @@ export const PuzzleScreen: React.FC = () => {
                 <CoachSpeech expression={coachExp} messages={bubbleMessages} size={80} />
 
                 {ratingBlock(false)}
+                {themePicker(false)}
 
                 {status === 'solved' && (
                   <motion.div
