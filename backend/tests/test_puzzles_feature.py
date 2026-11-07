@@ -10,9 +10,15 @@ Covers:
 """
 
 import copy
+import csv
+import os
+from pathlib import Path
+import subprocess
+import sys
+from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -20,7 +26,7 @@ from app.database import Base
 from app.models.puzzle import Puzzle, PuzzleAttempt, PuzzleTheme
 from app.services.puzzle_processor import process_puzzle_row
 from app.services.seeder import seed_puzzles
-from scripts.import_puzzles_to_db import upsert_puzzles_batch
+from scripts.import_puzzles_to_db import main as importer_main, upsert_puzzles_batch
 
 
 # ==============================================================================
@@ -388,3 +394,135 @@ def test_puzzle_attempt_hint_rule_and_repeat_idempotency(auth_client: TestClient
     assert res_f["ratingDelta"] <= -5
     assert res_f["streak"] == 0
     assert res_f["rating"] < new_rating
+
+
+def test_puzzles_router_rating_query_param_aliases(auth_client: TestClient):
+    """
+    Verify both snake_case (min_rating/max_rating) and camelCase (minRating/maxRating)
+    query parameters are supported and filter correctly.
+    """
+    # 1. snake_case
+    r_snake = auth_client.get("/api/v1/puzzles?min_rating=1000&max_rating=1400&limit=20")
+    assert r_snake.status_code == 200
+    puzzles_snake = r_snake.json()
+    assert len(puzzles_snake) > 0
+    for p in puzzles_snake:
+        assert 1000 <= p["rating"] <= 1400
+
+    # 2. camelCase
+    r_camel = auth_client.get("/api/v1/puzzles?minRating=1000&maxRating=1400&limit=20")
+    assert r_camel.status_code == 200
+    puzzles_camel = r_camel.json()
+    assert len(puzzles_camel) > 0
+    for p in puzzles_camel:
+        assert 1000 <= p["rating"] <= 1400
+
+
+def test_puzzle_request_handlers_do_not_call_seeder(auth_client: TestClient):
+    """Verify puzzle request handlers never invoke seed_puzzles during request processing."""
+    with patch("app.services.seeder.seed_puzzles") as mock_seeder:
+        r1 = auth_client.get("/api/v1/puzzles?limit=5")
+        assert r1.status_code == 200
+
+        r2 = auth_client.get("/api/v1/puzzles/next")
+        assert r2.status_code == 200
+
+        r3 = auth_client.get("/api/v1/puzzles/themes")
+        assert r3.status_code == 200
+
+        r4 = auth_client.get("/api/v1/puzzles/daily")
+        assert r4.status_code == 200
+
+        r5 = auth_client.get("/api/v1/puzzles/rating")
+        assert r5.status_code == 200
+
+        assert mock_seeder.call_count == 0, "seed_puzzles must not be called by any puzzle endpoint"
+
+
+def test_importer_dry_run_and_limit_against_csv_fixture(tmp_path: Path):
+    """
+    Verify importer against a local CSV fixture:
+      - --dry-run writes 0 rows to the database.
+      - --limit 2 writes exactly 2 puzzles and their themes to the database.
+    """
+    csv_file = tmp_path / "sample_puzzles.csv"
+    with open(csv_file, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["PuzzleId", "FEN", "Moves", "Rating", "RatingDeviation", "Popularity", "NbPlays", "Themes", "GameUrl", "OpeningTags"])
+        writer.writerow(["p1", "8/1P6/8/8/8/8/k7/7K b - - 0 1", "a2a1 b7b8q", "1500", "70", "95", "1200", "endgame promotion", "", ""])
+        writer.writerow(["p2", "6k1/5ppp/8/8/8/8/8/4R2K b - - 0 1", "g8h8 e1e8", "1200", "50", "95", "1500", "backRankMate mate mateIn1", "", ""])
+        writer.writerow(["p3", "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", "d5e4 d1e2", "1100", "75", "89", "650", "advantage opening", "", ""])
+
+    db_path = tmp_path / "test_import.db"
+    db_url = f"sqlite:///{db_path}"
+
+    # 1. Test --dry-run: must write nothing to DB
+    with patch("sys.argv", ["import_puzzles_to_db.py", "--cache-file", str(csv_file), "--dry-run", "--db-url", db_url, "--target", "10"]):
+        importer_main()
+
+    assert not db_path.exists(), "--dry-run must not create or write to the database"
+
+    # 2. Test --limit 2: must write exactly 2 puzzles to DB
+    with patch("sys.argv", ["import_puzzles_to_db.py", "--cache-file", str(csv_file), "--limit", "2", "--db-url", db_url, "--target", "10"]):
+        importer_main()
+
+    engine = create_engine(db_url)
+    with engine.connect() as conn:
+        puzzles_count = conn.execute(text("SELECT count(*) FROM puzzles")).scalar()
+        themes_count = conn.execute(text("SELECT count(*) FROM puzzle_themes")).scalar()
+        assert puzzles_count == 2, f"Expected 2 puzzles from --limit 2, found {puzzles_count}"
+        assert themes_count > 0, "Themes must be populated in puzzle_themes"
+    engine.dispose()
+
+
+def test_migration_010_backfills_existing_puzzles_to_puzzle_themes(tmp_path: Path):
+    """
+    Verify migration 010 backfills puzzle_themes from puzzles.theme JSON column
+    for pre-existing puzzles, is idempotent, and preserves composite PK.
+    """
+    backend_dir = Path(__file__).resolve().parent.parent
+    db_file = tmp_path / "mig_backfill.db"
+    env = {**os.environ, "DATABASE_URL": f"sqlite:///{db_file}"}
+
+    # Step 1: Upgrade to migration 009 (pre-010 schema)
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "009"],
+        cwd=backend_dir,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+
+    # Step 2: Insert pre-existing old-shape puzzles with JSON theme
+    engine = create_engine(f"sqlite:///{db_file}")
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO puzzles (id, fen, solution, rating, theme, goal)
+            VALUES 
+            ('old_puz_1', '8/1P6/8/8/8/8/k7/7K b - - 0 1', '["b8=Q"]', 1400, '["endgame", "promotion"]', 'White to move'),
+            ('old_puz_2', '6k1/5ppp/8/8/8/8/8/4R2K b - - 0 1', '["Re8#"]', 1200, '["mate", "backRankMate"]', 'White to move')
+        """))
+    engine.dispose()
+
+    # Step 3: Run migration 010 (alembic upgrade head)
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=backend_dir,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+
+    # Step 4: Verify puzzle_themes has the backfilled theme pairs
+    engine = create_engine(f"sqlite:///{db_file}")
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT puzzle_id, theme FROM puzzle_themes ORDER BY puzzle_id, theme")).fetchall()
+        expected = [
+            ("old_puz_1", "endgame"),
+            ("old_puz_1", "promotion"),
+            ("old_puz_2", "backRankMate"),
+            ("old_puz_2", "mate"),
+        ]
+        assert [tuple(r) for r in rows] == expected
+    engine.dispose()
+

@@ -26,9 +26,9 @@ class Puzzle(Base):
 class PuzzleTheme(Base):
     __tablename__ = "puzzle_themes"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    puzzle_id = Column(String(64), ForeignKey("puzzles.id", ondelete="CASCADE"), nullable=False, index=True)
-    theme = Column(String(64), nullable=False, index=True)
+    # Composite primary key (puzzle_id, theme) eliminates surrogate id & redundant index
+    puzzle_id = Column(String(64), ForeignKey("puzzles.id", ondelete="CASCADE"), primary_key=True)
+    theme = Column(String(64), primary_key=True)
 
     __table_args__ = (
         Index("ix_puzzle_themes_theme_puzzle_id", "theme", "puzzle_id"),

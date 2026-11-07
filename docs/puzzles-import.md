@@ -40,7 +40,7 @@ Simulates parsing, filters, theme balancing, and calculates projected table + in
 ```bash
 python backend/scripts/import_puzzles_to_db.py --dry-run --target 100000
 ```
-- Checks that the projected table + index size does not exceed Neon's 80 MB safety limit.
+- Checks that the projected table + index size does not exceed Neon's 120 MB safety limit (calibrated at 1.9x ratio).
 
 ### Step B: (Optional) Pre-download the Compressed Dump
 To avoid network interruptions during streaming:
@@ -102,7 +102,14 @@ SELECT pg_size_pretty(pg_total_relation_size('puzzles')) AS puzzles_table_and_in
 
 Every import run tags its puzzles with a unique `import_run` identifier (e.g. `run_20261107_122500_60b574`).
 
-### To Roll Back an Import Run:
+> [!WARNING]
+> **Foreign Key Constraints & Starter Puzzle Re-tagging**:
+> 1. `puzzle_attempts.puzzle_id` references `puzzles.id` without `CASCADE`. Attempting to delete a puzzle that a user has attempted will fail with a foreign key constraint violation.
+> 2. The batch upsert re-tags existing starter puzzles with the new `import_run`.
+
+### Safe Rollback Query:
+
+To roll back an import run safely without violating foreign keys for puzzles that already have user attempts:
 
 1. List the available import runs:
    ```sql
@@ -111,11 +118,18 @@ Every import run tags its puzzles with a unique `import_run` identifier (e.g. `r
    GROUP BY import_run;
    ```
 
-2. Delete puzzles by `import_run`:
+2. Safe deletion query (deletes only puzzles that have NO user attempts):
    ```sql
-   -- CASCADE automatically deletes matching rows in puzzle_themes
+   -- puzzle_themes rows are automatically deleted via ON DELETE CASCADE
    DELETE FROM puzzles
-   WHERE import_run = 'run_20261107_122500_60b574';
+   WHERE import_run = 'run_20261107_122500_60b574'
+     AND id NOT IN (SELECT puzzle_id FROM puzzle_attempts);
    ```
 
-3. Existing user `puzzle_attempts` are preserved for any puzzles that were not part of that rolled-back run.
+3. If any starter puzzles were re-tagged and need their `import_run` cleared or reset:
+   ```sql
+   UPDATE puzzles
+   SET import_run = 'starter_seed'
+   WHERE id IN (SELECT puzzle_id FROM puzzle_attempts)
+     AND import_run = 'run_20261107_122500_60b574';
+   ```

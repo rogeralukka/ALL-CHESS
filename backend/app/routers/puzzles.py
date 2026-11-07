@@ -5,6 +5,7 @@ from pydantic import ConfigDict
 from typing import List, Optional
 from datetime import datetime, timezone
 import hashlib
+import time
 
 from app.database import get_db
 from app.routers.auth import get_current_user
@@ -13,6 +14,17 @@ from app.models.puzzle import Puzzle, PuzzleTheme, PuzzleAttempt, UserPuzzleRati
 from app.schemas.common import CamelModel
 
 router = APIRouter(prefix="/puzzles", tags=["puzzles"])
+
+# In-memory caches
+_THEMES_CACHE = {
+    "expires_at": 0.0,
+    "data": [],
+}
+
+_DAILY_PUZZLE_CACHE = {
+    "date": None,
+    "puzzle_id": None,
+}
 
 
 class PuzzleOut(CamelModel):
@@ -65,7 +77,9 @@ class UserPuzzleRatingOut(CamelModel):
 @router.get("", response_model=List[PuzzleOut])
 def get_puzzles(
     min_rating: Optional[int] = Query(None),
+    minRating: Optional[int] = Query(None),
     max_rating: Optional[int] = Query(None),
+    maxRating: Optional[int] = Query(None),
     theme: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -73,9 +87,13 @@ def get_puzzles(
 ):
     """
     Returns puzzles matching filters, excluding puzzles already solved by user.
+    Supports both snake_case (min_rating) and camelCase (minRating) query parameters.
     If rating range not given, uses a window around user's puzzle rating (±150),
     widening if too few, with randomised selection in SQL.
     """
+    actual_min = min_rating if min_rating is not None else minRating
+    actual_max = max_rating if max_rating is not None else maxRating
+
     # Solved puzzle exclusion subquery using NOT EXISTS
     solved_subquery = (
         db.query(PuzzleAttempt.id)
@@ -94,12 +112,12 @@ def get_puzzles(
         )
 
     # If explicit rating bounds provided, filter and randomize
-    if min_rating is not None or max_rating is not None:
+    if actual_min is not None or actual_max is not None:
         query = base_query
-        if min_rating is not None:
-            query = query.filter(Puzzle.rating >= min_rating)
-        if max_rating is not None:
-            query = query.filter(Puzzle.rating <= max_rating)
+        if actual_min is not None:
+            query = query.filter(Puzzle.rating >= actual_min)
+        if actual_max is not None:
+            query = query.filter(Puzzle.rating <= actual_max)
         return query.order_by(func.random()).limit(limit).all()
 
     # Dynamic rating window based on user rating
@@ -194,14 +212,22 @@ def get_puzzle_themes(
 ):
     """
     Returns list of all available puzzle themes with counts for theme selector.
+    Cached in memory for 10 minutes (themes only change upon database import).
     """
+    now = time.time()
+    if _THEMES_CACHE["expires_at"] > now and _THEMES_CACHE["data"]:
+        return _THEMES_CACHE["data"]
+
     results = (
         db.query(PuzzleTheme.theme, func.count(PuzzleTheme.puzzle_id).label("count"))
         .group_by(PuzzleTheme.theme)
         .order_by(func.count(PuzzleTheme.puzzle_id).desc())
         .all()
     )
-    return [{"theme": r[0], "count": r[1]} for r in results]
+    theme_data = [{"theme": r[0], "count": r[1]} for r in results]
+    _THEMES_CACHE["data"] = theme_data
+    _THEMES_CACHE["expires_at"] = now + 600.0  # 10 minutes
+    return theme_data
 
 
 @router.get("/daily", response_model=PuzzleOut)
@@ -211,38 +237,44 @@ def get_daily_puzzle(
 ):
     """
     Returns the daily puzzle, deterministic and stable for the UTC day for everyone.
-    Picked from curated pool (popularity high, rating 800-1800) without OFFSET over full table.
+    Cached in memory per UTC day; selected via COUNT(*) + OFFSET :n on curated pool.
     """
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if _DAILY_PUZZLE_CACHE["date"] == today_str and _DAILY_PUZZLE_CACHE["puzzle_id"]:
+        cached_puzzle = db.query(Puzzle).filter(Puzzle.id == _DAILY_PUZZLE_CACHE["puzzle_id"]).first()
+        if cached_puzzle:
+            return cached_puzzle
+
     day_hash = int(hashlib.sha256(today_str.encode()).hexdigest()[:8], 16)
 
-    # Curated pool IDs (ordered deterministically by ID)
-    pool_ids = (
-        db.query(Puzzle.id)
-        .filter(Puzzle.rating >= 800, Puzzle.rating <= 1800, Puzzle.popularity >= 85)
-        .order_by(Puzzle.id.asc())
-        .all()
+    # 1. Curated pool query
+    pool_query = db.query(Puzzle).filter(
+        Puzzle.rating >= 800,
+        Puzzle.rating <= 1800,
+        Puzzle.popularity >= 85,
     )
-    if not pool_ids:
-        # Fallback if popularity not populated
-        pool_ids = (
-            db.query(Puzzle.id)
-            .filter(Puzzle.rating >= 800, Puzzle.rating <= 1800)
-            .order_by(Puzzle.id.asc())
-            .all()
-        )
-    if not pool_ids:
-        # Fallback to any puzzle
-        pool_ids = db.query(Puzzle.id).order_by(Puzzle.id.asc()).limit(500).all()
+    pool_count = pool_query.count()
 
-    if not pool_ids:
+    # 2. Fallback if popularity not populated
+    if pool_count == 0:
+        pool_query = db.query(Puzzle).filter(Puzzle.rating >= 800, Puzzle.rating <= 1800)
+        pool_count = pool_query.count()
+
+    # 3. Fallback to any puzzle
+    if pool_count == 0:
+        pool_query = db.query(Puzzle)
+        pool_count = pool_query.count()
+
+    if pool_count == 0:
         raise HTTPException(status_code=404, detail="No puzzles available")
 
-    chosen_id = pool_ids[day_hash % len(pool_ids)][0]
-    puzzle = db.query(Puzzle).filter(Puzzle.id == chosen_id).first()
+    offset_n = day_hash % pool_count
+    puzzle = pool_query.order_by(Puzzle.id.asc()).offset(offset_n).limit(1).first()
     if not puzzle:
         raise HTTPException(status_code=404, detail="Daily puzzle not found")
 
+    _DAILY_PUZZLE_CACHE["date"] = today_str
+    _DAILY_PUZZLE_CACHE["puzzle_id"] = puzzle.id
     return puzzle
 
 
