@@ -46,6 +46,9 @@ export interface IsoLevelMapProps {
   seed?: number;
   /** When set, the map is as tall as its content up to this many px (then it scrolls). */
   maxHeight?: number;
+  /** Extra empty space (px) above the last tile / below the first tile, so overlays drawn over the map (a coach bubble, a control panel) never cover a tile. */
+  extraPadTop?: number;
+  extraPadBottom?: number;
   className?: string;
 }
 
@@ -108,6 +111,8 @@ export const IsoLevelMap: React.FC<IsoLevelMapProps> = ({
   tileWidth = 82,
   seed = 7,
   maxHeight,
+  extraPadTop = 0,
+  extraPadBottom = 0,
   className = '',
 }) => {
   const { isFull, isOff } = useMotion();
@@ -134,8 +139,8 @@ export const IsoLevelMap: React.FC<IsoLevelMapProps> = ({
     const pts = pathPoints(levelCount, T);
     const minY = Math.min(...pts.map((t) => t.y));
     const maxY = Math.max(...pts.map((t) => t.y));
-    const padTop = T * 1.5;
-    const padBottom = T * 1.3;
+    const padTop = T * 1.5 + extraPadTop;
+    const padBottom = T * 1.3 + extraPadBottom;
     const height = maxY - minY + padTop + padBottom;
     const ox = width / 2; // path is centred horizontally
     const oy = -minY + padTop;
@@ -188,15 +193,20 @@ export const IsoLevelMap: React.FC<IsoLevelMapProps> = ({
     }
 
     return { height, tiles, props };
-  }, [levelCount, width, T, seed]);
+  }, [levelCount, width, T, seed, extraPadTop, extraPadBottom]);
 
   // keep the current tile in view (centred) when the map opens or the level changes
   useEffect(() => {
     const el = scrollRef.current;
     const t = layout.tiles[Math.min(currentIndex, layout.tiles.length - 1)];
     if (!el || !t) return;
-    el.scrollTop = Math.max(0, t.y - el.clientHeight * 0.55);
-  }, [layout, currentIndex]);
+    // centre the tile in the part of the map that no overlay covers (default: a little below the middle)
+    const visibleCentre =
+      extraPadTop || extraPadBottom
+        ? extraPadTop + (el.clientHeight - extraPadTop - extraPadBottom) * 0.5
+        : el.clientHeight * 0.55;
+    el.scrollTop = Math.max(0, t.y - visibleCentre);
+  }, [layout, currentIndex, extraPadTop, extraPadBottom]);
 
   // coach hop: start on hopFrom, jump to current after the map has faded in
   const [coachAt, setCoachAt] = useState<number>(hopFrom ?? currentIndex);
