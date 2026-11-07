@@ -1,37 +1,32 @@
 """
-Import ~5,000 puzzles from Lichess open puzzle database (CC0).
-Filters:
-  - ratings 400-2200
-  - rating deviation < 100
-  - popularity > 80
-  - balanced spread of themes and rating tiers
-
-Conversion to ALL-CHESS {fen, solution} format:
-  - Lichess FEN is before the opponent's blunder move (moves[0]).
-  - The script plays moves[0] on the board, making the player's turn the starting FEN.
-  - Converts solution moves[1:] to SAN notation.
-  - Generates goal dynamically from side to move + themes (e.g. "White to move — mate in 2").
-  - Strictly asserts that all mate puzzles end in checkmate.
+Import ~5,000 starter puzzles from Lichess open puzzle database (CC0).
+Used to generate/maintain backend/app/data/puzzles.json.
 """
 import csv
 import io
 import json
 import logging
-import re
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Optional
-import chess
 import zstandard
+
+# Ensure backend root is on sys.path
+import sys
+SCRIPT_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = SCRIPT_DIR.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+from app.services.puzzle_processor import process_puzzle_row
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "app" / "data"
+DATA_DIR = BACKEND_DIR / "app" / "data"
 OUTPUT_FILE = DATA_DIR / "puzzles.json"
 LICHESS_PUZZLE_URL = "https://database.lichess.org/lichess_db_puzzle.csv.zst"
 
-# Target counts per rating bucket to ensure even spread
 BUCKET_TARGETS = {
     "400-800": 600,
     "800-1100": 1100,
@@ -56,130 +51,6 @@ def get_bucket(rating: int) -> Optional[str]:
     return None
 
 
-def generate_goal(side: str, themes: List[str]) -> str:
-    """Generate dynamic goal from side to move and tactical themes."""
-    theme_desc = "find the best move"
-    if "mateIn1" in themes:
-        theme_desc = "mate in 1"
-    elif "mateIn2" in themes:
-        theme_desc = "mate in 2"
-    elif "mateIn3" in themes:
-        theme_desc = "mate in 3"
-    elif "mateIn4" in themes:
-        theme_desc = "mate in 4"
-    elif "mateIn5" in themes:
-        theme_desc = "mate in 5"
-    elif "mate" in themes:
-        theme_desc = "deliver checkmate"
-    elif "fork" in themes:
-        theme_desc = "find the fork"
-    elif "pin" in themes:
-        theme_desc = "exploit the pin"
-    elif "skewer" in themes:
-        theme_desc = "find the skewer"
-    elif "discoveredAttack" in themes:
-        theme_desc = "find the discovered attack"
-    elif "doubleCheck" in themes:
-        theme_desc = "unleash a double check"
-    elif "hangingPiece" in themes:
-        theme_desc = "win the hanging piece"
-    elif "trappedPiece" in themes:
-        theme_desc = "trap the piece"
-    elif "deflection" in themes:
-        theme_desc = "deflect the defender"
-    elif "attraction" in themes:
-        theme_desc = "draw the enemy piece into danger"
-    elif "clearance" in themes:
-        theme_desc = "clear the line"
-    elif "interference" in themes:
-        theme_desc = "interfere with the defense"
-    elif "sacrifice" in themes:
-        theme_desc = "find the winning sacrifice"
-    elif "endgame" in themes:
-        theme_desc = "find the best endgame continuation"
-    elif "advantage" in themes:
-        theme_desc = "gain a decisive advantage"
-    elif "crushing" in themes:
-        theme_desc = "find the crushing blow"
-    else:
-        for t in themes:
-            if t not in ("short", "long", "veryLong", "master", "masterVsMaster", "opening", "middlegame"):
-                clean = re.sub(r"([a-z])([A-Z])", r"\1 \2", t).lower()
-                theme_desc = f"find the {clean}"
-                break
-
-    return f"{side} to move \N{EM DASH} {theme_desc}"
-
-
-def process_puzzle_row(row: List[str]) -> Optional[Dict]:
-    """
-    Parses and converts a Lichess puzzle row:
-    row: [PuzzleId, FEN, Moves, Rating, RatingDeviation, Popularity, NbPlays, Themes, GameUrl, OpeningTags, ...]
-    """
-    puzzle_id = row[0]
-    initial_fen = row[1]
-    uci_moves = row[2].strip().split()
-    rating = int(row[3])
-    rating_dev = int(row[4])
-    popularity = int(row[5])
-    themes = row[7].strip().split()
-
-    if rating_dev >= 100 or popularity <= 80:
-        return None
-
-    if len(uci_moves) < 2:
-        return None
-
-    try:
-        board = chess.Board(initial_fen)
-    except Exception:
-        return None
-
-    # Play opponent's first move
-    try:
-        m0 = chess.Move.from_uci(uci_moves[0])
-        if m0 not in board.legal_moves:
-            return None
-        board.push(m0)
-    except Exception:
-        return None
-
-    starting_fen = board.fen()
-    side = "White" if board.turn == chess.WHITE else "Black"
-
-    # Play and convert solution moves to SAN
-    solution_san = []
-    try:
-        for m_str in uci_moves[1:]:
-            m = chess.Move.from_uci(m_str)
-            if m not in board.legal_moves:
-                return None
-            san = board.san(m)
-            solution_san.append(san)
-            board.push(m)
-    except Exception:
-        return None
-
-    if not solution_san:
-        return None
-
-    # Validate that mate themes strictly end in checkmate
-    has_mate_theme = any(t == "mate" or t.startswith("mateIn") for t in themes)
-    if has_mate_theme and not board.is_checkmate():
-        return None
-
-    goal = generate_goal(side, themes)
-
-    return {
-        "id": puzzle_id,
-        "fen": starting_fen,
-        "solution": solution_san,
-        "rating": rating,
-        "theme": themes,
-        "goal": goal,
-    }
-
-
 def import_puzzles():
     logger.info(f"Connecting to {LICHESS_PUZZLE_URL}...")
     req = urllib.request.Request(
@@ -196,8 +67,8 @@ def import_puzzles():
         text_stream = io.TextIOWrapper(stream_reader, encoding="utf-8")
         reader = csv.reader(text_stream)
 
-        header = next(reader)
-        logger.info(f"Connected. Stream header: {header[:6]}")
+        header = next(reader, None)
+        logger.info(f"Connected. Stream header: {header[:6] if header else 'None'}")
 
         lines_read = 0
         for row in reader:
@@ -214,14 +85,12 @@ def import_puzzles():
             if not bucket:
                 continue
 
-            # If bucket is full, skip
             if len(collected_by_bucket[bucket]) >= BUCKET_TARGETS[bucket]:
-                # Check if all buckets are full
                 if all(len(collected_by_bucket[b]) >= BUCKET_TARGETS[b] for b in BUCKET_TARGETS):
                     break
                 continue
 
-            puzzle = process_puzzle_row(row)
+            puzzle = process_puzzle_row(row, min_plays=500, min_popularity=80, max_rating_dev=100)
             if not puzzle:
                 continue
 
@@ -236,7 +105,6 @@ def import_puzzles():
     for b in BUCKET_TARGETS:
         all_puzzles.extend(collected_by_bucket[b])
 
-    # Sort puzzles by rating
     all_puzzles.sort(key=lambda x: x["rating"])
 
     logger.info(f"Import complete: {len(all_puzzles)} valid puzzles collected.")
