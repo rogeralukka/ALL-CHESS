@@ -30,6 +30,8 @@ backend/.env.local
 backend/.env.*.local
 !backend/.env.example
 backend/bin/
+backend/.cache/
+.cache/
 *.db
 *.sqlite
 *.sqlite3
