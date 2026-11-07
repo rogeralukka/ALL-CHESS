@@ -105,28 +105,39 @@ def test_puzzle_rating_and_attempt_flow_camelcase(auth_client: TestClient):
     r_init = auth_client.get("/api/v1/puzzles/rating")
     assert r_init.status_code == 200
     init_data = r_init.json()
-    assert init_data["rating"] == 650
+    assert init_data["rating"] == 1200
     assert init_data["streak"] == 0
     assert "bestStreak" in init_data
 
-    # Fetch a real puzzle ID from the database
-    puzzles = auth_client.get("/api/v1/puzzles?limit=1").json()
-    puzzle_id = puzzles[0]["id"]
+    # Fetch real puzzle IDs from the database
+    puzzles = auth_client.get("/api/v1/puzzles?limit=5").json()
+    assert len(puzzles) >= 2
+    puzzle_id_1 = puzzles[0]["id"]
+    puzzle_id_2 = puzzles[1]["id"]
 
-    # Submit successful attempt with camelCase timeSeconds
+    # Submit successful first attempt with camelCase timeSeconds
     attempt_payload = {"solved": True, "timeSeconds": 15}
-    r_att1 = auth_client.post(f"/api/v1/puzzles/{puzzle_id}/attempt", json=attempt_payload)
+    r_att1 = auth_client.post(f"/api/v1/puzzles/{puzzle_id_1}/attempt", json=attempt_payload)
     assert r_att1.status_code == 200
     att1 = r_att1.json()
     assert att1["solved"] is True
-    assert att1["rating"] > 650
+    assert att1["rating"] > 1200
     assert att1["ratingDelta"] >= 5
     assert att1["streak"] == 1
     assert att1["bestStreak"] == 1
+    assert att1["isRepeat"] is False
 
-    # Submit failed attempt
+    # Repeat attempt on same puzzle: rating delta must be 0 and isRepeat is True
+    r_repeat = auth_client.post(f"/api/v1/puzzles/{puzzle_id_1}/attempt", json=attempt_payload)
+    assert r_repeat.status_code == 200
+    att_rep = r_repeat.json()
+    assert att_rep["isRepeat"] is True
+    assert att_rep["ratingDelta"] == 0
+    assert att_rep["streak"] == 1
+
+    # Submit failed attempt on an unsolved puzzle
     fail_payload = {"solved": False, "timeSeconds": 30}
-    r_att2 = auth_client.post(f"/api/v1/puzzles/{puzzle_id}/attempt", json=fail_payload)
+    r_att2 = auth_client.post(f"/api/v1/puzzles/{puzzle_id_2}/attempt", json=fail_payload)
     assert r_att2.status_code == 200
     att2 = r_att2.json()
     assert att2["solved"] is False

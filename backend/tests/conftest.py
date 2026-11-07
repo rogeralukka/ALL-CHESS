@@ -49,6 +49,8 @@ def _no_real_network_for_account_checks(monkeypatch):
 def db_session():
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
+    from app.services.seeder import seed_puzzles
+    seed_puzzles(session)
     try:
         yield session
     finally:
