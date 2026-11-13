@@ -265,16 +265,16 @@ def test_puzzles_router_theme_filter_sql(auth_client: TestClient):
 
 def test_puzzles_router_rating_window_and_randomization(auth_client: TestClient):
     """Verify default rating window (user rating +-150) and randomized variation."""
-    # User default rating is 1200
+    # New users start at 400 (level 1)
     r1 = auth_client.get("/api/v1/puzzles?limit=10")
     assert r1.status_code == 200
     puzzles1 = r1.json()
     assert len(puzzles1) == 10
     ids1 = [p["id"] for p in puzzles1]
 
-    # Most should be within +-150 of 1200 (1050 to 1350)
+    # Window is 400..550 around the start rating, widened a little when sparse
     for p in puzzles1:
-        assert 900 <= p["rating"] <= 1500
+        assert 400 <= p["rating"] <= 800
 
     # Call again, results should be varied due to func.random()
     r2 = auth_client.get("/api/v1/puzzles?limit=10")
@@ -290,7 +290,7 @@ def test_puzzles_router_next_puzzle(auth_client: TestClient):
     assert "id" in p
     assert "fen" in p
     assert "solution" in p
-    assert 900 <= p["rating"] <= 1500
+    assert 400 <= p["rating"] <= 800
 
     # With theme
     r_theme = auth_client.get("/api/v1/puzzles/next?theme=endgame")
@@ -340,10 +340,10 @@ def test_puzzle_attempt_hint_rule_and_repeat_idempotency(auth_client: TestClient
     puz_normal = puzzles[1]["id"]
     puz_fail = puzzles[2]["id"]
 
-    # Initial rating is 1200
+    # Initial rating is 400 (level 1)
     r_rating = auth_client.get("/api/v1/puzzles/rating").json()
     initial_rating = r_rating["rating"]
-    assert initial_rating == 1200
+    assert initial_rating == 400
     initial_streak = r_rating["streak"]
 
     # 2. Solve with hint: rating_delta must be 0, streak unchanged
@@ -354,7 +354,7 @@ def test_puzzle_attempt_hint_rule_and_repeat_idempotency(auth_client: TestClient
     assert r_h.status_code == 200
     res_h = r_h.json()
     assert res_h["ratingDelta"] == 0
-    assert res_h["rating"] == 1200
+    assert res_h["rating"] == 400
     assert res_h["streak"] == initial_streak
     assert res_h["isRepeat"] is False
 
@@ -366,7 +366,7 @@ def test_puzzle_attempt_hint_rule_and_repeat_idempotency(auth_client: TestClient
     assert r_norm.status_code == 200
     res_norm = r_norm.json()
     assert res_norm["ratingDelta"] >= 5
-    assert res_norm["rating"] > 1200
+    assert res_norm["rating"] > 400
     assert res_norm["streak"] == initial_streak + 1
     assert res_norm["isRepeat"] is False
 

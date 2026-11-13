@@ -105,7 +105,7 @@ def test_puzzle_rating_and_attempt_flow_camelcase(auth_client: TestClient):
     r_init = auth_client.get("/api/v1/puzzles/rating")
     assert r_init.status_code == 200
     init_data = r_init.json()
-    assert init_data["rating"] == 1200
+    assert init_data["rating"] == 400
     assert init_data["streak"] == 0
     assert "bestStreak" in init_data
 
@@ -121,7 +121,7 @@ def test_puzzle_rating_and_attempt_flow_camelcase(auth_client: TestClient):
     assert r_att1.status_code == 200
     att1 = r_att1.json()
     assert att1["solved"] is True
-    assert att1["rating"] > 1200
+    assert att1["rating"] > 400
     assert att1["ratingDelta"] >= 5
     assert att1["streak"] == 1
     assert att1["bestStreak"] == 1

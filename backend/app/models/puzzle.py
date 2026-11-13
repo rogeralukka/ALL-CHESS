@@ -53,12 +53,16 @@ class PuzzleAttempt(Base):
     )
 
 
+# New players start at the bottom of the level map (level 1 = rating 400).
+DEFAULT_PUZZLE_RATING = 400
+
+
 class UserPuzzleRating(Base):
     __tablename__ = "user_puzzle_ratings"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True)
-    rating = Column(Integer, default=1200, nullable=False)
+    rating = Column(Integer, default=DEFAULT_PUZZLE_RATING, nullable=False)
     streak = Column(Integer, default=0, nullable=False)
     best_streak = Column(Integer, default=0, nullable=False)
     last_attempt_date = Column(String(32), nullable=True)

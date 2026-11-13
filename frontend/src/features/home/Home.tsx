@@ -20,7 +20,7 @@ import { gameRepository, statsRepository, friendRepository, learnRepository, puz
 import { Game, Friend, LessonStage, Puzzle } from '@/data/types';
 import { MOCK_LEARN_STAGES } from '@/data/mock/mockLearn';
 import { storage } from '@/lib/storage';
-import { levelForRating, levelProgress } from '@/lib/puzzleLevel';
+import { levelForRating, levelProgress, PUZZLE_MIN_RATING } from '@/lib/puzzleLevel';
 import { useMotion } from '@/lib/useMotion';
 import { Flame, ChevronRight, Sparkles, Users } from 'lucide-react';
 import { useMediaQuery } from '@/lib/useMediaQuery';
@@ -124,7 +124,7 @@ export const Home: React.FC = () => {
     };
   }, []);
 
-  const puzzleRating = storage.get('all_chess_puzzle_rating', 1200);
+  const puzzleRating = storage.get('all_chess_puzzle_rating', PUZZLE_MIN_RATING);
   const puzzleStreak = storage.get('all_chess_puzzle_streak', 0);
   // puzzle levels follow the puzzle rating (one level per 100 points)
   const puzzleLevel = levelForRating(puzzleRating);

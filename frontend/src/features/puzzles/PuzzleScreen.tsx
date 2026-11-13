@@ -148,7 +148,7 @@ export const PuzzleScreen: React.FC = () => {
   const [homeBottomRef, homeBottomH] = useElementHeight<HTMLDivElement>();
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
-  const [puzzleRating, setPuzzleRating] = useState<number>(() => storage.get('all_chess_puzzle_rating', 1200));
+  const [puzzleRating, setPuzzleRating] = useState<number>(() => storage.get('all_chess_puzzle_rating', PUZZLE_MIN_RATING));
   const [displayedRating, setDisplayedRating] = useState<number>(puzzleRating);
   const ratingRef = useRef(puzzleRating);
   const displayedRef = useRef(puzzleRating);
@@ -798,7 +798,7 @@ export const PuzzleScreen: React.FC = () => {
                     expression="wave"
                     size={80}
                     text={
-                      puzzleRating === 1200 && streak === 0
+                      puzzleRating === PUZZLE_MIN_RATING && streak === 0
                         ? 'Puzzles train the patterns you will meet in your own games. Ready when you are!'
                         : `Welcome back! You are on level ${level}. Solve puzzles to raise your rating and climb.`
                     }
