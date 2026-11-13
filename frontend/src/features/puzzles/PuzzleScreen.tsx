@@ -41,6 +41,22 @@ import {
 const MAP_LEVELS = PUZZLE_LEVELS;
 const THEME_STORAGE_KEY = 'all_chess_puzzle_theme';
 
+/** Height of an element, kept up to date (used to keep the level map's tiles clear of the overlays drawn over it). */
+function useElementHeight<T extends HTMLElement>(): [(el: T | null) => void, number] {
+  const [el, setEl] = useState<T | null>(null);
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    if (!el) return undefined;
+    const update = () => setH(el.offsetHeight);
+    update();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+  return [setEl, h];
+}
+
 /** "e2e4" -> { from: 'e2', to: 'e4' } */
 const uciToMove = (uci?: string | null) => (uci && uci.length >= 4 ? { from: uci.slice(0, 2), to: uci.slice(2, 4) } : null);
 
@@ -128,6 +144,8 @@ export const PuzzleScreen: React.FC = () => {
     startedRef.current = started;
   }, [started]);
   const isPhone = usePhoneLayout();
+  const [homeTopRef, homeTopH] = useElementHeight<HTMLDivElement>();
+  const [homeBottomRef, homeBottomH] = useElementHeight<HTMLDivElement>();
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
   const [puzzleRating, setPuzzleRating] = useState<number>(() => storage.get('all_chess_puzzle_rating', 1200));
@@ -769,10 +787,13 @@ export const PuzzleScreen: React.FC = () => {
                 onSelect={(i) => {
                   if (i <= level - 1) void handleSelectLevel(i);
                 }}
+                extraPadTop={homeTopH ? homeTopH + 16 : 0}
+                extraPadBottom={homeBottomH ? homeBottomH + 16 : 0}
+                showLockIcons
                 className="absolute inset-0"
               />
               <div className="absolute top-0 inset-x-0 px-4 pt-4 pb-12 bg-gradient-to-b from-black/55 via-black/25 to-transparent pointer-events-none">
-                <div className="pointer-events-auto">
+                <div ref={homeTopRef} className="pointer-events-auto">
                   <CoachSpeech
                     expression="wave"
                     size={80}
@@ -784,7 +805,8 @@ export const PuzzleScreen: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="absolute bottom-0 inset-x-0 px-4 pb-4 pt-16 bg-gradient-to-t from-black/75 via-black/45 to-transparent space-y-3">
+              <div className="absolute bottom-0 inset-x-0 px-4 pb-4 pt-16 bg-gradient-to-t from-black/75 via-black/45 to-transparent pointer-events-none">
+               <div ref={homeBottomRef} className="space-y-3 pointer-events-auto">
                 {ratingBlock(true)}
                 {themePicker(true)}
                 <Button variant="primary" size="lg" fullWidth className="!h-14 !text-[22px] !font-extrabold font-display" onClick={() => setStarted(true)} data-testid="solve-puzzles">
@@ -798,6 +820,7 @@ export const PuzzleScreen: React.FC = () => {
                     </a>
                   </p>
                 )}
+               </div>
               </div>
             </motion.div>
           ) : showLevelMap ? (
@@ -813,6 +836,7 @@ export const PuzzleScreen: React.FC = () => {
                 levelCount={MAP_LEVELS}
                 currentIndex={Math.min(MAP_LEVELS - 1, mapHopFrom !== null ? mapHopFrom + 1 : level - 1)}
                 hopFrom={mapHopFrom}
+                showLockIcons
                 onSelect={(i) => {
                   if (i <= level - 1) void handleSelectLevel(i);
                 }}
