@@ -10,7 +10,7 @@ import time
 from app.database import get_db
 from app.routers.auth import get_current_user
 from app.models.user import User
-from app.models.puzzle import Puzzle, PuzzleTheme, PuzzleAttempt, UserPuzzleRating
+from app.models.puzzle import DEFAULT_PUZZLE_RATING, Puzzle, PuzzleTheme, PuzzleAttempt, UserPuzzleRating
 from app.schemas.common import CamelModel
 
 router = APIRouter(prefix="/puzzles", tags=["puzzles"])
@@ -122,7 +122,7 @@ def get_puzzles(
 
     # Dynamic rating window based on user rating
     user_rating_record = db.query(UserPuzzleRating).filter(UserPuzzleRating.user_id == user.id).first()
-    curr_rating = user_rating_record.rating if user_rating_record else 1200
+    curr_rating = user_rating_record.rating if user_rating_record else DEFAULT_PUZZLE_RATING
 
     # 1. Target window ±150
     w_min = max(400, curr_rating - 150)
@@ -178,7 +178,7 @@ def get_next_puzzle(
         )
 
     user_rating_record = db.query(UserPuzzleRating).filter(UserPuzzleRating.user_id == user.id).first()
-    curr_rating = user_rating_record.rating if user_rating_record else 1200
+    curr_rating = user_rating_record.rating if user_rating_record else DEFAULT_PUZZLE_RATING
 
     # Target ±150
     puzzle = (
@@ -284,13 +284,13 @@ def get_user_puzzle_rating(
     user: User = Depends(get_current_user),
 ):
     """
-    Returns user's puzzle rating profile. Defaults to 1200 for new users.
+    Returns user's puzzle rating profile. Defaults to 400 (level 1) for new users.
     """
     user_rating = db.query(UserPuzzleRating).filter(UserPuzzleRating.user_id == user.id).first()
     if not user_rating:
         user_rating = UserPuzzleRating(
             user_id=user.id,
-            rating=1200,
+            rating=DEFAULT_PUZZLE_RATING,
             streak=0,
             best_streak=0,
             last_attempt_date=None,
@@ -341,7 +341,7 @@ def submit_puzzle_attempt(
     if not user_rating_record:
         user_rating_record = UserPuzzleRating(
             user_id=user.id,
-            rating=1200,
+            rating=DEFAULT_PUZZLE_RATING,
             streak=0,
             best_streak=0,
         )
